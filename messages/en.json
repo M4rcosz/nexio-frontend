@@ -1,0 +1,283 @@
+{
+  "metadata": {
+    "description": "Authentic flavors of Brazil's Northeast. Pick a unit, place your order and track it in real time."
+  },
+  "common": {
+    "loading": "Loading...",
+    "tryAgain": "Try again",
+    "back": "Back",
+    "save": "Save",
+    "cancel": "Cancel",
+    "remove": "remove",
+    "stub": "mock",
+    "stubTitle": "Backend endpoint not implemented yet — using mock data.",
+    "backendBadge": "backend",
+    "backendBadgeTitle": "Real backend endpoint."
+  },
+  "header": {
+    "brand": "Raízes do Nordeste",
+    "tagline": "Flavors · from · the · sertão",
+    "units": "Units",
+    "myOrders": "My orders",
+    "points": "Points",
+    "cart": "Cart",
+    "greeting": "Hi, {name}",
+    "signIn": "Sign in",
+    "signUp": "Sign up",
+    "signOut": "Sign out",
+    "signingOut": "Signing out..."
+  },
+  "languageSwitcher": {
+    "label": "Language",
+    "en": "English",
+    "pt-BR": "Português (BR)"
+  },
+  "themeToggle": {
+    "switchToLight": "Switch to light theme",
+    "switchToDark": "Switch to dark theme"
+  },
+  "footer": {
+    "tagline": "© {year} {name} — Flavors that tell stories."
+  },
+  "home": {
+    "heroTitle": "Authentic flavors of Brazil's Northeast",
+    "heroSubtitle": "Carne de sol, baião de dois, slow-cooked goat and more. Pick the closest unit and place your order.",
+    "chooseUnit": "Choose your unit",
+    "viewMenu": "View menu",
+    "select": "Select",
+    "search": {
+      "placeholder": "Search dishes — carne de sol, baião...",
+      "searching": "Searching...",
+      "empty": "No dishes found."
+    }
+  },
+  "menu": {
+    "title": "Menu",
+    "switchUnit": "← Change unit",
+    "searchPlaceholder": "Search a dish...",
+    "search": "Search",
+    "all": "All",
+    "empty": "No dishes match these filters.",
+    "available": "available at {unit}",
+    "noDescription": "No description.",
+    "addToCart": "Add to cart",
+    "added": "Added!"
+  },
+  "cart": {
+    "title": "Your cart",
+    "empty": "Your cart is empty.",
+    "browseUnits": "View units",
+    "orderingFrom": "Order for {unit}.",
+    "orderingFromUnknown": "unknown unit",
+    "backToMenu": "back to menu",
+    "notesPlaceholder": "Notes (e.g.: no onion)",
+    "clear": "Empty cart",
+    "summary": "Summary",
+    "items": "Items",
+    "total": "Total",
+    "checkout": "Go to checkout",
+    "switchUnitConfirm": "You already have items from another unit. Switching will empty the cart. Continue?"
+  },
+  "checkout": {
+    "title": "Checkout",
+    "emptyCart": "Your cart is empty. Pick a unit and add items before checking out.",
+    "browseUnits": "View units",
+    "unitTitle": "Unit",
+    "itemsTitle": "Items",
+    "notesLabel": "Order notes (optional)",
+    "notesPlaceholder": "Ex: deliver at apartment 102.",
+    "total": "Total",
+    "submit": "Confirm and pay",
+    "submitting": "Creating order...",
+    "submitFailed": "Failed to create order.",
+    "paymentNext": "You'll pay on the next step.",
+    "noteWith": "note: {value}"
+  },
+  "payment": {
+    "title": "Payment",
+    "orderHeader": "Order {id} · Total {total} · Status: {status}",
+    "totalLabel": "Total to pay:",
+    "methodLabel": "Payment method",
+    "methodTitle": "Method",
+    "statusTitle": "Status",
+    "pix": "PIX code (copy and paste)",
+    "pixDisclaimer": "Visual mock — not a real BR Code.",
+    "trackOrder": "Track order",
+    "waiting": "Waiting for payment confirmation... (auto refresh)",
+    "pay": "Pay",
+    "paying": "Starting...",
+    "failed": "Failed to start payment."
+  },
+  "orders": {
+    "title": "My orders",
+    "empty": "You haven't placed any orders yet.",
+    "browseUnits": "Choose a unit",
+    "itemsCount": "{count} item(s) · {total}",
+    "track": "Track"
+  },
+  "order": {
+    "title": "Order",
+    "openedAt": "Opened on {date} · {id}",
+    "statusTitle": "Status",
+    "itemsTitle": "Items",
+    "total": "Total",
+    "cancel": "Cancel order",
+    "cancelling": "Cancelling...",
+    "cancelFailed": "Could not cancel.",
+    "cancelled": "Order cancelled.",
+    "cancelledMessage": "Order cancelled at some step before delivery."
+  },
+  "loyalty": {
+    "title": "Loyalty program",
+    "balance": "Balance",
+    "points": "points",
+    "history": "Recent activity",
+    "noHistory": "No activity yet.",
+    "txEarn": "Earned",
+    "txRedeem": "Redeemed",
+    "txExpire": "Expired",
+    "txAdjustment": "Adjustment",
+    "consentTitle": "LGPD consent",
+    "consentGivenAt": "✓ Consent recorded on {date}.",
+    "consentRevocation": "You may request revocation at any time by contacting the unit.",
+    "consentText": "I agree to participate in the loyalty program and to have my consumption data used to award points.",
+    "consentSubmit": "Accept and continue",
+    "consentSubmitting": "Saving...",
+    "consentFailed": "Could not record consent."
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Use your username and password to enter.",
+    "usernameLabel": "Username",
+    "passwordLabel": "Password",
+    "submit": "Sign in",
+    "submitting": "Signing in...",
+    "noAccount": "Don't have an account?",
+    "register": "Register",
+    "tokenWarning": "⚠ Backend JWT expires in 60s. On any 401, sign in again.",
+    "failed": "Failed to sign in.",
+    "invalidCredentials": "Invalid username or password."
+  },
+  "register": {
+    "title": "Create account",
+    "subtitle": "Backend has no real signup yet — this form simulates registration and signs you in locally.",
+    "nameLabel": "Full name",
+    "emailLabel": "E-mail",
+    "usernameLabel": "Username",
+    "passwordLabel": "Password (min. 8 chars)",
+    "phoneLabel": "Phone (optional)",
+    "submit": "Create account",
+    "submitting": "Creating account...",
+    "haveAccount": "Already have an account?",
+    "signIn": "Sign in",
+    "failed": "Failed to register."
+  },
+  "admin": {
+    "headerLink": "Admin",
+    "nav": {
+      "overview": "Overview",
+      "users": "Users",
+      "title": "Admin"
+    },
+    "overview": {
+      "title": "Admin overview",
+      "subtitle": "Manage internal staff and operations.",
+      "managedUnits": "Managed units",
+      "managedUnitsAll": "All units",
+      "yourRole": "Your role",
+      "manageUsers": "Manage staff users",
+      "manageUsersHint": "Create attendants and kitchen accounts, toggle access."
+    },
+    "users": {
+      "title": "Staff users",
+      "subtitle": "Attendants and kitchen accounts for the units you manage.",
+      "newUser": "New user",
+      "count": "{count} user(s)",
+      "searchPlaceholder": "Search by name, e-mail or username...",
+      "filterRoleAll": "All roles",
+      "filterUnitAll": "All units",
+      "empty": "No staff users yet.",
+      "tableName": "Name",
+      "tableRole": "Role",
+      "tableUnit": "Unit",
+      "tableStatus": "Status",
+      "tableActions": "Actions",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "actionEdit": "Edit",
+      "actionDisable": "Disable",
+      "actionEnable": "Enable",
+      "confirmDisable": "Disable this user? They will not be able to sign in.",
+      "actionFailed": "Could not update user.",
+      "loadFailed": "Could not load users."
+    },
+    "form": {
+      "createTitle": "New staff user",
+      "createSubtitle": "Create an attendant or kitchen account.",
+      "editTitle": "Edit user",
+      "editSubtitle": "Update profile, role or assigned unit.",
+      "name": "Full name",
+      "username": "Username",
+      "email": "E-mail",
+      "phone": "Phone (optional)",
+      "password": "Password (min. 8 chars)",
+      "role": "Role",
+      "roleAttendant": "Attendant",
+      "roleKitchen": "Kitchen",
+      "roleManager": "Manager",
+      "roleAdmin": "Administrator",
+      "businessUnit": "Business unit",
+      "businessUnitLocked": "Scoped to your unit",
+      "businessUnitAdminNote": "Administrators are not tied to a unit.",
+      "submitCreate": "Create user",
+      "submitEdit": "Save changes",
+      "submitting": "Saving...",
+      "back": "← Back to users",
+      "failed": "Could not save user.",
+      "usernameTaken": "Username already taken.",
+      "emailTaken": "E-mail already registered.",
+      "roleForbidden": "You can't assign this role.",
+      "unitRequired": "Pick a business unit."
+    },
+    "errors": {
+      "forbiddenTitle": "Restricted area",
+      "forbiddenBody": "You need administrator or manager access to view this page."
+    }
+  },
+  "errors": {
+    "title": "Something went wrong",
+    "fallback": "The server didn't respond properly. The backend may be down or this endpoint may not be implemented yet.",
+    "notFoundTitle": "Page not found",
+    "notFoundBody": "The address you accessed doesn't exist or was removed.",
+    "notFoundHome": "Back to home"
+  },
+  "orderStatus": {
+    "PENDING": "Awaiting confirmation",
+    "CONFIRMED": "Confirmed",
+    "PREPARING": "In preparation",
+    "READY": "Ready for delivery",
+    "DELIVERED": "Delivered",
+    "CANCELLED": "Cancelled"
+  },
+  "paymentStatus": {
+    "PENDING": "Awaiting payment",
+    "PROCESSING": "Processing",
+    "APPROVED": "Paid",
+    "REFUSED": "Refused",
+    "CANCELLED": "Cancelled"
+  },
+  "paymentMethod": {
+    "PIX": "PIX",
+    "CREDIT_CARD": "Credit card",
+    "DEBIT_CARD": "Debit card",
+    "CASH": "Cash",
+    "VOUCHER": "Voucher"
+  },
+  "orderChannel": {
+    "WEB": "Website",
+    "APP": "App",
+    "TOTEM": "Kiosk",
+    "COUNTER": "Counter",
+    "PICKUP": "Pickup"
+  }
+}

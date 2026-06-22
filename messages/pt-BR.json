@@ -1,0 +1,283 @@
+{
+  "metadata": {
+    "description": "Sabores autênticos do Nordeste brasileiro. Escolha sua unidade, monte seu pedido e acompanhe em tempo real."
+  },
+  "common": {
+    "loading": "Carregando...",
+    "tryAgain": "Tentar novamente",
+    "back": "Voltar",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "remove": "remover",
+    "stub": "mock",
+    "stubTitle": "Endpoint ainda não existe no backend — usando dados de mock.",
+    "backendBadge": "backend",
+    "backendBadgeTitle": "Endpoint real do backend."
+  },
+  "header": {
+    "brand": "Raízes do Nordeste",
+    "tagline": "Sabores · do · sertão",
+    "units": "Unidades",
+    "myOrders": "Meus pedidos",
+    "points": "Pontos",
+    "cart": "Carrinho",
+    "greeting": "Olá, {name}",
+    "signIn": "Entrar",
+    "signUp": "Cadastrar",
+    "signOut": "Sair",
+    "signingOut": "Saindo..."
+  },
+  "languageSwitcher": {
+    "label": "Idioma",
+    "en": "English",
+    "pt-BR": "Português (BR)"
+  },
+  "themeToggle": {
+    "switchToLight": "Mudar para tema claro",
+    "switchToDark": "Mudar para tema escuro"
+  },
+  "footer": {
+    "tagline": "© {year} {name} — Sabores que contam histórias."
+  },
+  "home": {
+    "heroTitle": "Sabores autênticos do Nordeste",
+    "heroSubtitle": "Carne de sol, baião de dois, bode guisado e muito mais. Escolha a unidade mais próxima e monte seu pedido.",
+    "chooseUnit": "Escolha sua unidade",
+    "viewMenu": "Ver cardápio",
+    "select": "Selecionar",
+    "search": {
+      "placeholder": "Buscar pratos — carne de sol, baião...",
+      "searching": "Buscando...",
+      "empty": "Nenhum prato encontrado."
+    }
+  },
+  "menu": {
+    "title": "Cardápio",
+    "switchUnit": "← Trocar unidade",
+    "searchPlaceholder": "Buscar prato...",
+    "search": "Buscar",
+    "all": "Todas",
+    "empty": "Nenhum prato encontrado com esses filtros.",
+    "available": "disponível em {unit}",
+    "noDescription": "Sem descrição.",
+    "addToCart": "Adicionar",
+    "added": "Adicionado!"
+  },
+  "cart": {
+    "title": "Seu carrinho",
+    "empty": "Seu carrinho está vazio.",
+    "browseUnits": "Ver unidades",
+    "orderingFrom": "Pedido para {unit}.",
+    "orderingFromUnknown": "unidade desconhecida",
+    "backToMenu": "voltar ao cardápio",
+    "notesPlaceholder": "Observações (ex: sem cebola)",
+    "clear": "Esvaziar carrinho",
+    "summary": "Resumo",
+    "items": "Itens",
+    "total": "Total",
+    "checkout": "Ir para o checkout",
+    "switchUnitConfirm": "Você já tem itens de outra unidade no carrinho. Trocar limpa o carrinho. Deseja continuar?"
+  },
+  "checkout": {
+    "title": "Checkout",
+    "emptyCart": "Seu carrinho está vazio. Escolha uma unidade e adicione itens antes de fazer o checkout.",
+    "browseUnits": "Ver unidades",
+    "unitTitle": "Unidade",
+    "itemsTitle": "Itens",
+    "notesLabel": "Observações do pedido (opcional)",
+    "notesPlaceholder": "Ex: entregar no apartamento 102.",
+    "total": "Total",
+    "submit": "Confirmar e ir para pagamento",
+    "submitting": "Criando pedido...",
+    "submitFailed": "Falha ao criar pedido.",
+    "paymentNext": "O pagamento será feito na próxima etapa.",
+    "noteWith": "obs: {value}"
+  },
+  "payment": {
+    "title": "Pagamento",
+    "orderHeader": "Pedido {id} · Total {total} · Status: {status}",
+    "totalLabel": "Total a pagar:",
+    "methodLabel": "Forma de pagamento",
+    "methodTitle": "Método",
+    "statusTitle": "Status",
+    "pix": "Código PIX (copia e cola)",
+    "pixDisclaimer": "Mock visual — não é um BR Code válido.",
+    "trackOrder": "Acompanhar pedido",
+    "waiting": "Aguardando confirmação do pagamento... (atualiza automaticamente)",
+    "pay": "Pagar",
+    "paying": "Iniciando...",
+    "failed": "Falha ao iniciar pagamento."
+  },
+  "orders": {
+    "title": "Meus pedidos",
+    "empty": "Você ainda não fez nenhum pedido.",
+    "browseUnits": "Escolher unidade",
+    "itemsCount": "{count} item(s) · {total}",
+    "track": "Acompanhar"
+  },
+  "order": {
+    "title": "Pedido",
+    "openedAt": "Aberto em {date} · {id}",
+    "statusTitle": "Status",
+    "itemsTitle": "Itens",
+    "total": "Total",
+    "cancel": "Cancelar pedido",
+    "cancelling": "Cancelando...",
+    "cancelFailed": "Falha ao cancelar.",
+    "cancelled": "Pedido cancelado.",
+    "cancelledMessage": "Pedido cancelado em alguma etapa antes da entrega."
+  },
+  "loyalty": {
+    "title": "Programa de fidelidade",
+    "balance": "Saldo",
+    "points": "pontos",
+    "history": "Movimentações recentes",
+    "noHistory": "Nenhuma movimentação ainda.",
+    "txEarn": "Acumulado",
+    "txRedeem": "Resgatado",
+    "txExpire": "Expirado",
+    "txAdjustment": "Ajuste",
+    "consentTitle": "Consentimento LGPD",
+    "consentGivenAt": "✓ Consentimento registrado em {date}.",
+    "consentRevocation": "Você pode pedir a revogação a qualquer momento entrando em contato com a unidade.",
+    "consentText": "Aceito participar do programa de fidelidade e que meus dados de consumo sejam usados para gerar pontos.",
+    "consentSubmit": "Aceitar e continuar",
+    "consentSubmitting": "Registrando...",
+    "consentFailed": "Não foi possível registrar o consentimento."
+  },
+  "login": {
+    "title": "Entrar",
+    "subtitle": "Use seu usuário e senha para acessar.",
+    "usernameLabel": "Usuário",
+    "passwordLabel": "Senha",
+    "submit": "Entrar",
+    "submitting": "Entrando...",
+    "noAccount": "Ainda não tem conta?",
+    "register": "Cadastre-se",
+    "tokenWarning": "⚠ JWT do backend expira em 60s. Em caso de erro 401, refaça o login.",
+    "failed": "Falha ao entrar.",
+    "invalidCredentials": "Usuário ou senha incorretos."
+  },
+  "register": {
+    "title": "Criar conta",
+    "subtitle": "O backend ainda não tem cadastro real — este formulário simula o registro e já loga você localmente.",
+    "nameLabel": "Nome completo",
+    "emailLabel": "E-mail",
+    "usernameLabel": "Usuário",
+    "passwordLabel": "Senha (mín. 8 caracteres)",
+    "phoneLabel": "Telefone (opcional)",
+    "submit": "Criar conta",
+    "submitting": "Criando conta...",
+    "haveAccount": "Já tem conta?",
+    "signIn": "Entrar",
+    "failed": "Falha ao cadastrar."
+  },
+  "admin": {
+    "headerLink": "Admin",
+    "nav": {
+      "overview": "Visão geral",
+      "users": "Usuários",
+      "title": "Administração"
+    },
+    "overview": {
+      "title": "Painel administrativo",
+      "subtitle": "Gerencie a equipe e a operação interna.",
+      "managedUnits": "Unidades gerenciadas",
+      "managedUnitsAll": "Todas as unidades",
+      "yourRole": "Seu papel",
+      "manageUsers": "Gerenciar equipe",
+      "manageUsersHint": "Cadastre atendentes e cozinheiros, ative ou desative acessos."
+    },
+    "users": {
+      "title": "Usuários da equipe",
+      "subtitle": "Contas de atendentes e cozinha das unidades que você gerencia.",
+      "newUser": "Novo usuário",
+      "count": "{count} usuário(s)",
+      "searchPlaceholder": "Buscar por nome, e-mail ou usuário...",
+      "filterRoleAll": "Todos os papéis",
+      "filterUnitAll": "Todas as unidades",
+      "empty": "Ainda não há usuários cadastrados.",
+      "tableName": "Nome",
+      "tableRole": "Papel",
+      "tableUnit": "Unidade",
+      "tableStatus": "Status",
+      "tableActions": "Ações",
+      "statusActive": "Ativo",
+      "statusInactive": "Inativo",
+      "actionEdit": "Editar",
+      "actionDisable": "Desativar",
+      "actionEnable": "Ativar",
+      "confirmDisable": "Desativar este usuário? Ele não conseguirá mais entrar.",
+      "actionFailed": "Não foi possível atualizar o usuário.",
+      "loadFailed": "Não foi possível carregar os usuários."
+    },
+    "form": {
+      "createTitle": "Novo usuário",
+      "createSubtitle": "Cadastre uma conta de atendente ou cozinha.",
+      "editTitle": "Editar usuário",
+      "editSubtitle": "Atualize perfil, papel ou unidade.",
+      "name": "Nome completo",
+      "username": "Usuário",
+      "email": "E-mail",
+      "phone": "Telefone (opcional)",
+      "password": "Senha (mín. 8 caracteres)",
+      "role": "Papel",
+      "roleAttendant": "Atendente",
+      "roleKitchen": "Cozinha",
+      "roleManager": "Gerente",
+      "roleAdmin": "Administrador",
+      "businessUnit": "Unidade",
+      "businessUnitLocked": "Restrito à sua unidade",
+      "businessUnitAdminNote": "Administradores não pertencem a uma unidade.",
+      "submitCreate": "Criar usuário",
+      "submitEdit": "Salvar alterações",
+      "submitting": "Salvando...",
+      "back": "← Voltar para usuários",
+      "failed": "Não foi possível salvar o usuário.",
+      "usernameTaken": "Nome de usuário já em uso.",
+      "emailTaken": "E-mail já cadastrado.",
+      "roleForbidden": "Você não pode atribuir este papel.",
+      "unitRequired": "Selecione uma unidade."
+    },
+    "errors": {
+      "forbiddenTitle": "Área restrita",
+      "forbiddenBody": "Você precisa de acesso de administrador ou gerente para ver esta página."
+    }
+  },
+  "errors": {
+    "title": "Algo deu errado",
+    "fallback": "O servidor não respondeu corretamente. O backend pode estar fora do ar ou ainda não implementou este endpoint.",
+    "notFoundTitle": "Página não encontrada",
+    "notFoundBody": "O endereço acessado não existe ou foi removido.",
+    "notFoundHome": "Voltar para a home"
+  },
+  "orderStatus": {
+    "PENDING": "Aguardando confirmação",
+    "CONFIRMED": "Confirmado",
+    "PREPARING": "Em preparo",
+    "READY": "Pronto para entrega",
+    "DELIVERED": "Entregue",
+    "CANCELLED": "Cancelado"
+  },
+  "paymentStatus": {
+    "PENDING": "Aguardando pagamento",
+    "PROCESSING": "Processando",
+    "APPROVED": "Pago",
+    "REFUSED": "Recusado",
+    "CANCELLED": "Cancelado"
+  },
+  "paymentMethod": {
+    "PIX": "PIX",
+    "CREDIT_CARD": "Cartão de crédito",
+    "DEBIT_CARD": "Cartão de débito",
+    "CASH": "Dinheiro",
+    "VOUCHER": "Voucher"
+  },
+  "orderChannel": {
+    "WEB": "Site",
+    "APP": "App",
+    "TOTEM": "Totem",
+    "COUNTER": "Balcão",
+    "PICKUP": "Retirada"
+  }
+}
