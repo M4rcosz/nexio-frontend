@@ -10,3 +10,7 @@ dist
 .vercel
 .turbo
 next-env.d.ts.bak
+
+# build artifacts
+tsconfig.tsbuildinfo
+graphify-out
