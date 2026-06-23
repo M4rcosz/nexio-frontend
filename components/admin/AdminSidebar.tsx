@@ -3,9 +3,15 @@
 import { useTranslations } from 'next-intl'
 import { Link, usePathname } from '@/i18n/navigation'
 
-const NAV: Array<{ href: string; key: 'overview' | 'users'; icon: React.FC<{ className?: string }> }> = [
+const NAV: Array<{
+  href: string
+  key: 'overview' | 'users' | 'inventory' | 'promotions'
+  icon: React.FC<{ className?: string }>
+}> = [
   { href: '/admin', key: 'overview', icon: GridIcon },
   { href: '/admin/users', key: 'users', icon: UsersIcon },
+  { href: '/admin/inventory', key: 'inventory', icon: BoxIcon },
+  { href: '/admin/promotions', key: 'promotions', icon: TagIcon },
 ]
 
 export function AdminSidebar() {
@@ -66,6 +72,25 @@ function UsersIcon({ className = '' }: { className?: string }) {
       <circle cx="9" cy="7" r="4" />
       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  )
+}
+
+function BoxIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+      <path d="M3.27 6.96 12 12.01l8.73-5.05" />
+      <path d="M12 22.08V12" />
+    </svg>
+  )
+}
+
+function TagIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <circle cx="7" cy="7" r="1" />
     </svg>
   )
 }
