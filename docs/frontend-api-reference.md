@@ -351,6 +351,60 @@ Content-Type: application/json
 - **Errors:** `404` if the order has no payment, **or** it is not visible to the caller (same `404`
   for both — no enumeration leak).
 
+### 3.5 Admin: inventory, promotions & internal unit listing
+
+> Derived from the **frontend** clients/route handlers (`lib/api/inventory.ts`,
+> `lib/api/promotions.ts`, `lib/api/business-units.ts`,
+> `app/api/{inventory,promotions}/**`), not yet re-verified against the backend.
+> Confirm exact shapes against Swagger before relying on them.
+
+#### `GET /business-units/internal`
+
+- **Consumed by:** `listBusinessUnitsInternal` (ADMIN unit selector — includes inactive units).
+- **Query:** `limit?`, `cursor?`, `search?`, `city?`, `isActive?` (`"true"`/`"false"`).
+- **Response:** `Paginated<BusinessUnit>`.
+
+#### `GET /inventory/:businessUnitId`
+
+- **Consumed by:** `listInventory`.
+- **Response:** `InventoryItem[]` (not paginated).
+
+#### `POST /inventory/:businessUnitId/adjust`
+
+- **Consumed by:** `adjustInventory`.
+- **Body:** `AdjustInventoryRequest` (`{ productId, type: 'IN' | 'OUT', quantity, reason }`).
+- **Response:** `InventoryItem`.
+- **Errors (mapped by the BFF):** `404` no stock balance for that product at the unit
+  (`inventory_not_found`); `422` removal would drive the balance below zero
+  (`inventory_below_zero`).
+
+#### `GET /promotions/by-business-unit/:businessUnitId`
+
+- **Consumed by:** `listPromotionsByBusinessUnit`.
+- **Query:** `limit?`, `cursor?`.
+- **Response:** `Paginated<Promotion>`.
+
+#### `GET /promotions/:promotionId`
+
+- **Consumed by:** `getPromotion`.
+- **Response:** `Promotion` (`200`); `404` → client returns `null`.
+
+#### `POST /promotions`
+
+- **Consumed by:** `createPromotion`.
+- **Body:** `CreatePromotionRequest`.
+- **Response:** `Promotion` (`201`).
+- **Note:** `discountType` is **`PERCENTAGE` | `FIXED_AMOUNT`** only — `FREE_ITEM` is
+  rejected for promotions (the BFF returns `400 free_item_unsupported`). For a `MANAGER`
+  the BFF overrides `businessUnitId` with the caller's scoped unit; for an `ADMIN` it is
+  required in the body.
+
+#### `PATCH /promotions/:promotionId`
+
+- **Consumed by:** `updatePromotion`.
+- **Body:** `UpdatePromotionRequest` (partial, without `businessUnitId`; empty body → `400`).
+- **Response:** `Promotion` (`200`); `404` → client returns `null`.
+
 ---
 
 ## 4. Business rules & flows
@@ -675,6 +729,61 @@ export interface CreatePaymentRequest {
   method: PaymentMethod;
   // No amount: the server charges the order's authoritative totalAmount.
 }
+
+// ---------- Inventory (admin) ----------
+// Derived from the frontend; not yet re-verified against the backend.
+
+export type InventoryAdjustmentType = 'IN' | 'OUT';
+
+export interface InventoryItem {
+  id: string;
+  businessUnitId: string;
+  productId: string;
+  quantity: number;
+  minQuantity: number;
+  updatedAt: string; // ISO-8601
+}
+
+export interface AdjustInventoryRequest {
+  productId: string;
+  type: InventoryAdjustmentType;
+  quantity: number; // integer >= 1
+  reason: string;
+}
+
+// ---------- Promotions (admin) ----------
+// FREE_ITEM is a valid DiscountType elsewhere but is rejected for promotions.
+
+export type PromotionDiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT';
+
+export interface Promotion {
+  id: string;
+  businessUnitId: string;
+  name: string;
+  discountType: PromotionDiscountType;
+  discountValue: string; // decimal string; percent when PERCENTAGE
+  minOrderValue: string; // decimal string
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  createdAt: string; // ISO-8601
+  updatedAt: string; // ISO-8601
+}
+
+export interface CreatePromotionRequest {
+  businessUnitId: string;
+  name: string;
+  discountType: PromotionDiscountType;
+  discountValue: string;
+  minOrderValue: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+}
+
+export type UpdatePromotionRequest = Partial<
+  Omit<CreatePromotionRequest, 'businessUnitId'>
+>;
 ```
 
 ---

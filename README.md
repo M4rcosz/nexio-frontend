@@ -34,8 +34,11 @@ mocked locally following the schema described in the briefing — see
 | Menu (products)       | Real backend (`GET /api/products/...`)          |
 | Signup                | Stub (`/api/auth/register` Next route handler)  |
 | Business units, categories | Mock (`lib/api/mocks/*`)                   |
+| Business units (internal/admin list) | Real backend + mock fallback (`GET /api/business-units/internal`) |
 | Orders / Payment      | Mock                                            |
 | Loyalty               | Mock                                            |
+| Inventory (admin)     | Real backend + mock fallback (`GET/POST /api/inventory/...`)  |
+| Promotions (admin)    | Real backend + mock fallback (`/api/promotions/...`)         |
 
 The `NEXT_PUBLIC_USE_MOCKS=true` flag in `.env.local` forces the *menu* and
 *login* resources to use mocks too — handy when the backend is not running.
@@ -107,6 +110,7 @@ app/
 │   ├── payment/[orderId]/       # Payment
 │   ├── orders/                  # History + tracking
 │   ├── loyalty/                 # Points and LGPD consent
+│   ├── admin/                   # Admin area: overview, users, inventory, promotions
 │   ├── error.tsx                # Boundary
 │   ├── loading.tsx
 │   ├── not-found.tsx

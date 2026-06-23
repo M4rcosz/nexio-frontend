@@ -337,8 +337,16 @@ type LoyaltyAccount = {
 ### `Promotion` e `OrderPromotion`
 Existem no schema mas não são prioridade no MVP do cliente final. Ignore por enquanto, só saiba que o desconto vem aplicado no `totalAmount` do `Order`.
 
+> **Atualização:** a área **admin** deste frontend já gerencia promoções
+> (`app/[locale]/admin/promotions`, client `lib/api/promotions.ts`). O escopo
+> "ignore" acima vale apenas para a experiência **CUSTOMER/WEB**.
+
 ### `Inventory`
 Backstage — o cliente final nunca vê. Ignore.
+
+> **Atualização:** o **admin** deste frontend agora expõe inventário
+> (`app/[locale]/admin/inventory`, client `lib/api/inventory.ts`). "Ignore"
+> permanece verdadeiro só para o CUSTOMER.
 
 ---
 
@@ -595,5 +603,10 @@ Você (frontend) NÃO precisa rodar nenhum desses — quem cuida do backend é o
 - **Roles ADMIN/MANAGER/ATTENDANT/KITCHEN**: ignore. Este frontend é só CUSTOMER.
 - **Inventário**: backstage — cliente final não vê.
 - **Promoções**: existe no schema, fora do MVP. Trate `totalAmount` do `Order` como já tendo aplicado qualquer desconto.
+
+> **Atualização:** além da experiência CUSTOMER/WEB, este repositório também
+> hospeda uma **área admin** (`/admin`) com Users, Inventory e Promotions,
+> escopada por role (ADMIN/MANAGER). As regras "ignore" acima descrevem o
+> escopo **CUSTOMER**, não o repositório inteiro.
 - **Eventos de domínio, Outbox, WebSocket**: target state do backend. Use polling em `GET /api/orders/:id` para acompanhar status (intervalo sugerido: 5s).
 - **Observabilidade, tracing**: nada no backend ainda.
