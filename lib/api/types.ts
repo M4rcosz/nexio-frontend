@@ -172,3 +172,62 @@ export type CreateOrderRequest = {
 export type CreatePaymentRequest = {
   method: PaymentMethod
 }
+
+// --- Inventory ---
+
+export type InventoryAdjustmentType = 'IN' | 'OUT'
+
+export type InventoryItem = {
+  id: string
+  businessUnitId: string
+  productId: string
+  quantity: number
+  minQuantity: number
+  updatedAt: string
+}
+
+export type AdjustInventoryRequest = {
+  productId: string
+  type: InventoryAdjustmentType
+  quantity: number
+  reason: string
+}
+
+// --- Promotions ---
+
+/**
+ * The promotion schema only models PERCENTAGE and FIXED_AMOUNT. FREE_ITEM is a
+ * valid {@link DiscountType} elsewhere but is rejected for promotions.
+ */
+export type PromotionDiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT'
+
+export type Promotion = {
+  id: string
+  businessUnitId: string
+  name: string
+  discountType: PromotionDiscountType
+  /** Decimal string, e.g. "10.00". For PERCENTAGE this is the percent. */
+  discountValue: string
+  /** Decimal string, e.g. "30.00". */
+  minOrderValue: string
+  startDate: string
+  endDate: string
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export type CreatePromotionRequest = {
+  businessUnitId: string
+  name: string
+  discountType: PromotionDiscountType
+  discountValue: string
+  minOrderValue: string
+  startDate: string
+  endDate: string
+  isActive: boolean
+}
+
+export type UpdatePromotionRequest = Partial<
+  Omit<CreatePromotionRequest, 'businessUnitId'>
+>

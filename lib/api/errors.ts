@@ -27,7 +27,11 @@ export function describeError(err: unknown): string {
     if (err.status === 404) return 'Resource not found.'
     if (err.status >= 500)
       return 'The server did not respond properly. Please try again shortly.'
-    if (err.status >= 400) return err.message || 'Invalid request.'
+    // Other generic 4xx: never echo the raw backend message — it may leak
+    // internal details. Known cases (401/403/404 above, and coded errors such
+    // as 409 username_taken) are handled by their own branches or by callers
+    // that key off the error `code`, not this message.
+    if (err.status >= 400) return 'Invalid request.'
   }
   if (err instanceof Error) return err.message
   return 'Unknown error.'

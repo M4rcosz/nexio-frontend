@@ -54,3 +54,38 @@ export async function getBusinessUnit(id: string): Promise<BusinessUnit | null> 
   await mockDelay()
   return MOCK_BUSINESS_UNITS.find((u) => u.id === id) ?? null
 }
+
+export type InternalBusinessUnitFilters = {
+  search?: string
+  city?: string
+  /** When set, restricts the listing to active/inactive units. */
+  isActive?: boolean
+}
+
+/**
+ * Full listing for the admin unit selector — includes inactive units, unlike
+ * {@link listBusinessUnits} (which is the public, active-only view).
+ */
+export async function listBusinessUnitsInternalMock(
+  filters: InternalBusinessUnitFilters = {},
+): Promise<Paginated<BusinessUnit>> {
+  await mockDelay()
+  let data = [...MOCK_BUSINESS_UNITS]
+  if (typeof filters.isActive === 'boolean') {
+    data = data.filter((u) => u.isActive === filters.isActive)
+  }
+  if (filters.city) {
+    const city = filters.city.toLowerCase()
+    data = data.filter((u) => u.city.toLowerCase().includes(city))
+  }
+  if (filters.search) {
+    const term = filters.search.toLowerCase()
+    data = data.filter(
+      (u) =>
+        u.name.toLowerCase().includes(term) ||
+        u.city.toLowerCase().includes(term) ||
+        u.cnpj.toLowerCase().includes(term),
+    )
+  }
+  return { data, meta: { limit: 20, nextCursor: null, hasMore: false } }
+}
