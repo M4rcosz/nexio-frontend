@@ -156,7 +156,7 @@ export type LoginResponse = { access_token: string }
 
 export type RegisterRequest = {
   username: string
-  email: string
+  email?: string
   password: string
   name: string
   phone?: string

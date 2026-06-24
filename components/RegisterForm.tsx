@@ -33,12 +33,15 @@ export function RegisterForm() {
           phone: form.phone || undefined,
         }),
       })
+      const body = (await res.json().catch(() => null)) as
+        | { error?: string; requiresLogin?: boolean }
+        | null
       if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null
         setError(body?.error ?? t('failed'))
         return
       }
-      router.push('/')
+      // Account created but auto sign-in did not happen — send them to login.
+      router.push(body?.requiresLogin ? '/login' : '/')
       router.refresh()
     })
   }

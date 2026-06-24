@@ -1,5 +1,5 @@
 import { serverFetchAnonymous, USE_MOCKS } from './client'
-import type { LoginRequest, LoginResponse, RegisterRequest, Role } from './types'
+import type { LoginRequest, LoginResponse, RegisterRequest, Role, User } from './types'
 import { mockDelay } from './mocks/_delay'
 import { findUserByUsernameMock } from './mocks/admin-users'
 import { ApiError } from './errors'
@@ -62,16 +62,37 @@ export async function loginBackend(
 }
 
 /**
- * [stub] The backend does not implement signup yet. The Route Handler treats
- * this as "pretend it persisted" and returns a mock access_token so the user
- * is auto-signed in.
+ * Self-register a customer against `POST /users/register`. The backend forces
+ * the CUSTOMER role server-side and returns the created user (no token), so the
+ * caller is expected to sign in afterwards to obtain a session.
  */
-export async function registerStub(
+export async function registerCustomer(
   body: RegisterRequest,
-): Promise<LoginResponse> {
-  await mockDelay()
-  if (!body.username || body.password.length < 8) {
-    throw new Error('Invalid signup payload.')
+): Promise<User> {
+  if (USE_MOCKS) {
+    await mockDelay()
+    if (body.username.length < 3 || body.password.length < 8) {
+      throw new ApiError(400, null, 'Invalid signup payload.')
+    }
+    if (findUserByUsernameMock(body.username)) {
+      throw new ApiError(409, null, 'Username already in use.')
+    }
+    const now = new Date().toISOString()
+    return {
+      id: `usr_${body.username}`,
+      username: body.username,
+      email: body.email ?? null,
+      name: body.name,
+      phone: body.phone ?? null,
+      role: 'CUSTOMER',
+      businessUnitId: null,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    }
   }
-  return loginBackend({ username: body.username, password: body.password })
+  return serverFetchAnonymous<User>('/users/register', {
+    method: 'POST',
+    body,
+  })
 }
