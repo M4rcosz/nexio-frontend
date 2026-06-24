@@ -45,6 +45,8 @@
     "chooseUnit": "Choose your unit",
     "viewMenu": "View menu",
     "select": "Select",
+    "unitSearchPlaceholder": "Search units — name or city...",
+    "noUnits": "No units found.",
     "search": {
       "placeholder": "Search dishes — carne de sol, baião...",
       "searching": "Searching...",

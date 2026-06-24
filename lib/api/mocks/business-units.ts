@@ -42,10 +42,31 @@ export const MOCK_BUSINESS_UNITS: BusinessUnit[] = [
   },
 ]
 
-export async function listBusinessUnits(): Promise<Paginated<BusinessUnit>> {
+export type PublicBusinessUnitFilters = {
+  search?: string
+  city?: string
+}
+
+export async function listBusinessUnits(
+  filters: PublicBusinessUnitFilters = {},
+): Promise<Paginated<BusinessUnit>> {
   await mockDelay()
+  // Public view is active-only, mirroring the backend (`isActive` forced true).
+  let data = MOCK_BUSINESS_UNITS.filter((u) => u.isActive)
+  if (filters.city) {
+    const city = filters.city.toLowerCase()
+    data = data.filter((u) => u.city.toLowerCase().includes(city))
+  }
+  if (filters.search) {
+    const term = filters.search.toLowerCase()
+    data = data.filter(
+      (u) =>
+        u.name.toLowerCase().includes(term) ||
+        u.city.toLowerCase().includes(term),
+    )
+  }
   return {
-    data: MOCK_BUSINESS_UNITS.filter((u) => u.isActive),
+    data,
     meta: { limit: 20, nextCursor: null, hasMore: false },
   }
 }

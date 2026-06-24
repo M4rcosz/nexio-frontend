@@ -1,8 +1,10 @@
-// The public reads (`listBusinessUnits` / `getBusinessUnit`) are still mock-only
-// — the backend does not expose them in this app's flow. The internal listing
-// follows the live-with-toggle pattern: it hits the real backend, falling back
-// to the mock only when USE_MOCKS is enabled.
-import { serverFetch, USE_MOCKS } from './client'
+// All reads follow the live-with-toggle pattern: they hit the real backend,
+// falling back to the mock only when USE_MOCKS is enabled. The public reads
+// (`listBusinessUnits` / `getBusinessUnit`) consume the anonymous endpoints
+// `GET /business-units` and `GET /business-units/:id` (active-only public view);
+// the internal listing consumes the authenticated `GET /business-units/internal`.
+import { serverFetch, serverFetchAnonymous, USE_MOCKS } from './client'
+import { ApiError } from './errors'
 import type { BusinessUnit, Paginated } from './types'
 import {
   getBusinessUnit as getBusinessUnitMock,
@@ -10,14 +12,52 @@ import {
   listBusinessUnitsInternalMock,
 } from './mocks/business-units'
 
-export async function listBusinessUnits(): Promise<Paginated<BusinessUnit>> {
-  return listBusinessUnitsMock()
+export type ListBusinessUnitsQuery = {
+  limit?: number
+  cursor?: string
+  search?: string
+  city?: string
 }
 
+/**
+ * Public, active-only unit listing. Consumes `GET /business-units`
+ * (cursor-paginated, no auth). Supports `search`/`city` filters.
+ */
+export async function listBusinessUnits(
+  query: ListBusinessUnitsQuery = {},
+): Promise<Paginated<BusinessUnit>> {
+  if (USE_MOCKS) {
+    return listBusinessUnitsMock({ search: query.search, city: query.city })
+  }
+  return serverFetchAnonymous<Paginated<BusinessUnit>>('/business-units', {
+    query: {
+      limit: query.limit,
+      cursor: query.cursor,
+      search: query.search,
+      city: query.city,
+    },
+    next: { revalidate: 30, tags: ['business-units'] },
+  })
+}
+
+/**
+ * Public single-unit read. Consumes `GET /business-units/:id`; returns `null`
+ * when the unit is missing or inactive (the backend answers `404` for both).
+ */
 export async function getBusinessUnit(
   id: string,
 ): Promise<BusinessUnit | null> {
-  return getBusinessUnitMock(id)
+  if (USE_MOCKS) {
+    return getBusinessUnitMock(id)
+  }
+  try {
+    return await serverFetchAnonymous<BusinessUnit>(`/business-units/${id}`, {
+      next: { revalidate: 30, tags: ['business-units', `business-units:${id}`] },
+    })
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null
+    throw err
+  }
 }
 
 export type ListBusinessUnitsInternalQuery = {

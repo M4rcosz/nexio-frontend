@@ -1,22 +1,25 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { listBusinessUnits } from '@/lib/api/business-units'
-import { StubBadge } from '@/components/StubBadge'
 import { SetBusinessUnitButton } from '@/components/SetBusinessUnitButton'
 import { HomeProductSearch } from '@/components/HomeProductSearch'
+import { UnitSearch } from '@/components/UnitSearch'
 import { getTenant } from '@/lib/tenant/resolve'
 
 export default async function HomePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>
+  searchParams: Promise<{ unitSearch?: string }>
 }) {
   const { locale } = await params
   setRequestLocale(locale)
 
+  const { unitSearch } = await searchParams
   const t = await getTranslations('home')
   const tenant = await getTenant()
-  const { data } = await listBusinessUnits()
+  const { data } = await listBusinessUnits({ search: unitSearch })
   const defaultUnitId = data[0]?.id ?? null
 
   return (
@@ -68,9 +71,12 @@ export default async function HomePage({
               {data.length} {data.length === 1 ? 'unit' : 'units'}
             </p>
           </div>
-          <StubBadge />
+          <UnitSearch initialSearch={unitSearch} />
         </div>
 
+        {data.length === 0 ? (
+          <p className="card p-6 text-sm text-fg-muted">{t('noUnits')}</p>
+        ) : (
         <ul className="grid gap-5 sm:grid-cols-2">
           {data.map((unit, i) => (
             <li key={unit.id}>
@@ -112,6 +118,7 @@ export default async function HomePage({
             </li>
           ))}
         </ul>
+        )}
       </section>
     </div>
   )

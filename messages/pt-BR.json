@@ -45,6 +45,8 @@
     "chooseUnit": "Escolha sua unidade",
     "viewMenu": "Ver cardápio",
     "select": "Selecionar",
+    "unitSearchPlaceholder": "Buscar unidades — nome ou cidade...",
+    "noUnits": "Nenhuma unidade encontrada.",
     "search": {
       "placeholder": "Buscar pratos — carne de sol, baião...",
       "searching": "Buscando...",
