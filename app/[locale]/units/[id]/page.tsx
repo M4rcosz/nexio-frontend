@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { getBusinessUnit } from '@/lib/api/business-units'
 import { listProductsByBusinessUnit } from '@/lib/api/products'
+import { listMenu } from '@/lib/api/menu'
 import { listCategories } from '@/lib/api/categories'
 import { ProductCard } from '@/components/ProductCard'
 import { StubBadge, BackendBadge } from '@/components/StubBadge'
@@ -22,18 +23,31 @@ export default async function MenuPage({
   const sp = await searchParams
   const t = await getTranslations('menu')
 
-  const [unit, productsPage, categoriesPage] = await Promise.all([
+  const [unit, productsPage, menuPage, categoriesPage] = await Promise.all([
     getBusinessUnit(id),
     listProductsByBusinessUnit(id, {
       search: sp.search,
       categoryId: sp.categoryId,
     }),
+    listMenu(id, { limit: 100 }),
     listCategories(),
   ])
 
   if (!unit) notFound()
 
-  const products = productsPage.data
+  // The menu carries the unit's effective price (and hides unavailable
+  // items); the product listing keeps search/category filters. Join both so
+  // the cart is built with the price the order will actually charge. When the
+  // unit has no menu configured, fall back to catalog prices.
+  const menuPriceByProduct = new Map(
+    menuPage.data.map((m) => [m.productId, m.price]),
+  )
+  const products =
+    menuPriceByProduct.size > 0
+      ? productsPage.data
+          .filter((p) => menuPriceByProduct.has(p.id))
+          .map((p) => ({ ...p, price: menuPriceByProduct.get(p.id)! }))
+      : productsPage.data
   const categories = categoriesPage.data
 
   return (

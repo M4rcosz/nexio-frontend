@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { getBusinessUnit } from '@/lib/api/business-units'
 import { getProduct } from '@/lib/api/products'
+import { listMenu } from '@/lib/api/menu'
 import { formatMoney } from '@/lib/money'
 import { AddToCartButton } from '@/components/AddToCartButton'
 
@@ -15,11 +16,18 @@ export default async function ProductPage({
   setRequestLocale(locale)
   const t = await getTranslations('menu')
 
-  const [unit, product] = await Promise.all([
+  const [unit, baseProduct, menuPage] = await Promise.all([
     getBusinessUnit(id),
     getProduct(productId),
+    listMenu(id, { limit: 100 }),
   ])
-  if (!unit || !product) notFound()
+  if (!unit || !baseProduct) notFound()
+
+  // Charge the unit's effective menu price, not the catalog one, so the cart
+  // matches what the order will bill. Falls back to the catalog price when
+  // the unit has no menu configured.
+  const menuPrice = menuPage.data.find((m) => m.productId === productId)?.price
+  const product = menuPrice ? { ...baseProduct, price: menuPrice } : baseProduct
 
   return (
     <div className="space-y-6">
