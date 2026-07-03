@@ -1,810 +1,919 @@
-# Raízes do Nordeste — Frontend API Reference
+# API — Raízes do Nordeste
 
-A hand-written, end-to-end reference for the **Raízes do Nordeste** backend API, written for
-the frontend team. It captures not just the shapes of requests and responses but the **rules and
-intent** behind them — the order state machine, server-authoritative pricing, channel-driven
-customer resolution, optimistic-lock conflicts, and the webhook-driven payment flow.
+Referência de todos os endpoints HTTP do backend, pensada para orientar o desenvolvimento do front-end.
 
-This document **complements** the live Swagger UI; it does not replace it:
-
-- **Swagger** (`GET /api/docs`, non-production only) = the live, generated schema. Source of truth
-  for exact field presence at any moment.
-- **This document** = the rules, the intent, and ready-to-copy TypeScript contracts that Swagger
-  cannot express.
-
-> Verified against the backend on branch `feat/payments`. If the backend changes, re-check the
-> referenced source files (paths below are relative to the backend repo).
+> Fonte: controllers e DTOs em `src/modules/**/infrastructure/http/`. Se divergir do código, o código vence — atualize este arquivo.
 
 ---
 
-## 1. Conventions
-
-These apply to **every** endpoint. Read this section first.
+## Convenções gerais
 
 ### Base URL
 
-- All routes live under the global prefix `/api` (`src/main.ts` — `app.setGlobalPrefix('api')`).
-- **Dev base URL:** `http://localhost:3000/api` (already the frontend default; see
-  `NEXT_PUBLIC_API_BASE_URL`).
-- **No API versioning** is wired yet. `/api/v1` is on the roadmap, not present today.
+Todas as rotas têm o prefixo global `/api`.
 
-### Authentication
+```
+http://localhost:3000/api
+```
 
-- A **global `AuthGuard`** protects every route (`src/app.module.ts`). Unless a route is marked
-  `@Public()`, it requires:
+Em ambiente não-produção há Swagger UI em `GET /api/docs`.
 
-  ```http
-  Authorization: Bearer <JWT>
-  ```
+### Autenticação
 
-- Get the token from `POST /api/auth/login`.
-- The JWT payload is `{ sub, username, role, iat, exp }` (`src/shared/auth/jwt-payload.type.ts`).
-  `sub` is the user id; `role` is one of the `UserRole` values.
-- **Authorization rules** (`AuthGuard.canActivate`):
-  - `@Public()` → no token needed.
-  - Token present + no `@Roles(...)` on the route → **any authenticated user** passes.
-  - Token present + `@Roles([...])` → the user's `role` must be in the list, otherwise **403**.
-  - Missing/invalid/expired token on a protected route → **401**.
+- Autenticação por **JWT Bearer**. Envie `Authorization: Bearer <access_token>` em toda rota que não seja marcada como pública.
+- O guard é **deny-by-default**: qualquer rota sem `@Public()` exige token válido.
+- Token obtido em `POST /api/auth/login` (e renovado em `POST /api/auth/refresh`).
 
-### Validation (the 400 vs 422 distinction)
+Payload do access token (informativo — o front não precisa decodificar, mas ajuda a entender o escopo):
 
-A global `ValidationPipe` runs with `whitelist: true`, `forbidNonWhitelisted: true`,
-`transform: true`, `enableImplicitConversion: false` (`src/app.module.ts`). Consequences for you:
-
-- **Send exactly the documented fields.** Any unknown/extra body field → **400**.
-- **No implicit type coercion.** JSON types must be correct. Query-string numbers are converted
-  only where a DTO opts in via `@Type(() => Number)` — today that is the `limit` query param.
-- A DTO validation failure (wrong type, missing required field, bad enum, malformed UUID) →
-  **`400 Bad Request`** (NestJS default; the pipe does not set `errorHttpStatusCode`).
-
-> **Key rule:** **`400` = malformed request** (failed DTO validation). **`422` = well-formed
-> request that violates a business rule** (e.g. illegal state transition, price mismatch).
-> They are different and you should branch on them differently.
-
-### Money & decimals
-
-- **Order and payment amounts are decimal strings** (`"12.50"`) on **both** request and response —
-  never JS numbers. Fields: `unitPrice`, `subtotal`, `totalAmount` (orders), `amount` (payments).
-- **Exception:** product **`price` is returned as a number** (`18.5`) but **sent as a decimal
-  string** (`"18.50"`) when creating a product.
-- Use a decimal library (`big.js` / `decimal.js`) for any arithmetic or comparison. **Never** use
-  `===`, `+`, or `parseFloat` on money.
-
-### Dates
-
-ISO-8601 strings, e.g. `2026-05-18T10:30:00.000Z`.
-
-### Error envelope
-
-Every error (validation, auth, and domain/business) is returned in one shape
-(`src/shared/errors/error-envelope.type.ts`, `src/shared/filter/global-error.filter.ts`):
-
-```json
+```jsonc
 {
-  "statusCode": 422,
-  "error": "Unprocessable Entity",
-  "message": "Unit price 10.00 does not match the authoritative price 12.50 …",
-  "path": "/api/orders",
-  "timestamp": "2026-05-31T10:30:00.000Z"
+  "sub": "<userId>",
+  "username": "maria.souza",
+  "role": "CUSTOMER",           // ADMIN | MANAGER | ATTENDANT | KITCHEN | CUSTOMER
+  "businessUnitIds": ["<uuid>"],// unidades às quais o staff está vinculado ([] = sem vínculo)
+  "iat": 0,
+  "exp": 0
 }
 ```
 
-- `statusCode` — HTTP status (also in the response status line).
-- `error` — the standard reason phrase for that status.
-- `message` — human-readable; for `400` validation failures, multiple messages are joined with
-  `", "`.
-- `path` — the request path.
-- `timestamp` — when the error was produced.
+### Papéis (roles)
 
-### Pagination (cursor-based)
+`ADMIN`, `MANAGER`, `ATTENDANT`, `KITCHEN`, `CUSTOMER`.
 
-Source: `src/shared/pagination/`.
+- `ADMIN` costuma ignorar o escopo de unidade (acesso total).
+- `MANAGER`/`ATTENDANT`/`KITCHEN` são **staff**, restritos às unidades do claim `businessUnitIds`.
+- `CUSTOMER` é o cliente final (sem vínculo de unidade).
 
-- **Request query:** `limit?` (1–100, default 20, **clamped server-side** — `?limit=999999`
-  becomes 100) and `cursor?` (the id of the last item you saw).
-- **Response envelope:**
+### Escopo por unidade (`businessUnitId`)
 
-  ```json
-  {
-    "data": [ /* items */ ],
-    "meta": { "limit": 20, "nextCursor": "uuid-or-null", "hasMore": true }
-  }
-  ```
+Rotas de gestão por unidade validam o `:businessUnitId` da rota (ou do corpo) contra o claim do token.
+Para staff **não-admin** cuja unidade não bate com o parâmetro, a resposta é **404** (a existência do recurso não é revelada). `ADMIN` faz bypass.
 
-- **To page:** while `meta.hasMore` is `true`, pass `meta.nextCursor` as the next request's
-  `cursor`. When `hasMore` is `false`, `nextCursor` is `null` and you've reached the end.
+### Formato de erro
 
----
-
-## 2. Auth flow
-
-1. `POST /api/auth/login` with `{ username, password }`. On success you get
-   `{ access_token: "<JWT>" }`.
-2. Send `Authorization: Bearer <access_token>` on every subsequent request.
-3. The token encodes the user's `role`, which determines what they can call.
-
-### Role table (`UserRole`)
-
-| Role        | Typical use                          | Can list/manage orders (STAFF) | Can attend COUNTER/PICKUP |
-| ----------- | ------------------------------------ | :----------------------------: | :-----------------------: |
-| `ADMIN`     | Full administration                  |               ✅               |            ✅             |
-| `MANAGER`   | Unit management                      |               ✅               |            ✅             |
-| `ATTENDANT` | Front-of-house / counter staff       |               ✅               |            ✅             |
-| `KITCHEN`   | Kitchen / preparation                |               ✅               |            ❌             |
-| `CUSTOMER`  | End customer (app/web)               |               ❌               |            ❌             |
-
-- **STAFF roles** = `ADMIN, MANAGER, ATTENDANT, KITCHEN` — may list all orders and change order
-  status.
-- **Attending roles** = `ADMIN, MANAGER, ATTENDANT` — may place orders on attendant-only channels
-  (`COUNTER`, `PICKUP`). `KITCHEN` is staff but does **not** serve customers, so it is excluded.
-
----
-
-## 3. Endpoint reference
-
-Base path `/api` is implied on every path below.
-
-### 3.1 Identity
-
-#### `POST /auth/login`
-
-- **Auth:** `@Public()` — no token.
-- **Status:** `200 OK`.
-- **Body:** `{ username: string, password: string }` (`password` min length 8).
-- **Response:** `{ "access_token": "<JWT>" }`.
-- **Errors:** `400` malformed body; `401` invalid credentials.
-
----
-
-### 3.2 Business units (products)
-
-#### `GET /products`
-
-- **Auth:** `@Public()`.
-- **Query:** `limit?`, `cursor?`, `categoryId?` (uuid), `search?`.
-- **Response:** `Paginated<ProductResponse>` (`200`).
-
-#### `GET /products/by-business-unit/:businessUnitId`
-
-- **Auth:** `@Public()`.
-- **Params:** `businessUnitId` (uuid).
-- **Query:** `limit?`, `cursor?`, `categoryId?` (uuid), `search?`.
-- **Response:** `Paginated<ProductResponse>` (`200`).
-
-#### `GET /products/:productId`
-
-- **Auth:** `@Public()`.
-- **Params:** `productId` (uuid).
-- **Response:** `ProductResponse` (`200`).
-- **Errors:** `404` product not found.
-
-#### `POST /products`
-
-- **Auth:** `@Roles(['ADMIN', 'MANAGER'])`.
-- **Status:** `201 Created`.
-- **Body:** `ProductCreateRequest`:
-  - `name` — string, ≤ 100.
-  - `description?` — string, ≤ 255.
-  - `price` — **decimal string**, positive (rejects `"0"`), up to 8 integer + 2 fractional digits
-    (DB `Decimal(10,2)`).
-  - `categoryId` — uuid.
-  - `imageUrl` — URL, ≤ 2000.
-- **Response:** `ProductResponse` (note `price` comes back as a **number**).
-- **Errors:** `400` malformed body; `401` no token; `403` wrong role; `409` a product with that
-  name already exists; `404` the referenced category does not exist.
-
----
-
-### 3.3 Orders
-
-#### `POST /orders`
-
-- **Auth:** any authenticated user (no `@Roles`).
-- **Status:** `201 Created`.
-- **Body:** `OrderCreateRequest` (see [§4.3](#43-channel--customer-resolution) for channel rules).
-- **Response:** `OrderResponse` — newly created order, `orderStatus: "PENDING"`.
-- **Errors:**
-  - `400` malformed body (e.g. empty `orderItems`, bad UUID, non-decimal `unitPrice`).
-  - `403` attendant required — a `COUNTER`/`PICKUP` order placed by a user without attend
-    privilege.
-  - `404` a product is not on this business unit's menu.
-  - `422` price mismatch / product inactive / product unavailable.
-
-**Example request**
+Todos os erros seguem este envelope:
 
 ```json
-POST /api/orders
-Authorization: Bearer <JWT>
-Content-Type: application/json
-
 {
-  "businessUnitId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "orderChannel": "APP",
-  "notes": "No onions, please",
-  "orderItems": [
-    { "productId": "550e8400-e29b-41d4-a716-446655440000", "quantity": 2, "unitPrice": "12.50" },
-    { "productId": "7c9e6679-7425-40de-944b-e07fc1f90ae7", "quantity": 1, "unitPrice": "8.00", "notes": "extra spicy" }
+  "statusCode": 404,
+  "message": "Order not found",
+  "error": "Not Found",
+  "timestamp": "2026-07-01T10:30:00.000Z",
+  "path": "/api/orders/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+Erros de validação de DTO (`class-validator`) chegam com `statusCode: 400` e `message` podendo ser string única ou concatenação das falhas.
+
+### Validação de entrada
+
+- A `ValidationPipe` global usa **whitelist + forbidNonWhitelisted**: campos desconhecidos no corpo → **400**.
+- **Conversão implícita está desligada.** Em query strings, números/booleans/datas já são convertidos pelos DTOs (`@Type`), mas envie exatamente o esperado.
+- **Dinheiro é sempre string decimal** (ex.: `"12.50"`), nunca número. Nunca faça aritmética de moeda no cliente com `float`; trate como string / centavos.
+
+### Paginação (cursor-based)
+
+Listas retornam este envelope:
+
+```json
+{
+  "data": [ /* ...itens... */ ],
+  "meta": {
+    "limit": 20,
+    "nextCursor": "550e8400-e29b-41d4-a716-446655440000",
+    "hasMore": true
+  }
+}
+```
+
+Query params comuns em rotas de lista:
+
+| Param    | Tipo   | Default | Notas                                                        |
+| -------- | ------ | ------- | ------------------------------------------------------------ |
+| `limit`  | number | `20`    | Clampado em `[1, 100]`.                                       |
+| `cursor` | string | —       | `id` do último item da página anterior; resultados vêm após. |
+
+Para a próxima página, mande `cursor = meta.nextCursor`. Fim quando `hasMore === false` / `nextCursor === null`.
+
+---
+
+## Índice
+
+- [Auth](#auth) — `/api/auth`
+- [Users](#users) — `/api/users`
+- [Business Units](#business-units) — `/api/business-units`
+- [Products](#products) — `/api/products`
+- [Menu](#menu) — `/api/business-units/:businessUnitId/menu`
+- [Inventory](#inventory) — `/api/inventory`
+- [Orders](#orders) — `/api/orders`
+- [Payments](#payments) — `/api/payments`
+- [Loyalty](#loyalty) — `/api/loyalty`
+- [Promotions](#promotions) — `/api/promotions`
+- [Audit Logs](#audit-logs) — `/api/audit-logs`
+
+---
+
+## Auth
+
+`/api/auth` — todas públicas. Rate limit estrito: 5 req/min por rota.
+
+### POST /api/auth/login
+
+Público. Retorna par de tokens.
+
+Request:
+
+```json
+{
+  "username": "maria.souza",
+  "password": "senha-de-8+-chars"
+}
+```
+
+Response `200`:
+
+```json
+{
+  "access_token": "<jwt>",
+  "refresh_token": "<opaque>"
+}
+```
+
+Erros: `401` credenciais inválidas / usuário inativo.
+
+### POST /api/auth/refresh
+
+Público. Troca um refresh token (rotacionado) por um novo par.
+
+Request:
+
+```json
+{ "refresh_token": "<opaque>" }
+```
+
+Response `200`: mesmo shape do login. Erros: `401` token inválido/expirado/reutilizado.
+
+### POST /api/auth/logout
+
+Público. Revoga o refresh token informado.
+
+Request:
+
+```json
+{ "refresh_token": "<opaque>" }
+```
+
+Response `204` (sem corpo).
+
+---
+
+## Users
+
+`/api/users`
+
+### POST /api/users/register
+
+**Público.** Auto-cadastro de cliente. Papel forçado para `CUSTOMER` (não aceita `role`). Rate limit 5/min.
+
+Request:
+
+```jsonc
+{
+  "name": "Maria Souza",          // obrigatório, ≤120
+  "username": "maria.souza",      // obrigatório, 3–50, /^[a-z0-9._-]+$/
+  "password": "senha1234",        // obrigatório, ≥8
+  "email": "maria@example.com",   // opcional, e-mail válido
+  "phone": "+5581999999999"       // opcional, ≤20
+}
+```
+
+Response `201`: [UserResponse](#userresponse). Erros: `409` username/email/phone já em uso.
+
+### POST /api/users
+
+**ADMIN, MANAGER.** Cria usuário staff/admin. A política decide quais papéis cada um pode criar.
+
+Request:
+
+```jsonc
+{
+  "name": "João Atendente",
+  "username": "joao.atendente",
+  "password": "senha1234",
+  "role": "ATTENDANT",              // ADMIN|MANAGER|ATTENDANT|KITCHEN|CUSTOMER
+  "email": "joao@example.com",      // opcional
+  "phone": "+5581988888888",        // opcional
+  "businessUnitIds": ["<uuid>"]     // opcional; omitir/[] = usuário sem vínculo
+}
+```
+
+Response `201`: [UserResponse](#userresponse). Erros: `403` papel não permitido; `409` conflito de unicidade.
+
+### GET /api/users
+
+**ADMIN, MANAGER** (MANAGER limitado às próprias unidades). Lista paginada.
+
+Query: `limit`, `cursor`, e filtros opcionais `businessUnitId` (uuid), `username` (substring, ≤50), `email` (substring, ≤120).
+
+Response `200`: paginado de [UserResponse](#userresponse). Erros: `404` MANAGER pediu unidade fora do escopo.
+
+### PATCH /api/users/me
+
+**CUSTOMER.** Atualiza nome e/ou telefone do próprio usuário. Pelo menos um dos campos é obrigatório. Rate limit 10/min.
+
+Request (ao menos um):
+
+```json
+{ "name": "Maria S.", "phone": "+5581999999999" }
+```
+
+Response `200`: [UserResponse](#userresponse). Erros: `409` phone já em uso; `404` usuário não encontrado.
+
+### PATCH /api/users/me/password
+
+**Autenticado.** Troca a própria senha. Rate limit 5/min. Revoga todas as sessões.
+
+Request:
+
+```jsonc
+{
+  "currentPassword": "OldPass!2024",      // ≤128
+  "newPassword": "N3w-Str0ng-Pass!"       // 10–128, ≥3 classes de caractere (min/mai/dígito/símbolo)
+}
+```
+
+Response `204`. Erros: `401` senha atual incorreta; `422` nova igual à atual; `404` usuário não encontrado.
+
+### PATCH /api/users/:id/deactivate
+
+**ADMIN, MANAGER.** Define `isActive=false`.
+
+Response `200`: [UserResponse](#userresponse). Erros: `403` (papel/próprio usuário); `404`.
+
+### PATCH /api/users/:id/reactivate
+
+**ADMIN, MANAGER.** Define `isActive=true`.
+
+Response `200`: [UserResponse](#userresponse). Erros: `403`; `404`; `409` estado mudou durante a operação (retentar).
+
+### PUT /api/users/:id/business-units
+
+**ADMIN.** Substitui o conjunto de unidades do staff (replace total; conjunto não pode ser vazio — para zerar, desative o usuário).
+
+Request:
+
+```json
+{ "businessUnitIds": ["<uuid>", "<uuid>"] }
+```
+
+Response `200`: [UserResponse](#userresponse). Erros: `403` (não-admin/alvo sem vínculo); `404`; `422` alguma unidade não existe.
+
+### UserResponse
+
+```jsonc
+{
+  "id": "<uuid>",
+  "username": "maria.souza",
+  "name": "Maria Souza",
+  "email": "maria@example.com",   // ou null
+  "phone": "+5581999999999",      // ou null
+  "role": "CUSTOMER",
+  "businessUnitIds": ["<uuid>"],  // [] se sem vínculo
+  "isActive": true
+}
+```
+
+---
+
+## Business Units
+
+`/api/business-units`
+
+> Ordem de rota importa: `internal` é resolvido antes de `:id`.
+
+### GET /api/business-units
+
+**Público.** Lista unidades **ativas** (paginado). View pública (sem cnpj/isActive/timestamps).
+
+Query: `limit`, `cursor`, `search` (string), `city` (string). (`isActive` é ignorado aqui — sempre só ativas.)
+
+Response `200`: paginado de [PublicBusinessUnit](#publicbusinessunit).
+
+### GET /api/business-units/:id
+
+**Público.** Uma unidade ativa por ID. Response `200`: [PublicBusinessUnit](#publicbusinessunit). Erro `404`.
+
+### GET /api/business-units/internal
+
+**ADMIN, MANAGER.** Lista com detalhe completo (paginado).
+
+Query: `limit`, `cursor`, `search`, `city`, `isActive` (`true`/`false`).
+
+Response `200`: paginado de [BusinessUnit](#businessunit).
+
+### GET /api/business-units/internal/:id
+
+**ADMIN, MANAGER.** Uma unidade por ID, detalhe completo (inclui inativas). Response `200`: [BusinessUnit](#businessunit). Erro `404`.
+
+### POST /api/business-units
+
+**ADMIN.** Cria unidade.
+
+Request:
+
+```jsonc
+{
+  "name": "Raízes Pelourinho",          // ≤120
+  "cnpj": "12345678000190",             // 14 dígitos, sem máscara
+  "address": "Largo do Pelourinho, 10", // ≤255
+  "city": "Salvador",                   // ≤120
+  "phone": "7132223344"                 // ≤20
+}
+```
+
+Response `201`: [BusinessUnit](#businessunit). Erro `409` cnpj ou phone duplicado.
+
+### PATCH /api/business-units/:id/activate
+
+**ADMIN.** `isActive=true`. Response `200`: [BusinessUnit](#businessunit). Erro `404`.
+
+### PATCH /api/business-units/:id/deactivate
+
+**ADMIN.** `isActive=false`. Response `200`: [BusinessUnit](#businessunit). Erro `404`.
+
+### PublicBusinessUnit
+
+```json
+{
+  "id": "<uuid>",
+  "name": "Raízes Pelourinho",
+  "address": "Largo do Pelourinho, 10",
+  "city": "Salvador",
+  "phone": "7132223344"
+}
+```
+
+### BusinessUnit
+
+```jsonc
+{
+  "id": "<uuid>",
+  "name": "Raízes Pelourinho",
+  "cnpj": "12345678000190",
+  "address": "Largo do Pelourinho, 10",
+  "city": "Salvador",
+  "phone": "7132223344",
+  "isActive": true,
+  "createdAt": "2026-05-18T10:30:00.000Z",
+  "updatedAt": "2026-05-18T10:30:00.000Z"
+}
+```
+
+---
+
+## Products
+
+`/api/products` — catálogo global de produtos (o preço por unidade vem no Menu).
+
+### GET /api/products
+
+**Público.** Lista produtos **ativos** (paginado).
+
+Query: `limit`, `cursor`, `categoryId` (uuid), `search` (string).
+
+Response `200`: paginado de [Product](#product).
+
+### GET /api/products/by-business-unit/:businessUnitId
+
+**Público.** Produtos ativos de uma unidade (paginado). Mesmos query params acima. Response `200`: paginado de [Product](#product).
+
+### GET /api/products/:productId
+
+**Público.** Um produto por ID. Response `200`: [Product](#product). Erro `404`.
+
+### POST /api/products
+
+**ADMIN, MANAGER.** Cria produto.
+
+Request:
+
+```jsonc
+{
+  "name": "Acarajé",                                 // ≤100
+  "description": "Bolinho de feijão-fradinho...",    // opcional, ≤255
+  "price": "12.50",                                  // decimal positivo, ≤2 casas
+  "categoryId": "<uuid>",
+  "imageUrl": "https://example.com/acaraje.jpg"      // URL válida, ≤2000
+}
+```
+
+Response `201`: [Product](#product). Erros: `409` nome duplicado; `404` categoria inexistente.
+
+### PATCH /api/products/:productId/activate
+
+**ADMIN.** `isActive=true`. Response `200`: [Product](#product). Erro `404`.
+
+### PATCH /api/products/:productId/deactivate
+
+**ADMIN.** `isActive=false`. Response `200`: [Product](#product). Erro `404`.
+
+### Product
+
+```jsonc
+{
+  "id": "<uuid>",
+  "name": "Acarajé",
+  "description": "…",              // ou null
+  "price": "18.50",                // string decimal (BRL)
+  "isActive": true,
+  "categoryId": "<uuid>",
+  "createdAt": "2026-05-18T10:30:00.000Z",
+  "updatedAt": "2026-05-18T10:30:00.000Z",
+  "imageUrl": "https://example.com/acaraje.jpg"
+}
+```
+
+---
+
+## Menu
+
+`/api/business-units/:businessUnitId/menu` — itens de cardápio por unidade (produto + preço efetivo na unidade).
+
+### GET /api/business-units/:businessUnitId/menu
+
+**Público.** Cardápio **disponível** da unidade (paginado). View pública.
+
+Query: `limit`, `cursor`.
+
+Response `200`: paginado de [PublicMenuItem](#publicmenuitem).
+
+### GET /api/business-units/:businessUnitId/menu/manage
+
+**ADMIN, MANAGER** (unit-scoped). Cardápio completo para gestão, incluindo itens indisponíveis.
+
+Query: `limit`, `cursor`.
+
+Response `200`: paginado de [MenuItem](#menuitem).
+
+### GET /api/business-units/:businessUnitId/menu/:menuItemId
+
+**Público.** Um item disponível. Response `200`: [PublicMenuItem](#publicmenuitem). Erro `404` (inexistente ou indisponível).
+
+### POST /api/business-units/:businessUnitId/menu
+
+**ADMIN, MANAGER** (unit-scoped). Adiciona produto ao cardápio da unidade.
+
+Request:
+
+```jsonc
+{
+  "productId": "<uuid>",
+  "customPrice": "18.50",   // decimal positivo, ≤2 casas (obrigatório)
+  "isAvailable": true       // opcional, default true
+}
+```
+
+Response `201`: [MenuItem](#menuitem). Erros: `409` produto já no cardápio; `404` unidade/produto inexistente.
+
+### PATCH /api/business-units/:businessUnitId/menu/:menuItemId
+
+**ADMIN, MANAGER** (unit-scoped). Atualiza preço e/ou disponibilidade (ao menos um campo).
+
+Request (ao menos um):
+
+```json
+{ "customPrice": "19.90", "isAvailable": false }
+```
+
+Response `200`: [MenuItem](#menuitem). Erro `404`.
+
+### PATCH /api/business-units/:businessUnitId/menu/:menuItemId/deactivate
+
+**ADMIN, MANAGER** (unit-scoped). `isAvailable=false`. Response `200`: [MenuItem](#menuitem). Erro `404`.
+
+### PATCH /api/business-units/:businessUnitId/menu/:menuItemId/activate
+
+**ADMIN, MANAGER** (unit-scoped). `isAvailable=true`. Response `200`: [MenuItem](#menuitem). Erro `404`.
+
+### PublicMenuItem
+
+```jsonc
+{
+  "menuItemId": "<uuid>",
+  "productId": "<uuid>",
+  "name": "Moqueca de peixe",
+  "description": "…",                 // ou null
+  "imageUrl": "https://…",
+  "price": "18.50"                    // preço efetivo na unidade (string decimal)
+}
+```
+
+### MenuItem
+
+```jsonc
+{
+  "id": "<uuid>",
+  "businessUnitId": "<uuid>",
+  "productId": "<uuid>",
+  "customPrice": "18.50",
+  "isAvailable": true,
+  "createdAt": "2026-05-18T10:30:00.000Z",
+  "updatedAt": "2026-05-18T10:30:00.000Z"
+}
+```
+
+---
+
+## Inventory
+
+`/api/inventory` — estoque por unidade. Ambas as rotas são **unit-scoped**; `:businessUnitId` é validado contra o claim.
+
+### GET /api/inventory/:businessUnitId
+
+**MANAGER, ADMIN.** Saldos de estoque da unidade (paginado).
+
+Query: `limit`, `cursor`.
+
+Response `200`: paginado de [Inventory](#inventory-item).
+
+### POST /api/inventory/:businessUnitId/adjust
+
+**MANAGER, ADMIN.** Movimento manual IN/OUT.
+
+Request:
+
+```jsonc
+{
+  "productId": "<uuid>",
+  "type": "IN",                       // IN (repõe) | OUT (remove)
+  "quantity": 10,                     // inteiro ≥1
+  "reason": "Weekly restock delivery" // ≤150
+}
+```
+
+Response `201`: [Inventory](#inventory-item). Erros: `404` produto sem linha de estoque na unidade (IN); `422` OUT deixaria saldo negativo.
+
+### Inventory (item)
+
+```jsonc
+{
+  "id": "<uuid>",
+  "businessUnitId": "<uuid>",
+  "productId": "<uuid>",
+  "quantity": 42,
+  "minQuantity": 5,                 // limiar para alerta de reposição
+  "updatedAt": "2026-05-18T10:30:00.000Z"
+}
+```
+
+---
+
+## Orders
+
+`/api/orders`
+
+### POST /api/orders
+
+**Autenticado.** Cria pedido para o canal informado.
+
+Header opcional de idempotência:
+
+- `Idempotency-Key: <string ≤255>` — reenvio com a mesma chave e mesmo corpo retorna o mesmo pedido; mesma chave com corpo diferente é rejeitada. Chave ausente/vazia/grande demais desliga a idempotência.
+
+Regras de canal (`orderChannel`):
+
+- `APP`, `WEB`: cliente = usuário autenticado.
+- `TOTEM`: pedido anônimo (sem cliente).
+- `COUNTER`, `PICKUP`: exigem atendente (ADMIN/MANAGER/ATTENDANT); `customerId` vem no corpo.
+
+Request:
+
+```jsonc
+{
+  "businessUnitId": "<uuid>",
+  "customerId": "<uuid>",     // opcional; só usado em COUNTER/PICKUP
+  "pointsRedeemed": 0,        // opcional, inteiro ≥0 (resgate de pontos de fidelidade)
+  "notes": "sem cebola",      // opcional, ≤150
+  "orderChannel": "APP",      // APP|WEB|TOTEM|COUNTER|PICKUP
+  "orderItems": [             // não vazio
+    {
+      "productId": "<uuid>",
+      "quantity": 2,          // inteiro ≥1
+      "unitPrice": "12.50",   // decimal string, ≤2 casas
+      "notes": "bem passado"  // opcional, ≤150
+    }
   ]
 }
 ```
 
-**Example response** (`201`)
+Response `201`: [Order](#order). O `totalAmount` é calculado no servidor (aplica promoção e resgate de pontos).
+
+### GET /api/orders
+
+**Staff** (ADMIN, MANAGER, ATTENDANT, KITCHEN). Lista paginada com filtros.
+
+Query: `limit`, `cursor`, `businessUnitId` (uuid), `orderChannel` (enum), `orderStatus` (enum). Staff vê apenas unidades do seu escopo.
+
+Response `200`: paginado de [Order](#order).
+
+### GET /api/orders/:id
+
+**Autenticado.** Um pedido por ID. Cliente só enxerga os próprios pedidos.
+
+Response `200`: [Order](#order). Erro `404` (inexistente ou não visível ao solicitante).
+
+### PATCH /api/orders/:id/status
+
+**Staff.** Muda o status (máquina de estados; transições inválidas → `422`).
+
+Transições válidas:
+
+```
+PENDING   → CONFIRMED | CANCELLED
+CONFIRMED → PREPARING | CANCELLED
+PREPARING → READY | CANCELLED
+READY     → DELIVERED
+DELIVERED → (terminal)
+CANCELLED → (terminal)
+```
+
+Request:
 
 ```json
+{ "orderStatus": "CONFIRMED" }
+```
+
+Response `200`: [Order](#order). Erros: `404`; `422` transição não permitida.
+
+### POST /api/orders/:id/cancel
+
+**Autenticado.** Cancela e roda compensações (restock, refund, reversão de pontos).
+Staff da unidade pode cancelar enquanto `PENDING`/`CONFIRMED`; cliente só o próprio pedido enquanto `PENDING`.
+
+Response `200`: [Order](#order). Erros: `404`; `422` fora da janela de cancelamento.
+
+### Order
+
+```jsonc
 {
-  "id": "a1b2c3d4-0000-0000-0000-000000000000",
-  "businessUnitId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "customerId": "user-uuid-from-jwt",
-  "attendantId": null,
+  "id": "<uuid>",
+  "businessUnitId": "<uuid>",
+  "customerId": "<uuid>",       // ou null
+  "attendantId": "<uuid>",      // ou null
   "pointsRedeemed": 0,
   "pointsEarned": 0,
-  "totalAmount": "33.00",
-  "notes": "No onions, please",
+  "totalAmount": "25.00",       // string decimal (autoritativo, do servidor)
+  "notes": "…",                 // ou null
   "orderChannel": "APP",
   "orderStatus": "PENDING",
-  "createdAt": "2026-05-31T10:30:00.000Z",
-  "updatedAt": "2026-05-31T10:30:00.000Z",
-  "updatedById": null,
+  "createdAt": "2026-05-18T10:30:00.000Z",
+  "updatedAt": "2026-05-18T10:30:00.000Z",
+  "updatedById": "<uuid>",      // ou null
   "orderItems": [
-    { "id": "...", "productId": "550e8400-…", "quantity": 2, "unitPrice": "12.50", "subtotal": "25.00", "notes": null },
-    { "id": "...", "productId": "7c9e6679-…", "quantity": 1, "unitPrice": "8.00", "subtotal": "8.00", "notes": "extra spicy" }
+    {
+      "id": "<uuid>",
+      "productId": "<uuid>",
+      "quantity": 2,
+      "unitPrice": "12.50",     // string decimal
+      "subtotal": "25.00",      // string decimal
+      "notes": "…"              // ou null
+    }
   ]
 }
 ```
 
-> `totalAmount` and each `subtotal` are computed **server-side** — do not send them. See
-> [§4.1](#41-server-authoritative-pricing) / [§4.2](#42-total-is-server-computed).
-
-#### `GET /orders`
-
-- **Auth:** `@Roles(STAFF_ROLES)` — `ADMIN, MANAGER, ATTENDANT, KITCHEN`.
-- **Query:** `limit?`, `cursor?`, `businessUnitId?` (uuid), `orderChannel?` (`OrderChannel`),
-  `orderStatus?` (`OrderStatus`).
-- **Response:** `Paginated<OrderResponse>` (`200`).
-- **Errors:** `401` no token; `403` non-staff (e.g. `CUSTOMER`).
-
-#### `GET /orders/:id`
-
-- **Auth:** any authenticated user.
-- **Params:** `id` (uuid).
-- **Response:** `OrderResponse` (`200`).
-- **Visibility:** customers see **only their own** orders; staff see any.
-- **Errors:** `404` if the order is missing **or not visible to the caller** — the same `404` is
-  returned for both so existence is never leaked.
-
-#### `PATCH /orders/:id/status`
-
-- **Auth:** `@Roles(STAFF_ROLES)`.
-- **Status:** `200 OK`.
-- **Params:** `id` (uuid).
-- **Body:** `{ orderStatus: OrderStatus }` — the target status.
-- **Response:** `OrderResponse` (updated).
-- **Errors:**
-  - `400` malformed body (e.g. not a valid `OrderStatus`).
-  - `401`/`403` not authenticated / not staff.
-  - `404` order not found.
-  - `422` illegal transition (target not allowed from current status — see
-    [§4.4](#44-order-state-machine)).
-  - `409` concurrent change — the status changed between read and write (optimistic lock; see
-    [§4.5](#45-optimistic-lock-conflict-on-status-update)).
-
 ---
 
-### 3.4 Payments
+## Payments
 
-#### `POST /payments`
+### POST /api/payments
 
-- **Auth:** any authenticated user.
-- **Status:** `201 Created`.
-- **Body:** `{ orderId: string (uuid), method: PaymentMethod }`. **No amount** — the server charges
-  the order's authoritative `totalAmount`.
-- **Response:** `PaymentResponse` with `status: "PROCESSING"`.
-- **Errors:**
-  - `400` malformed body.
-  - `404` order not found.
-  - `422` order not payable — it is **not `PENDING`**, or it **already has a payment** (one payment
-    per order).
+**Autenticado.** Cria pagamento para um pedido e aciona o gateway.
 
-**Example**
+Request:
 
-```json
-POST /api/payments
-Authorization: Bearer <JWT>
-Content-Type: application/json
-
-{ "orderId": "a1b2c3d4-0000-0000-0000-000000000000", "method": "PIX" }
-```
-
-```json
-// 201 Created
+```jsonc
 {
-  "id": "pay-uuid",
-  "orderId": "a1b2c3d4-0000-0000-0000-000000000000",
-  "amount": "33.00",
+  "orderId": "<uuid>",
+  "method": "PIX"     // CREDIT_CARD|DEBIT_CARD|PIX|CASH|VOUCHER
+}
+```
+
+Response `201`: [Payment](#payment). Erros: `404` pedido inexistente; `422` pedido não aguardando pagamento ou já pago.
+
+### POST /api/payments/webhook
+
+**Público** (autenticado por assinatura HMAC do gateway, não por JWT). O front normalmente **não** chama isto — é callback do gateway. Sempre responde `200`.
+
+Header: assinatura HMAC (verificada pelo `PaymentWebhookGuard`).
+
+Request:
+
+```jsonc
+{
+  "extTransactionId": "<id do gateway>",
+  "status": "APPROVED",   // APPROVED | REFUSED
+  "amount": "25.00"       // deve bater com o valor cobrado
+}
+```
+
+Response `200`:
+
+```json
+{ "received": true }
+```
+
+Erro: `401` assinatura ausente/inválida.
+
+### GET /api/orders/:orderId/payment
+
+**Autenticado.** Pagamento de um pedido. Cliente só vê o próprio.
+
+Response `200`: [Payment](#payment). Erro `404` (sem pagamento ou não visível).
+
+### Payment
+
+```jsonc
+{
+  "id": "<uuid>",
+  "orderId": "<uuid>",
+  "amount": "25.00",              // string decimal
   "method": "PIX",
-  "status": "PROCESSING",
-  "extTransactionId": "mock_3f0c…",
-  "createdAt": "2026-05-31T10:31:00.000Z",
-  "updatedAt": "2026-05-31T10:31:00.000Z"
+  "status": "PENDING",            // PENDING|PROCESSING|APPROVED|REFUSED|CANCELLED|REFUNDED
+  "extTransactionId": "…",        // ou null
+  "createdAt": "2026-05-18T10:30:00.000Z",
+  "updatedAt": "2026-05-18T10:30:00.000Z"
 }
-```
-
-#### `POST /payments/webhook`
-
-- **Auth:** `@Public()` **+ `PaymentWebhookGuard`** — requires header `x-webhook-secret`
-  (validated against `PAYMENT_WEBHOOK_SECRET`).
-- **Status:** `200 OK`.
-- **Body:** `{ extTransactionId: string, status: "APPROVED" | "REFUSED" }`.
-- **Response:** `PaymentResponse` (settled).
-- **Errors:** `401` missing/invalid secret; `404` no payment matches the transaction.
-
-> **The frontend never calls this.** It is the gateway → server callback that makes a payment
-> final. Documented here only so you understand *how a payment becomes `APPROVED`/`REFUSED`* and why
-> an approved payment also flips its order to `CONFIRMED`. See [§4.6](#46-payment-is-webhook-driven).
-
-#### `GET /orders/:orderId/payment`
-
-- **Auth:** any authenticated user.
-- **Params:** `orderId` (uuid).
-- **Response:** `PaymentResponse` (`200`).
-- **Visibility:** customers see **only their own** order's payment; staff see any.
-- **Errors:** `404` if the order has no payment, **or** it is not visible to the caller (same `404`
-  for both — no enumeration leak).
-
-### 3.5 Admin: inventory, promotions & internal unit listing
-
-> Derived from the **frontend** clients/route handlers (`lib/api/inventory.ts`,
-> `lib/api/promotions.ts`, `lib/api/business-units.ts`,
-> `app/api/{inventory,promotions}/**`), not yet re-verified against the backend.
-> Confirm exact shapes against Swagger before relying on them.
-
-#### `GET /business-units/internal`
-
-- **Consumed by:** `listBusinessUnitsInternal` (ADMIN unit selector — includes inactive units).
-- **Query:** `limit?`, `cursor?`, `search?`, `city?`, `isActive?` (`"true"`/`"false"`).
-- **Response:** `Paginated<BusinessUnit>`.
-
-#### `GET /inventory/:businessUnitId`
-
-- **Consumed by:** `listInventory`.
-- **Response:** `InventoryItem[]` (not paginated).
-
-#### `POST /inventory/:businessUnitId/adjust`
-
-- **Consumed by:** `adjustInventory`.
-- **Body:** `AdjustInventoryRequest` (`{ productId, type: 'IN' | 'OUT', quantity, reason }`).
-- **Response:** `InventoryItem`.
-- **Errors (mapped by the BFF):** `404` no stock balance for that product at the unit
-  (`inventory_not_found`); `422` removal would drive the balance below zero
-  (`inventory_below_zero`).
-
-#### `GET /promotions/by-business-unit/:businessUnitId`
-
-- **Consumed by:** `listPromotionsByBusinessUnit`.
-- **Query:** `limit?`, `cursor?`.
-- **Response:** `Paginated<Promotion>`.
-
-#### `GET /promotions/:promotionId`
-
-- **Consumed by:** `getPromotion`.
-- **Response:** `Promotion` (`200`); `404` → client returns `null`.
-
-#### `POST /promotions`
-
-- **Consumed by:** `createPromotion`.
-- **Body:** `CreatePromotionRequest`.
-- **Response:** `Promotion` (`201`).
-- **Note:** `discountType` is **`PERCENTAGE` | `FIXED_AMOUNT`** only — `FREE_ITEM` is
-  rejected for promotions (the BFF returns `400 free_item_unsupported`). For a `MANAGER`
-  the BFF overrides `businessUnitId` with the caller's scoped unit; for an `ADMIN` it is
-  required in the body.
-
-#### `PATCH /promotions/:promotionId`
-
-- **Consumed by:** `updatePromotion`.
-- **Body:** `UpdatePromotionRequest` (partial, without `businessUnitId`; empty body → `400`).
-- **Response:** `Promotion` (`200`); `404` → client returns `null`.
-
----
-
-## 4. Business rules & flows
-
-These are the rules Swagger cannot express. Respect them in the UI.
-
-### 4.1 Server-authoritative pricing
-
-Each `orderItems[].unitPrice` you send **must equal** the business unit's authoritative price
-(`BusinessUnitMenuItem.customPrice`). Any divergence → **`422` `PriceMismatchError`**
-(`create-order.use-case.ts:152`).
-
-- **Do:** send the price you fetched from the product / menu endpoint for that business unit.
-- **Don't:** trust a cached or hard-coded price, or let the user edit it.
-- Treat the server's computed `totalAmount` and each item `subtotal` as the source of truth for
-  display and for the amount that will be charged.
-
-### 4.2 Total is server-computed
-
-The order `totalAmount` is computed server-side from the item subtotals. **Never** send a total —
-there is no field for it, and it would be rejected as an unknown field (`400`).
-
-### 4.3 Channel → customer resolution
-
-The `orderChannel` decides who the order's customer is and who may place it
-(`order-channel.ts`):
-
-| Channel  | Customer source                          | Who may place it                  | Send `customerId`? |
-| -------- | ---------------------------------------- | --------------------------------- | ------------------ |
-| `APP`    | The authenticated user                   | Any authenticated user            | **No** (ignored)   |
-| `WEB`    | The authenticated user                   | Any authenticated user            | **No** (ignored)   |
-| `TOTEM`  | Anonymous (no customer attached)         | Any authenticated user            | **No**             |
-| `COUNTER`| From the request body (optional)         | Staff with **attend** privilege   | Optional           |
-| `PICKUP` | From the request body (optional)         | Staff with **attend** privilege   | Optional           |
-
-- For `APP`/`WEB`, the customer is taken from the JWT — do **not** send `customerId`.
-- For `COUNTER`/`PICKUP`, a user **without** attend privilege (`CUSTOMER`, or `KITCHEN`) → **`403`
-  attendant required**. Only `ADMIN`, `MANAGER`, `ATTENDANT` may use these channels.
-
-### 4.4 Order state machine
-
-Allowed transitions (`order-status.ts`). `DELIVERED` and `CANCELLED` are terminal. An order can
-never transition to itself.
-
-```
-PENDING ──▶ CONFIRMED ──▶ PREPARING ──▶ READY ──▶ DELIVERED   (terminal)
-   │            │             │
-   └────────────┴─────────────┴──────────▶ CANCELLED          (terminal)
-```
-
-| From        | Allowed targets             |
-| ----------- | --------------------------- |
-| `PENDING`   | `CONFIRMED`, `CANCELLED`    |
-| `CONFIRMED` | `PREPARING`, `CANCELLED`    |
-| `PREPARING` | `READY`, `CANCELLED`        |
-| `READY`     | `DELIVERED`                 |
-| `DELIVERED` | — (terminal)                |
-| `CANCELLED` | — (terminal)                |
-
-Any other target → **`422`**. **In the UI, only offer buttons for the legal next states** — use the
-`ORDER_STATUS_TRANSITIONS` map ([§6](#6-typescript-types)) to derive them.
-
-### 4.5 Optimistic-lock conflict on status update
-
-`PATCH /orders/:id/status` uses an optimistic lock: the write only applies if the status you read
-still holds. If another request transitioned the order in between, you get **`409`**. **On `409`,
-refetch the order, re-derive the allowed actions from its new status, then retry** if the action
-still makes sense.
-
-### 4.6 Payment is webhook-driven
-
-Payments settle **asynchronously** — there is **no synchronous payment result**. The flow:
-
-1. `POST /payments` → returns `status: "PROCESSING"` immediately.
-2. The gateway later calls `POST /payments/webhook` with the settled status. That webhook:
-   - sets the payment to `APPROVED` or `REFUSED`, and
-   - if `APPROVED`, advances the order to **`CONFIRMED`** (atomically).
-3. **Poll `GET /orders/:orderId/payment`** until `status` is `APPROVED` or `REFUSED`. There is **no
-   SSE/WebSocket** yet.
-
-**Mock gateway** (`mock-payment-gateway.ts`): amount **exactly `13.13` → `REFUSED`**, everything
-else → `APPROVED`, after ~200 ms simulated latency. Use `13.13` to exercise the refusal path.
-Webhook redelivery is idempotent — an already-settled payment is returned unchanged.
-
-### 4.7 One payment per order
-
-Enforced by a DB unique constraint. A second `POST /payments` for the same order → **`422`**
-(`order already has a payment`).
-
-### 4.8 No idempotency keys
-
-There are **no idempotency keys** yet. A duplicate `POST /orders` or `POST /payments` creates a
-**duplicate**. The frontend must dedupe: disable the submit button on click and guard against
-double-submits / retries.
-
-### 4.9 Audit is internal
-
-Order/payment actions are audited server-side. There is **no HTTP surface** for audit — nothing for
-the frontend to call or display.
-
-### Sequence: place order → pay → poll → confirmed
-
-```
-Client                         API                              Gateway
-  │  POST /orders               │                                  │
-  │ ───────────────────────────▶│  validate prices, build totals   │
-  │ ◀─────────────────────────── │  201 OrderResponse (PENDING)     │
-  │                             │                                    │
-  │  POST /payments             │                                    │
-  │ ───────────────────────────▶│  charge(totalAmount) ───────────▶ │
-  │ ◀─────────────────────────── │  201 PaymentResponse (PROCESSING) │
-  │                             │ ◀──── webhook {APPROVED} ───────── │  (x-webhook-secret)
-  │                             │  settle payment + order → CONFIRMED
-  │  GET /orders/:id/payment    │                                    │
-  │ ───────────────────────────▶│  (poll on an interval)            │
-  │ ◀─────────────────────────── │  200 PaymentResponse (APPROVED)   │
-  │  GET /orders/:id            │                                    │
-  │ ───────────────────────────▶│                                    │
-  │ ◀─────────────────────────── │  200 OrderResponse (CONFIRMED)    │
 ```
 
 ---
 
-## 5. Error reference
+## Loyalty
 
-### Kind → HTTP status (`errors.type.ts`)
+`/api/loyalty` — programa de fidelidade do cliente. Todas exigem papel **CUSTOMER**.
 
-| Kind           | HTTP | Meaning                                                |
-| -------------- | ---- | ------------------------------------------------------ |
-| `not-found`    | 404  | Resource missing (or hidden from the caller)           |
-| `invalid`      | 422  | Business rule / state-machine violation                |
-| `conflict`     | 409  | Concurrent change / duplicate                          |
-| `unauthorized` | 401  | Missing/invalid JWT or webhook secret                  |
-| `forbidden`    | 403  | Authenticated but wrong role/privilege                 |
-| `unavailable`  | 503  | A dependency is down                                   |
+Regra: 1 ponto a cada R$10 na aprovação do pagamento; resgate 1pt = R$0,10 de desconto no pedido (via `pointsRedeemed` na criação do pedido). Pontos só acumulam após consentimento LGPD.
 
-Plus **`400 Bad Request`** for any DTO validation failure (malformed request — see
-[§1](#validation-the-400-vs-422-distinction)), and **`500`** for unexpected server errors.
+### GET /api/loyalty/me
 
-### Per-endpoint error matrix
+**CUSTOMER.** Conta de fidelidade do cliente autenticado.
 
-| Endpoint                          | 400 | 401 | 403 | 404 | 409 | 422 |
-| --------------------------------- | :-: | :-: | :-: | :-: | :-: | :-: |
-| `POST /auth/login`                | ✅  | ✅  |     |     |     |     |
-| `GET /products*`                  | ✅  |     |     | ✅¹ |     |     |
-| `POST /products`                  | ✅  | ✅  | ✅  | ✅² | ✅³ |     |
-| `POST /orders`                    | ✅  | ✅  | ✅⁴ | ✅⁵ |     | ✅⁶ |
-| `GET /orders`                     | ✅  | ✅  | ✅  |     |     |     |
-| `GET /orders/:id`                 |     | ✅  |     | ✅⁷ |     |     |
-| `PATCH /orders/:id/status`        | ✅  | ✅  | ✅  | ✅  | ✅⁸ | ✅⁹ |
-| `POST /payments`                  | ✅  | ✅  |     | ✅  |     | ✅¹⁰|
-| `POST /payments/webhook`          | ✅  | ✅¹¹|     | ✅  |     |     |
-| `GET /orders/:orderId/payment`    |     | ✅  |     | ✅⁷ |     |     |
+Response `200`: [LoyaltyAccount](#loyaltyaccount). Erro `404` (conta ainda não existe — é criada no primeiro pedido).
 
-1. `404` only on `GET /products/:productId`.
-2. Referenced category does not exist.
-3. A product with the same name already exists.
-4. `COUNTER`/`PICKUP` placed by a user without attend privilege.
-5. A product is not on the business unit's menu.
-6. Price mismatch, product inactive, or product unavailable.
-7. Missing **or** not visible to the caller (same `404`, no enumeration leak).
-8. Concurrent status change (optimistic lock).
-9. Illegal state transition.
-10. Order not payable: not `PENDING`, or already has a payment.
-11. Missing/invalid `x-webhook-secret`.
+### POST /api/loyalty/me/consent
 
----
+**CUSTOMER.** Concede consentimento LGPD (upsert idempotente — cria a conta se não existir). Response `200`: [LoyaltyAccount](#loyaltyaccount).
 
-## 6. TypeScript types
+### DELETE /api/loyalty/me/consent
 
-Copy-paste contracts mirroring the backend response DTOs and value objects. **Money fields are
-`string`** in these interfaces (decimal strings), **except `ProductResponse.price`, which is a
-`number`**. Date fields are ISO-8601 `string`s.
+**CUSTOMER.** Revoga o consentimento LGPD. Response `200`: [LoyaltyAccount](#loyaltyaccount). Erro `404` (sem conta).
 
-```ts
-// ---------- Enums (string unions) ----------
+### LoyaltyAccount
 
-export type UserRole = 'ADMIN' | 'MANAGER' | 'ATTENDANT' | 'KITCHEN' | 'CUSTOMER';
-
-export type OrderChannel = 'APP' | 'WEB' | 'TOTEM' | 'COUNTER' | 'PICKUP';
-
-export type OrderStatus =
-  | 'PENDING'
-  | 'CONFIRMED'
-  | 'PREPARING'
-  | 'READY'
-  | 'DELIVERED'
-  | 'CANCELLED';
-
-export type PaymentMethod = 'CREDIT_CARD' | 'DEBIT_CARD' | 'PIX' | 'CASH' | 'VOUCHER';
-
-export type PaymentStatus = 'PENDING' | 'PROCESSING' | 'APPROVED' | 'REFUSED' | 'CANCELLED';
-
-// ---------- Order state machine (mirrors order-status.ts) ----------
-// DELIVERED and CANCELLED are terminal. Use this to compute legal next states in the UI.
-
-export const ORDER_STATUS_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
-  PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['PREPARING', 'CANCELLED'],
-  PREPARING: ['READY', 'CANCELLED'],
-  READY: ['DELIVERED'],
-  DELIVERED: [],
-  CANCELLED: [],
-};
-
-export const canTransition = (from: OrderStatus, to: OrderStatus): boolean =>
-  ORDER_STATUS_TRANSITIONS[from].includes(to);
-
-// ---------- Shared envelopes ----------
-
-export interface PaginationMeta {
-  limit: number;
-  nextCursor: string | null; // null when there are no more pages
-  hasMore: boolean;
+```jsonc
+{
+  "id": "<uuid>",
+  "customerId": "<uuid>",
+  "totalPoints": 42,
+  "consentGiven": true,
+  "consentDate": "2026-05-18T10:30:00.000Z",     // ou null
+  "consentRevokedAt": null,                       // instante da revogação; null enquanto ativo
+  "createdAt": "2026-05-18T10:30:00.000Z"
 }
-
-export interface Paginated<T> {
-  data: T[];
-  meta: PaginationMeta;
-}
-
-export interface ErrorEnvelope {
-  statusCode: number;
-  error: string; // standard reason phrase, e.g. "Unprocessable Entity"
-  message: string;
-  path: string;
-  timestamp: string; // ISO-8601
-}
-
-// ---------- Responses ----------
-
-export interface ProductResponse {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number; // NOTE: number on responses (sent as a decimal string on create)
-  isActive: boolean;
-  categoryId: string;
-  createdAt: string; // ISO-8601
-  updatedAt: string; // ISO-8601
-  imageUrl: string;
-}
-
-export interface OrderItemResponse {
-  id: string;
-  productId: string;
-  quantity: number;
-  unitPrice: string; // decimal string
-  subtotal: string; // decimal string (server-computed)
-  notes: string | null;
-}
-
-export interface OrderResponse {
-  id: string;
-  businessUnitId: string;
-  customerId: string | null;
-  attendantId: string | null;
-  pointsRedeemed: number;
-  pointsEarned: number;
-  totalAmount: string; // decimal string (server-computed)
-  notes: string | null;
-  orderChannel: OrderChannel;
-  orderStatus: OrderStatus;
-  createdAt: string; // ISO-8601
-  updatedAt: string; // ISO-8601
-  updatedById: string | null;
-  orderItems: OrderItemResponse[];
-}
-
-export interface PaymentResponse {
-  id: string;
-  orderId: string;
-  amount: string; // decimal string (the order's authoritative total)
-  method: PaymentMethod;
-  status: PaymentStatus;
-  extTransactionId: string | null;
-  createdAt: string; // ISO-8601
-  updatedAt: string; // ISO-8601
-}
-
-// ---------- Request bodies ----------
-
-export interface LoginRequest {
-  username: string;
-  password: string; // min 8 chars
-}
-
-export interface LoginResponse {
-  access_token: string;
-}
-
-export interface ProductCreateRequest {
-  name: string; // <= 100
-  description?: string; // <= 255
-  price: string; // positive decimal string, up to 8 integer + 2 fractional digits
-  categoryId: string; // uuid
-  imageUrl: string; // URL, <= 2000
-}
-
-export interface OrderItemInput {
-  productId: string; // uuid
-  quantity: number; // integer >= 1
-  unitPrice: string; // decimal string (<= 2 dp); MUST match the menu price
-  notes?: string; // <= 150
-}
-
-export interface OrderCreateRequest {
-  businessUnitId: string; // uuid
-  customerId?: string; // uuid; only honored on COUNTER/PICKUP
-  pointsRedeemed?: number; // integer >= 0
-  notes?: string; // <= 150
-  orderChannel: OrderChannel;
-  orderItems: OrderItemInput[]; // non-empty
-}
-
-export interface OrderUpdateStatusRequest {
-  orderStatus: OrderStatus; // must be a legal transition from the current status
-}
-
-export interface CreatePaymentRequest {
-  orderId: string; // uuid
-  method: PaymentMethod;
-  // No amount: the server charges the order's authoritative totalAmount.
-}
-
-// ---------- Inventory (admin) ----------
-// Derived from the frontend; not yet re-verified against the backend.
-
-export type InventoryAdjustmentType = 'IN' | 'OUT';
-
-export interface InventoryItem {
-  id: string;
-  businessUnitId: string;
-  productId: string;
-  quantity: number;
-  minQuantity: number;
-  updatedAt: string; // ISO-8601
-}
-
-export interface AdjustInventoryRequest {
-  productId: string;
-  type: InventoryAdjustmentType;
-  quantity: number; // integer >= 1
-  reason: string;
-}
-
-// ---------- Promotions (admin) ----------
-// FREE_ITEM is a valid DiscountType elsewhere but is rejected for promotions.
-
-export type PromotionDiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT';
-
-export interface Promotion {
-  id: string;
-  businessUnitId: string;
-  name: string;
-  discountType: PromotionDiscountType;
-  discountValue: string; // decimal string; percent when PERCENTAGE
-  minOrderValue: string; // decimal string
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-  createdAt: string; // ISO-8601
-  updatedAt: string; // ISO-8601
-}
-
-export interface CreatePromotionRequest {
-  businessUnitId: string;
-  name: string;
-  discountType: PromotionDiscountType;
-  discountValue: string;
-  minOrderValue: string;
-  startDate: string;
-  endDate: string;
-  isActive: boolean;
-}
-
-export type UpdatePromotionRequest = Partial<
-  Omit<CreatePromotionRequest, 'businessUnitId'>
->;
 ```
 
 ---
 
-## Appendix — Source map (backend)
+## Promotions
 
-For maintainers keeping this doc in sync. Paths are relative to the backend repo root.
+`/api/promotions` — gestão de promoções por unidade. Todas exigem **ADMIN, MANAGER** e são unit-scoped (MANAGER só na própria unidade; ADMIN bypass). Uma promoção por pedido; aplicada antes da fidelidade.
 
-| Concern                         | File                                                                       |
-| ------------------------------- | -------------------------------------------------------------------------- |
-| Global prefix `/api`, Swagger   | `src/main.ts`                                                              |
-| Global guard / pipe / filter    | `src/app.module.ts`                                                       |
-| JWT payload                     | `src/shared/auth/jwt-payload.type.ts`                                     |
-| Auth/role logic                 | `src/shared/auth/auth.guard.ts`, `roles.decorator.ts`, `public.decorator.ts` |
-| Error envelope / kinds          | `src/shared/errors/error-envelope.type.ts`, `errors.type.ts`, `src/shared/filter/global-error.filter.ts` |
-| Pagination                      | `src/shared/pagination/`                                                  |
-| Login                           | `src/modules/identity/.../auth.controller.ts`, `sign-in-request.dto.ts`   |
-| Products                        | `src/modules/business-units/.../products.controller.ts`, `product-*.dto.ts` |
-| Orders                          | `src/modules/orders/.../orders.controller.ts`, `order-*.dto.ts`, `create-order.use-case.ts`, `update-order-status.use-case.ts` |
-| Order channel / status VOs      | `src/modules/orders/domain/value-objects/order-channel.ts`, `order-status.ts` |
-| Payments                        | `src/modules/payments/.../payments.controller.ts`, `create-payment.dto.ts`, `payment-webhook.dto.ts`, `create-payment.use-case.ts`, `confirm-payment.use-case.ts` |
-| Payment method / status VOs     | `src/modules/payments/domain/value-objects/payment-method.ts`, `payment-status.ts` |
-| Webhook secret guard            | `src/modules/payments/.../guards/payment-webhook.guard.ts`                |
-| Mock gateway                    | `src/modules/payments/.../gateway/mock-payment-gateway.ts`                |
+### POST /api/promotions
+
+Cria promoção. `businessUnitId` vai no corpo mas é validado contra o escopo do ator.
+
+Request:
+
+```jsonc
+{
+  "businessUnitId": "<uuid>",
+  "name": "Almoço executivo",          // ≤100
+  "discountType": "PERCENTAGE",        // PERCENTAGE | FIXED_AMOUNT (FREE_ITEM não suportado → erro)
+  "discountValue": "10.00",            // PERCENTAGE: percentual (10.00 = 10%); FIXED_AMOUNT: BRL. Positivo, ≤2 casas
+  "minOrderValue": "30.00",            // subtotal mínimo; "0" = sem mínimo. ≤2 casas
+  "startDate": "2026-06-01T00:00:00.000Z",
+  "endDate": "2026-06-30T23:59:59.000Z",
+  "isActive": true                     // opcional, default true
+}
+```
+
+Response `201`: [Promotion](#promotion). Erro `404` unidade fora do escopo.
+
+### GET /api/promotions/by-business-unit/:businessUnitId
+
+Lista promoções da unidade (paginado). Query: `limit`, `cursor`. Response `200`: paginado de [Promotion](#promotion).
+
+### GET /api/promotions/:promotionId
+
+Uma promoção por ID. Response `200`: [Promotion](#promotion). Erro `404`.
+
+### PATCH /api/promotions/:promotionId
+
+Atualiza promoção (todos os campos opcionais; `businessUnitId` é imutável). Mesmos formatos do create.
+
+```jsonc
+{
+  "name": "…",
+  "discountType": "FIXED_AMOUNT",
+  "discountValue": "5.00",
+  "minOrderValue": "20.00",
+  "startDate": "2026-06-01T00:00:00.000Z",
+  "endDate": "2026-06-30T23:59:59.000Z",
+  "isActive": false
+}
+```
+
+Response `200`: [Promotion](#promotion). Erro `404`.
+
+### PATCH /api/promotions/:promotionId/activate
+
+`isActive=true`. Response `200`: [Promotion](#promotion). Erro `404`.
+
+### PATCH /api/promotions/:promotionId/deactivate
+
+`isActive=false`. Response `200`: [Promotion](#promotion). Erro `404`.
+
+### Promotion
+
+```jsonc
+{
+  "id": "<uuid>",
+  "businessUnitId": "<uuid>",
+  "name": "Almoço executivo",
+  "discountType": "PERCENTAGE",
+  "discountValue": "10.00",       // string decimal
+  "minOrderValue": "30.00",       // string decimal
+  "startDate": "2026-06-01T00:00:00.000Z",
+  "endDate": "2026-06-30T23:59:59.000Z",
+  "isActive": true,
+  "createdAt": "2026-05-18T10:30:00.000Z",
+  "updatedAt": "2026-05-18T10:30:00.000Z"
+}
+```
+
+---
+
+## Audit Logs
+
+`/api/audit-logs`
+
+### GET /api/audit-logs
+
+**ADMIN.** Lista logs de auditoria (paginado).
+
+Query: `limit`, `cursor` (uuid), `from` (date-time), `to` (date-time), `userId` (uuid), `action` (string), `entity` (string), `entityId` (string).
+
+Response `200`: paginado de [AuditLog](#auditlog).
+
+### AuditLog
+
+```jsonc
+{
+  "id": "<uuid>",
+  "userId": "<uuid>",             // ou null (eventos de sistema)
+  "action": "LOGIN_SUCCESS",
+  "entity": "User",
+  "entityId": "<uuid>",           // ou null
+  "metadata": { },                // objeto sanitizado (chaves sensíveis redigidas) ou null
+  "createdAt": "2026-05-18T10:30:00.000Z"
+}
+```
+
+---
+
+## Enums de referência
+
+| Enum                 | Valores                                                                 |
+| -------------------- | ----------------------------------------------------------------------- |
+| `UserRole`           | `ADMIN`, `MANAGER`, `ATTENDANT`, `KITCHEN`, `CUSTOMER`                   |
+| `OrderChannel`       | `APP`, `WEB`, `TOTEM`, `COUNTER`, `PICKUP`                               |
+| `OrderStatus`        | `PENDING`, `CONFIRMED`, `PREPARING`, `READY`, `DELIVERED`, `CANCELLED`   |
+| `PaymentMethod`      | `CREDIT_CARD`, `DEBIT_CARD`, `PIX`, `CASH`, `VOUCHER`                    |
+| `PaymentStatus`      | `PENDING`, `PROCESSING`, `APPROVED`, `REFUSED`, `CANCELLED`, `REFUNDED`  |
+| `DiscountType`       | `PERCENTAGE`, `FIXED_AMOUNT` (`FREE_ITEM` existe mas não é suportado)    |
+| Inventory `type`     | `IN`, `OUT` (aceitos na API; `ADJUSTMENT`/`RESERVE` são internos)        |
+
+---
+
+## Fluxo típico (cliente APP)
+
+1. `POST /api/auth/login` → guarda `access_token` + `refresh_token`.
+2. `GET /api/business-units` → escolhe a unidade.
+3. `GET /api/business-units/:id/menu` → monta o carrinho a partir dos itens disponíveis (`price`, `menuItemId`/`productId`).
+4. `POST /api/orders` (com `Idempotency-Key`) → recebe o `Order` com `totalAmount`.
+5. `POST /api/payments` → cria o pagamento; acompanhe o `status`.
+6. `GET /api/orders/:orderId/payment` e `GET /api/orders/:id` → polling do estado até `DELIVERED`.
+7. `GET /api/loyalty/me` → pontos acumulados.
+
+Quando o `access_token` expirar (`401`), chame `POST /api/auth/refresh` e refaça a requisição.
