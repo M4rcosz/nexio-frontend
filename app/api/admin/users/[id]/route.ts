@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getInternalUser, updateInternalUser } from '@/lib/api/admin-users'
-import { describeError } from '@/lib/api/errors'
+import { ApiError, describeError } from '@/lib/api/errors'
 import { canManageRole, getAdminContext } from '@/lib/auth/access'
 
 const PatchBody = z.object({
@@ -60,7 +60,19 @@ export async function PATCH(
     )
   }
   try {
-    const user = await updateInternalUser(admin, id, parsed)
+    const user = await updateInternalUser(admin, id, {
+      email: parsed.email,
+      name: parsed.name,
+      phone: parsed.phone,
+      role: parsed.role,
+      // The backend takes a set of units; the form still picks a single one.
+      businessUnitIds:
+        parsed.businessUnitId === undefined
+          ? undefined
+          : parsed.businessUnitId
+            ? [parsed.businessUnitId]
+            : [],
+    })
     if (!user) {
       return NextResponse.json({ error: 'User not found.' }, { status: 404 })
     }
@@ -81,6 +93,9 @@ export async function PATCH(
         { error: describeError(err), code },
         { status: 403 },
       )
+    }
+    if (err instanceof ApiError && (err.status === 501 || err.status === 422)) {
+      return NextResponse.json({ error: err.message }, { status: err.status })
     }
     return NextResponse.json({ error: describeError(err) }, { status: 500 })
   }

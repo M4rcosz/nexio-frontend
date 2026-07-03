@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/navigation'
-import type { BusinessUnit, Role, User } from '@/lib/api/types'
+import type { PublicBusinessUnit, Role, User } from '@/lib/api/types'
 
 type Mode = 'create' | 'edit'
 
@@ -24,7 +24,7 @@ export function UserForm({
 }: {
   mode: Mode
   user?: User
-  units: BusinessUnit[]
+  units: PublicBusinessUnit[]
   /** When set, the form locks the business unit field (MANAGER scope). */
   scopedBusinessUnitId: string | null
   manageableRoles: Role[]
@@ -47,8 +47,10 @@ export function UserForm({
     phone: user?.phone ?? '',
     password: '',
     role: initialRole,
+    // The form still picks a single unit; the API models a set, so the first
+    // bound unit seeds the field.
     businessUnitId:
-      user?.businessUnitId ?? scopedBusinessUnitId ?? units[0]?.id ?? '',
+      user?.businessUnitIds[0] ?? scopedBusinessUnitId ?? units[0]?.id ?? '',
   })
 
   function update<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {

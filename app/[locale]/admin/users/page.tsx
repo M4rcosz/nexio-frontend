@@ -78,7 +78,11 @@ export default async function AdminUsersPage({
               <UserCard
                 key={u.id}
                 user={u}
-                unit={u.businessUnitId ? unitsById.get(u.businessUnitId) ?? null : null}
+                unit={
+                  u.businessUnitIds[0]
+                    ? unitsById.get(u.businessUnitIds[0]) ?? null
+                    : null
+                }
               />
             ))}
           </div>
@@ -103,7 +107,11 @@ export default async function AdminUsersPage({
                     <UserRow
                       key={u.id}
                       user={u}
-                      unit={u.businessUnitId ? unitsById.get(u.businessUnitId) ?? null : null}
+                      unit={
+                        u.businessUnitIds[0]
+                          ? unitsById.get(u.businessUnitIds[0]) ?? null
+                          : null
+                      }
                     />
                   ))}
                 </tbody>

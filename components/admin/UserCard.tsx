@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/i18n/navigation'
-import type { BusinessUnit, Role, User } from '@/lib/api/types'
+import type { PublicBusinessUnit, Role, User } from '@/lib/api/types'
 import { UserStatusBadge } from './UserStatusBadge'
 
 const ROLE_LABEL_KEY: Record<Role, string> = {
@@ -20,7 +20,7 @@ export function UserCard({
   unit,
 }: {
   user: User
-  unit: BusinessUnit | null
+  unit: PublicBusinessUnit | null
 }) {
   const router = useRouter()
   const t = useTranslations('admin.users')
@@ -78,7 +78,10 @@ export function UserCard({
             {t('tableUnit')}
           </dt>
           <dd className="mt-0.5 truncate text-fg">
-            {unit?.name ?? user.businessUnitId ?? '—'}
+            {unit?.name ?? user.businessUnitIds[0] ?? '—'}
+            {user.businessUnitIds.length > 1
+              ? ` +${user.businessUnitIds.length - 1}`
+              : ''}
           </dd>
         </div>
       </dl>

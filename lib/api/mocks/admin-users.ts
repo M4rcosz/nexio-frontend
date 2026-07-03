@@ -1,4 +1,5 @@
-// TODO: backend not implemented yet — using mock data
+// Mock fallback for the `/users` staff-management endpoints (used when
+// NEXT_PUBLIC_USE_MOCKS=true or the backend is unavailable).
 //
 // Single in-memory store of internal users (anything other than CUSTOMER).
 // Shared between `getMe` lookup and the admin management endpoints so a user
@@ -7,14 +8,12 @@ import type { Role, User } from '@/lib/api/types'
 import { MOCK_BUSINESS_UNITS } from './business-units'
 import { mockDelay } from './_delay'
 
-const NOW = new Date().toISOString()
-
 function makeUser(
   id: string,
   username: string,
   name: string,
   role: Role,
-  businessUnitId: string | null,
+  businessUnitIds: string[],
   email = `${username}@raizes.com`,
   phone: string | null = '(81) 99999-0000',
 ): User {
@@ -25,42 +24,45 @@ function makeUser(
     name,
     phone,
     role,
-    businessUnitId,
+    businessUnitIds,
     isActive: true,
-    createdAt: NOW,
-    updatedAt: NOW,
   }
 }
 
 /** Internal store — mutated by admin CRUD. Seeded with realistic data. */
 const STORE: User[] = [
-  // Top-level
-  makeUser('usr_admin_demo', 'admin', 'Administradora Geral', 'ADMIN', null, 'admin@raizes.com'),
+  // Top-level (ADMIN carries no unit binding)
+  makeUser('usr_admin_demo', 'admin', 'Administradora Geral', 'ADMIN', [], 'admin@raizes.com'),
 
   // Managers (one per unit)
-  makeUser('usr_manager_recife', 'manager.recife', 'Beatriz Lima', 'MANAGER', MOCK_BUSINESS_UNITS[0].id, 'beatriz@raizes.com'),
-  makeUser('usr_manager_olinda', 'manager.olinda', 'Rafael Souza', 'MANAGER', MOCK_BUSINESS_UNITS[1].id, 'rafael@raizes.com'),
+  makeUser('usr_manager_recife', 'manager.recife', 'Beatriz Lima', 'MANAGER', [MOCK_BUSINESS_UNITS[0].id], 'beatriz@raizes.com'),
+  makeUser('usr_manager_olinda', 'manager.olinda', 'Rafael Souza', 'MANAGER', [MOCK_BUSINESS_UNITS[1].id], 'rafael@raizes.com'),
 
   // Attendants
-  makeUser('usr_attendant_maria', 'maria.atendente', 'Maria Silva', 'ATTENDANT', MOCK_BUSINESS_UNITS[0].id, 'maria@raizes.com'),
-  makeUser('usr_attendant_pedro', 'pedro.atendente', 'Pedro Henrique', 'ATTENDANT', MOCK_BUSINESS_UNITS[0].id, 'pedro@raizes.com'),
-  makeUser('usr_attendant_ana', 'ana.atendente', 'Ana Costa', 'ATTENDANT', MOCK_BUSINESS_UNITS[1].id, 'ana@raizes.com'),
+  makeUser('usr_attendant_maria', 'maria.atendente', 'Maria Silva', 'ATTENDANT', [MOCK_BUSINESS_UNITS[0].id], 'maria@raizes.com'),
+  makeUser('usr_attendant_pedro', 'pedro.atendente', 'Pedro Henrique', 'ATTENDANT', [MOCK_BUSINESS_UNITS[0].id], 'pedro@raizes.com'),
+  makeUser('usr_attendant_ana', 'ana.atendente', 'Ana Costa', 'ATTENDANT', [MOCK_BUSINESS_UNITS[1].id], 'ana@raizes.com'),
 
   // Kitchen
-  makeUser('usr_kitchen_jose', 'jose.cozinha', 'José Cozinha', 'KITCHEN', MOCK_BUSINESS_UNITS[0].id, 'jose@raizes.com'),
-  makeUser('usr_kitchen_lucia', 'lucia.cozinha', 'Lúcia Mendes', 'KITCHEN', MOCK_BUSINESS_UNITS[1].id, 'lucia@raizes.com'),
+  makeUser('usr_kitchen_jose', 'jose.cozinha', 'José Cozinha', 'KITCHEN', [MOCK_BUSINESS_UNITS[0].id], 'jose@raizes.com'),
+  makeUser('usr_kitchen_lucia', 'lucia.cozinha', 'Lúcia Mendes', 'KITCHEN', [MOCK_BUSINESS_UNITS[1].id], 'lucia@raizes.com'),
 ]
 
 function newId(prefix = 'usr'): string {
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
 }
 
+function inScope(user: User, scopedBusinessUnitIds?: string[] | null): boolean {
+  if (!scopedBusinessUnitIds) return true
+  return user.businessUnitIds.some((id) => scopedBusinessUnitIds.includes(id))
+}
+
 export type InternalUserFilters = {
   role?: Role
   businessUnitId?: string
   search?: string
-  /** When set, scopes the listing to only this unit (used for MANAGER). */
-  scopedBusinessUnitId?: string | null
+  /** When set, scopes the listing to these units (used for MANAGER). */
+  scopedBusinessUnitIds?: string[] | null
   /** Restrict listing to these roles (the actor's manageable roles). */
   allowedRoles?: Role[]
 }
@@ -74,12 +76,12 @@ export async function listInternalUsersMock(
   const allowed = filters.allowedRoles ?? DEFAULT_ALLOWED
   let users = STORE.filter((u) => allowed.includes(u.role))
 
-  if (filters.scopedBusinessUnitId) {
-    users = users.filter((u) => u.businessUnitId === filters.scopedBusinessUnitId)
+  if (filters.scopedBusinessUnitIds) {
+    users = users.filter((u) => inScope(u, filters.scopedBusinessUnitIds))
   }
   if (filters.role) users = users.filter((u) => u.role === filters.role)
   if (filters.businessUnitId)
-    users = users.filter((u) => u.businessUnitId === filters.businessUnitId)
+    users = users.filter((u) => u.businessUnitIds.includes(filters.businessUnitId!))
   if (filters.search) {
     const term = filters.search.toLowerCase()
     users = users.filter(
@@ -94,14 +96,14 @@ export async function listInternalUsersMock(
 
 export async function getInternalUserMock(
   id: string,
-  scopedBusinessUnitId?: string | null,
+  scopedBusinessUnitIds?: string[] | null,
   allowedRoles: Role[] = DEFAULT_ALLOWED,
 ): Promise<User | null> {
   await mockDelay()
   const u = STORE.find((x) => x.id === id)
   if (!u) return null
   if (!allowedRoles.includes(u.role)) return null
-  if (scopedBusinessUnitId && u.businessUnitId !== scopedBusinessUnitId) return null
+  if (!inScope(u, scopedBusinessUnitIds)) return null
   return { ...u }
 }
 
@@ -112,10 +114,8 @@ export type CreateInternalUserInput = {
   phone?: string
   password: string
   role: Role
-  /**
-   * ADMIN users have no businessUnit; for everyone else it must be set.
-   */
-  businessUnitId: string | null
+  /** ADMIN users carry no unit; everyone else needs at least one. */
+  businessUnitIds: string[]
 }
 
 export async function createInternalUserMock(
@@ -148,10 +148,8 @@ export async function createInternalUserMock(
     name: input.name,
     phone: input.phone ?? null,
     role: input.role,
-    businessUnitId: input.businessUnitId,
+    businessUnitIds: input.businessUnitIds,
     isActive: true,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
   }
   STORE.push(user)
   return { ...user }
@@ -162,21 +160,20 @@ export type UpdateInternalUserInput = {
   name?: string
   phone?: string | null
   role?: Role
-  businessUnitId?: string | null
+  businessUnitIds?: string[]
 }
 
 export async function updateInternalUserMock(
   id: string,
   patch: UpdateInternalUserInput,
-  scopedBusinessUnitId?: string | null,
+  scopedBusinessUnitIds?: string[] | null,
   allowedRoles: Role[] = DEFAULT_ALLOWED,
 ): Promise<User | null> {
   await mockDelay()
   const idx = STORE.findIndex((x) => x.id === id)
   if (idx < 0) return null
   if (!allowedRoles.includes(STORE[idx].role)) return null
-  if (scopedBusinessUnitId && STORE[idx].businessUnitId !== scopedBusinessUnitId)
-    return null
+  if (!inScope(STORE[idx], scopedBusinessUnitIds)) return null
   if (patch.role && !allowedRoles.includes(patch.role)) {
     throw Object.assign(new Error('Role not allowed for this actor.'), {
       code: 'role_forbidden',
@@ -193,7 +190,7 @@ export async function updateInternalUserMock(
   STORE[idx] = {
     ...STORE[idx],
     ...patch,
-    updatedAt: new Date().toISOString(),
+    businessUnitIds: patch.businessUnitIds ?? STORE[idx].businessUnitIds,
   }
   return { ...STORE[idx] }
 }
@@ -201,16 +198,15 @@ export async function updateInternalUserMock(
 export async function setInternalUserActiveMock(
   id: string,
   isActive: boolean,
-  scopedBusinessUnitId?: string | null,
+  scopedBusinessUnitIds?: string[] | null,
   allowedRoles: Role[] = DEFAULT_ALLOWED,
 ): Promise<User | null> {
   await mockDelay()
   const idx = STORE.findIndex((x) => x.id === id)
   if (idx < 0) return null
   if (!allowedRoles.includes(STORE[idx].role)) return null
-  if (scopedBusinessUnitId && STORE[idx].businessUnitId !== scopedBusinessUnitId)
-    return null
-  STORE[idx] = { ...STORE[idx], isActive, updatedAt: new Date().toISOString() }
+  if (!inScope(STORE[idx], scopedBusinessUnitIds)) return null
+  STORE[idx] = { ...STORE[idx], isActive }
   return { ...STORE[idx] }
 }
 

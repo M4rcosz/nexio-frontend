@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { Link, useRouter } from '@/i18n/navigation'
-import type { BusinessUnit, Role, User } from '@/lib/api/types'
+import type { PublicBusinessUnit, Role, User } from '@/lib/api/types'
 import { UserStatusBadge } from './UserStatusBadge'
 
 const ROLE_LABEL_KEY: Record<Role, string> = {
@@ -19,7 +19,7 @@ export function UserRow({
   unit,
 }: {
   user: User
-  unit: BusinessUnit | null
+  unit: PublicBusinessUnit | null
 }) {
   const router = useRouter()
   const t = useTranslations('admin.users')
@@ -64,7 +64,10 @@ export function UserRow({
         {tForm(ROLE_LABEL_KEY[user.role])}
       </td>
       <td className="px-4 py-3 text-sm text-fg-muted">
-        {unit?.name ?? user.businessUnitId ?? '—'}
+        {unit?.name ?? user.businessUnitIds[0] ?? '—'}
+        {user.businessUnitIds.length > 1
+          ? ` +${user.businessUnitIds.length - 1}`
+          : ''}
       </td>
       <td className="px-4 py-3">
         <UserStatusBadge active={optimisticActive} />

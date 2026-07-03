@@ -3,7 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { useRouter, usePathname } from '@/i18n/navigation'
 import { useEffect, useState } from 'react'
-import type { BusinessUnit, Role } from '@/lib/api/types'
+import type { PublicBusinessUnit, Role } from '@/lib/api/types'
 
 const ROLE_LABEL_KEY: Record<Role, string> = {
   ATTENDANT: 'roleAttendant',
@@ -19,7 +19,7 @@ export function UserFilters({
   showUnitFilter,
   manageableRoles,
 }: {
-  units: BusinessUnit[]
+  units: PublicBusinessUnit[]
   initial: { search?: string; role?: string; businessUnitId?: string }
   showUnitFilter: boolean
   manageableRoles: Role[]

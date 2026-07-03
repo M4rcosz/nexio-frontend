@@ -4,7 +4,7 @@ import {
   createInternalUser,
   listInternalUsers,
 } from '@/lib/api/admin-users'
-import { describeError } from '@/lib/api/errors'
+import { ApiError, describeError } from '@/lib/api/errors'
 import { canManageRole, getAdminContext } from '@/lib/auth/access'
 
 const RoleEnum = z.enum(['ATTENDANT', 'KITCHEN', 'MANAGER', 'ADMIN'])
@@ -82,7 +82,8 @@ export async function POST(req: Request) {
       phone: parsed.phone,
       password: parsed.password,
       role: parsed.role,
-      businessUnitId: parsed.businessUnitId ?? null,
+      // The backend takes a set of units; the form still picks a single one.
+      businessUnitIds: parsed.businessUnitId ? [parsed.businessUnitId] : [],
     })
     return NextResponse.json(user, { status: 201 })
   } catch (err) {
@@ -99,6 +100,18 @@ export async function POST(req: Request) {
     if (code === 'role_forbidden') {
       return NextResponse.json(
         { error: describeError(err), code },
+        { status: 403 },
+      )
+    }
+    if (err instanceof ApiError && err.status === 409) {
+      return NextResponse.json(
+        { error: 'Username, e-mail or phone already in use.', code: 'username_taken' },
+        { status: 409 },
+      )
+    }
+    if (err instanceof ApiError && err.status === 403) {
+      return NextResponse.json(
+        { error: 'Role not allowed for your access level.', code: 'role_forbidden' },
         { status: 403 },
       )
     }
