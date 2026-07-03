@@ -1,4 +1,4 @@
-// TODO: backend not implemented yet — used only when USE_MOCKS is enabled.
+// Mock fallback for the `/promotions` endpoints (USE_MOCKS only).
 //
 // In-memory promotions store. Money fields are decimal strings, mirroring the
 // real API. FREE_ITEM is never produced here (the schema does not model it).

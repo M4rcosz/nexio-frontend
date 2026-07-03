@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getPromotion, updatePromotion } from '@/lib/api/promotions'
 import { ApiError, describeError } from '@/lib/api/errors'
-import { getAdminContext } from '@/lib/auth/access'
+import { canAccessUnit, getAdminContext } from '@/lib/auth/access'
 
 const MONEY = z.string().regex(/^\d+(\.\d{1,2})?$/, 'Must be a decimal string.')
 
@@ -32,10 +32,7 @@ export async function GET(
     if (!promotion) {
       return NextResponse.json({ error: 'Promotion not found.' }, { status: 404 })
     }
-    if (
-      admin.role === 'MANAGER' &&
-      admin.scopedBusinessUnitId !== promotion.businessUnitId
-    ) {
+    if (!canAccessUnit(admin, promotion.businessUnitId)) {
       return NextResponse.json(
         { error: 'You can only view your own unit.', code: 'unit_forbidden' },
         { status: 403 },
@@ -91,7 +88,7 @@ export async function PATCH(
           { status: 404 },
         )
       }
-      if (admin.scopedBusinessUnitId !== current.businessUnitId) {
+      if (!canAccessUnit(admin, current.businessUnitId)) {
         return NextResponse.json(
           { error: 'You can only edit your own unit.', code: 'unit_forbidden' },
           { status: 403 },

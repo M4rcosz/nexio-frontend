@@ -49,10 +49,11 @@ export default async function AdminInventoryPage({
     )
   }
 
-  const [items, productsPage] = await Promise.all([
-    listInventory(selectedUnitId),
+  const [inventoryPage, productsPage] = await Promise.all([
+    listInventory(selectedUnitId, { limit: 100 }),
     listProducts({ limit: 100 }),
   ])
+  const items = inventoryPage.data
   const productNames: Record<string, string> = {}
   for (const p of productsPage.data) productNames[p.id] = p.name
 

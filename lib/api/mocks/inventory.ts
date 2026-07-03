@@ -1,4 +1,4 @@
-// TODO: backend not implemented yet — used only when USE_MOCKS is enabled.
+// Mock fallback for the `/inventory` endpoints (USE_MOCKS only).
 //
 // In-memory inventory store keyed by `${businessUnitId}:${productId}`, seeded
 // from the product catalog so every unit starts with a stock balance for each
@@ -7,6 +7,7 @@
 import type {
   AdjustInventoryRequest,
   InventoryItem,
+  Paginated,
 } from '@/lib/api/types'
 import { mockDelay } from './_delay'
 import { MOCK_PRODUCTS } from './products'
@@ -41,12 +42,13 @@ function seed(): void {
 
 export async function listInventoryMock(
   businessUnitId: string,
-): Promise<InventoryItem[]> {
+): Promise<Paginated<InventoryItem>> {
   await mockDelay()
   seed()
-  return Array.from(STORE.values())
+  const data = Array.from(STORE.values())
     .filter((i) => i.businessUnitId === businessUnitId)
     .map((i) => ({ ...i }))
+  return { data, meta: { limit: 20, nextCursor: null, hasMore: false } }
 }
 
 export async function adjustInventoryMock(

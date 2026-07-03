@@ -1,9 +1,13 @@
-// TODO: backend not implemented yet — using mock data (also acts as fallback
-// when the real backend is offline).
+// Mock fallback for the `/products` endpoints (used when
+// NEXT_PUBLIC_USE_MOCKS=true or the real backend is offline).
 //
 // Dish names stay in Portuguese on purpose: they are proper nouns of Brazilian
 // cuisine and a real menu would print them as-is, even on an English UI.
-import type { Paginated, ProductResponseDto } from '@/lib/api/types'
+import type {
+  CreateProductRequest,
+  Paginated,
+  ProductResponseDto,
+} from '@/lib/api/types'
 import { mockDelay } from './_delay'
 
 const NOW = new Date().toISOString()
@@ -13,7 +17,7 @@ export const MOCK_PRODUCTS: ProductResponseDto[] = [
     id: 'prod_carne_sol',
     name: 'Carne de sol com macaxeira',
     description: 'Grilled sun-dried beef served with fried cassava, clarified butter and grilled coalho cheese.',
-    price: 58.9,
+    price: '58.90',
     isActive: true,
     categoryId: 'cat_carnes',
     imageUrl: null,
@@ -24,7 +28,7 @@ export const MOCK_PRODUCTS: ProductResponseDto[] = [
     id: 'prod_baiao',
     name: 'Baião de dois',
     description: 'Rice with green beans, coalho cheese, shredded dried beef and cilantro.',
-    price: 42.0,
+    price: '42.00',
     isActive: true,
     categoryId: 'cat_acompanhamentos',
     imageUrl: null,
@@ -35,7 +39,7 @@ export const MOCK_PRODUCTS: ProductResponseDto[] = [
     id: 'prod_bode',
     name: 'Bode guisado',
     description: 'Slow-cooked goat stew served with cassava purée and rice.',
-    price: 67.5,
+    price: '67.50',
     isActive: true,
     categoryId: 'cat_carnes',
     imageUrl: null,
@@ -46,7 +50,7 @@ export const MOCK_PRODUCTS: ProductResponseDto[] = [
     id: 'prod_queijo_coalho',
     name: 'Queijo coalho na brasa',
     description: 'Coalho cheese skewers grilled over embers, drizzled with cane molasses.',
-    price: 28.0,
+    price: '28.00',
     isActive: true,
     categoryId: 'cat_petiscos',
     imageUrl: null,
@@ -57,7 +61,7 @@ export const MOCK_PRODUCTS: ProductResponseDto[] = [
     id: 'prod_caldo_cana',
     name: 'Caldo de cana 500ml',
     description: 'Fresh sugarcane juice with lime.',
-    price: 9.5,
+    price: '9.50',
     isActive: true,
     categoryId: 'cat_bebidas',
     imageUrl: null,
@@ -68,7 +72,7 @@ export const MOCK_PRODUCTS: ProductResponseDto[] = [
     id: 'prod_bolo_rolo',
     name: 'Bolo de rolo',
     description: 'Generous slice of bolo de rolo with creamy guava paste.',
-    price: 16.0,
+    price: '16.00',
     isActive: true,
     categoryId: 'cat_sobremesas',
     imageUrl: null,
@@ -100,4 +104,41 @@ export async function listProductsMock(query?: {
 export async function getProductMock(id: string): Promise<ProductResponseDto | null> {
   await mockDelay()
   return MOCK_PRODUCTS.find((p) => p.id === id) ?? null
+}
+
+export async function createProductMock(
+  input: CreateProductRequest,
+): Promise<ProductResponseDto> {
+  await mockDelay()
+  if (MOCK_PRODUCTS.some((p) => p.name.toLowerCase() === input.name.toLowerCase())) {
+    throw Object.assign(new Error('Product name already in use.'), {
+      code: 'already_exists',
+    })
+  }
+  const now = new Date().toISOString()
+  const product: ProductResponseDto = {
+    id: `prod_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`,
+    name: input.name,
+    description: input.description ?? null,
+    price: input.price,
+    isActive: true,
+    categoryId: input.categoryId,
+    imageUrl: input.imageUrl,
+    createdAt: now,
+    updatedAt: now,
+  }
+  MOCK_PRODUCTS.push(product)
+  return { ...product }
+}
+
+export async function setProductActiveMock(
+  id: string,
+  isActive: boolean,
+): Promise<ProductResponseDto | null> {
+  await mockDelay()
+  const product = MOCK_PRODUCTS.find((p) => p.id === id)
+  if (!product) return null
+  product.isActive = isActive
+  product.updatedAt = new Date().toISOString()
+  return { ...product }
 }

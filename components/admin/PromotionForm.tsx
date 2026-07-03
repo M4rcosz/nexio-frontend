@@ -4,9 +4,9 @@ import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/navigation'
 import type {
-  BusinessUnit,
   Promotion,
   PromotionDiscountType,
+  PublicBusinessUnit,
 } from '@/lib/api/types'
 
 type Mode = 'create' | 'edit'
@@ -38,7 +38,7 @@ export function PromotionForm({
 }: {
   mode: Mode
   promotion?: Promotion
-  units: BusinessUnit[]
+  units: PublicBusinessUnit[]
   /** When set, the unit field is locked to this unit (MANAGER scope). */
   scopedBusinessUnitId: string | null
 }) {

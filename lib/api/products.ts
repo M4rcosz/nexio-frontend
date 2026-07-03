@@ -1,9 +1,16 @@
 import { serverFetch, USE_MOCKS } from './client'
 import { ApiError } from './errors'
-import type { Paginated, PaginationQuery, ProductResponseDto } from './types'
+import type {
+  CreateProductRequest,
+  Paginated,
+  PaginationQuery,
+  ProductResponseDto,
+} from './types'
 import {
+  createProductMock,
   getProductMock,
   listProductsMock,
+  setProductActiveMock,
 } from './mocks/products'
 
 export async function listProducts(
@@ -58,4 +65,36 @@ export async function listProductsByBusinessUnit(
       next: { revalidate: 30, tags: [`menu:${businessUnitId}`] },
     },
   )
+}
+
+/** `POST /products` (ADMIN/MANAGER). 409 on duplicated name. */
+export async function createProduct(
+  input: CreateProductRequest,
+): Promise<ProductResponseDto> {
+  if (USE_MOCKS) {
+    return createProductMock(input)
+  }
+  return serverFetch<ProductResponseDto>('/products', {
+    method: 'POST',
+    body: input,
+  })
+}
+
+/** `PATCH /products/:productId/activate|deactivate` (ADMIN). */
+export async function setProductActive(
+  productId: string,
+  isActive: boolean,
+): Promise<ProductResponseDto | null> {
+  if (USE_MOCKS) {
+    return setProductActiveMock(productId, isActive)
+  }
+  try {
+    return await serverFetch<ProductResponseDto>(
+      `/products/${productId}/${isActive ? 'activate' : 'deactivate'}`,
+      { method: 'PATCH' },
+    )
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null
+    throw err
+  }
 }

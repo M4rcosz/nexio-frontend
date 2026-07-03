@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { adjustInventory } from '@/lib/api/inventory'
 import { ApiError, describeError } from '@/lib/api/errors'
-import { getAdminContext } from '@/lib/auth/access'
+import { canAccessUnit, getAdminContext } from '@/lib/auth/access'
 
 const AdjustBody = z.object({
   productId: z.string().min(1),
@@ -20,10 +20,7 @@ export async function POST(
     return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
   }
   const { businessUnitId } = await ctx.params
-  if (
-    admin.role === 'MANAGER' &&
-    admin.scopedBusinessUnitId !== businessUnitId
-  ) {
+  if (!canAccessUnit(admin, businessUnitId)) {
     return NextResponse.json(
       { error: 'You can only adjust your own unit.', code: 'unit_forbidden' },
       { status: 403 },

@@ -74,3 +74,22 @@ export async function updatePromotion(
     throw err
   }
 }
+
+/** `PATCH /promotions/:promotionId/activate|deactivate` (ADMIN/MANAGER). */
+export async function setPromotionActive(
+  promotionId: string,
+  isActive: boolean,
+): Promise<Promotion | null> {
+  if (USE_MOCKS) {
+    return updatePromotionMock(promotionId, { isActive })
+  }
+  try {
+    return await serverFetch<Promotion>(
+      `/promotions/${promotionId}/${isActive ? 'activate' : 'deactivate'}`,
+      { method: 'PATCH' },
+    )
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null
+    throw err
+  }
+}

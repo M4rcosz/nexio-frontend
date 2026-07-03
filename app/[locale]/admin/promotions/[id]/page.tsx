@@ -59,11 +59,9 @@ export default async function EditPromotionPage({
             {
               id: promotion.businessUnitId,
               name: promotion.businessUnitId,
-              cnpj: '',
               address: '',
               city: '',
               phone: '',
-              isActive: true,
             },
           ]}
           scopedBusinessUnitId={

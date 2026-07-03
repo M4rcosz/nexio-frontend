@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { listPromotionsByBusinessUnit } from '@/lib/api/promotions'
 import { ApiError, describeError } from '@/lib/api/errors'
-import { getAdminContext } from '@/lib/auth/access'
+import { canAccessUnit, getAdminContext } from '@/lib/auth/access'
 
 export async function GET(
   req: Request,
@@ -12,10 +12,7 @@ export async function GET(
     return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
   }
   const { businessUnitId } = await ctx.params
-  if (
-    admin.role === 'MANAGER' &&
-    admin.scopedBusinessUnitId !== businessUnitId
-  ) {
+  if (!canAccessUnit(admin, businessUnitId)) {
     return NextResponse.json(
       { error: 'You can only view your own unit.', code: 'unit_forbidden' },
       { status: 403 },

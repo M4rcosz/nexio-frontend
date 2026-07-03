@@ -2,7 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { usePathname, useRouter } from '@/i18n/navigation'
-import type { BusinessUnit } from '@/lib/api/types'
+import type { PublicBusinessUnit } from '@/lib/api/types'
 
 /**
  * Unit picker for ADMIN pages. Pushes the chosen unit into the `businessUnitId`
@@ -14,7 +14,7 @@ export function AdminUnitSelector({
   selected,
   labelKey,
 }: {
-  units: BusinessUnit[]
+  units: PublicBusinessUnit[]
   selected: string
   /** Translation key (within the page namespace) for the field label. */
   labelKey: string
