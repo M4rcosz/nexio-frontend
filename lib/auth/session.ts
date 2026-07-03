@@ -5,6 +5,8 @@ export type SessionPayload = {
   sub: string
   username: string
   role: string
+  /** Units the staff user is bound to ([] = unbound). Absent in old tokens. */
+  businessUnitIds?: string[]
   iat?: number
   exp?: number
 }

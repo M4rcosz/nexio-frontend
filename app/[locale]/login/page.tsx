@@ -37,9 +37,6 @@ export default async function LoginPage({
               {t('register')}
             </Link>
           </p>
-          <p className="mt-4 rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-xs text-accent-700 dark:text-accent-300">
-            {t('tokenWarning')}
-          </p>
         </div>
       </div>
     </div>

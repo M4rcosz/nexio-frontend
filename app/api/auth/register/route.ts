@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { loginBackend, registerCustomer } from '@/lib/api/auth'
 import { ApiError, describeError } from '@/lib/api/errors'
-import { SESSION_COOKIE_NAME, sessionCookieOptions } from '@/lib/auth/cookie'
+import {
+  REFRESH_COOKIE_NAME,
+  refreshCookieOptions,
+  SESSION_COOKIE_NAME,
+  sessionCookieOptions,
+} from '@/lib/auth/cookie'
 
 // Mirrors the backend RegisterCustomerDto: username is the lowercase login key,
 // email and phone are optional, and there is no role field (forced to CUSTOMER
@@ -56,12 +61,13 @@ export async function POST(req: Request) {
   // 2. Registration returns no token — sign the new customer in with the same
   // credentials so they land authenticated, matching the previous UX.
   try {
-    const { access_token } = await loginBackend({
+    const { access_token, refresh_token } = await loginBackend({
       username: parsed.username,
       password: parsed.password,
     })
     const res = NextResponse.json({ ok: true })
     res.cookies.set(SESSION_COOKIE_NAME, access_token, sessionCookieOptions())
+    res.cookies.set(REFRESH_COOKIE_NAME, refresh_token, refreshCookieOptions())
     return res
   } catch {
     // The account exists; only the auto-login failed. Tell the client to send

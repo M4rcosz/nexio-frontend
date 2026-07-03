@@ -141,11 +141,12 @@
     "txAdjustment": "Ajuste",
     "consentTitle": "Consentimento LGPD",
     "consentGivenAt": "✓ Consentimento registrado em {date}.",
-    "consentRevocation": "Você pode pedir a revogação a qualquer momento entrando em contato com a unidade.",
+    "consentRevocation": "Você pode revogar o consentimento a qualquer momento — os pontos param de acumular imediatamente.",
     "consentText": "Aceito participar do programa de fidelidade e que meus dados de consumo sejam usados para gerar pontos.",
     "consentSubmit": "Aceitar e continuar",
     "consentSubmitting": "Registrando...",
-    "consentFailed": "Não foi possível registrar o consentimento."
+    "consentFailed": "Não foi possível registrar o consentimento.",
+    "consentRevoke": "Revogar consentimento"
   },
   "login": {
     "title": "Entrar",
@@ -156,13 +157,12 @@
     "submitting": "Entrando...",
     "noAccount": "Ainda não tem conta?",
     "register": "Cadastre-se",
-    "tokenWarning": "⚠ JWT do backend expira em 60s. Em caso de erro 401, refaça o login.",
     "failed": "Falha ao entrar.",
     "invalidCredentials": "Usuário ou senha incorretos."
   },
   "register": {
     "title": "Criar conta",
-    "subtitle": "O backend ainda não tem cadastro real — este formulário simula o registro e já loga você localmente.",
+    "subtitle": "Crie sua conta para pedir e acumular pontos de fidelidade.",
     "nameLabel": "Nome completo",
     "emailLabel": "E-mail",
     "usernameLabel": "Usuário",

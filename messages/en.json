@@ -141,11 +141,12 @@
     "txAdjustment": "Adjustment",
     "consentTitle": "LGPD consent",
     "consentGivenAt": "✓ Consent recorded on {date}.",
-    "consentRevocation": "You may request revocation at any time by contacting the unit.",
+    "consentRevocation": "You can revoke your consent at any time — points stop accruing immediately.",
     "consentText": "I agree to participate in the loyalty program and to have my consumption data used to award points.",
     "consentSubmit": "Accept and continue",
     "consentSubmitting": "Saving...",
-    "consentFailed": "Could not record consent."
+    "consentFailed": "Could not record consent.",
+    "consentRevoke": "Revoke consent"
   },
   "login": {
     "title": "Sign in",
@@ -156,13 +157,12 @@
     "submitting": "Signing in...",
     "noAccount": "Don't have an account?",
     "register": "Register",
-    "tokenWarning": "⚠ Backend JWT expires in 60s. On any 401, sign in again.",
     "failed": "Failed to sign in.",
     "invalidCredentials": "Invalid username or password."
   },
   "register": {
     "title": "Create account",
-    "subtitle": "Backend has no real signup yet — this form simulates registration and signs you in locally.",
+    "subtitle": "Create your account to order and earn loyalty points.",
     "nameLabel": "Full name",
     "emailLabel": "E-mail",
     "usernameLabel": "Username",

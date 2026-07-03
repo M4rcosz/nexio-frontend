@@ -2,7 +2,6 @@ import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link, redirect } from '@/i18n/navigation'
 import { isAuthenticated } from '@/lib/auth/session'
 import { RegisterForm } from '@/components/RegisterForm'
-import { StubBadge } from '@/components/StubBadge'
 
 export default async function RegisterPage({
   params,
@@ -23,7 +22,6 @@ export default async function RegisterPage({
             <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg sm:text-3xl">
               {t('title')}
             </h1>
-            <StubBadge />
           </div>
           <p className="mt-1 text-sm text-fg-muted">{t('subtitle')}</p>
           <RegisterForm />

@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { loginBackend } from '@/lib/api/auth'
 import { ApiError, describeError } from '@/lib/api/errors'
-import { SESSION_COOKIE_NAME, sessionCookieOptions } from '@/lib/auth/cookie'
+import {
+  REFRESH_COOKIE_NAME,
+  refreshCookieOptions,
+  SESSION_COOKIE_NAME,
+  sessionCookieOptions,
+} from '@/lib/auth/cookie'
 
 const Body = z.object({
   username: z.string().min(1, 'Username is required.'),
@@ -21,9 +26,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { access_token } = await loginBackend(parsed)
+    const { access_token, refresh_token } = await loginBackend(parsed)
     const res = NextResponse.json({ ok: true })
     res.cookies.set(SESSION_COOKIE_NAME, access_token, sessionCookieOptions())
+    res.cookies.set(REFRESH_COOKIE_NAME, refresh_token, refreshCookieOptions())
     return res
   } catch (err) {
     const status = err instanceof ApiError ? err.status || 500 : 500
