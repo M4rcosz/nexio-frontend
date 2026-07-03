@@ -1,4 +1,4 @@
-# API — Raízes do Nordeste
+# API — Nexio
 
 Referência de todos os endpoints HTTP do backend, pensada para orientar o desenvolvimento do front-end.
 
@@ -324,7 +324,7 @@ Request:
 
 ```jsonc
 {
-  "name": "Raízes Pelourinho",          // ≤120
+  "name": "Nexio Pelourinho",          // ≤120
   "cnpj": "12345678000190",             // 14 dígitos, sem máscara
   "address": "Largo do Pelourinho, 10", // ≤255
   "city": "Salvador",                   // ≤120
@@ -347,7 +347,7 @@ Response `201`: [BusinessUnit](#businessunit). Erro `409` cnpj ou phone duplicad
 ```json
 {
   "id": "<uuid>",
-  "name": "Raízes Pelourinho",
+  "name": "Nexio Pelourinho",
   "address": "Largo do Pelourinho, 10",
   "city": "Salvador",
   "phone": "7132223344"
@@ -359,7 +359,7 @@ Response `201`: [BusinessUnit](#businessunit). Erro `409` cnpj ou phone duplicad
 ```jsonc
 {
   "id": "<uuid>",
-  "name": "Raízes Pelourinho",
+  "name": "Nexio Pelourinho",
   "cnpj": "12345678000190",
   "address": "Largo do Pelourinho, 10",
   "city": "Salvador",

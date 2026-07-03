@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "description": "Sabores autênticos do Nordeste brasileiro. Escolha sua unidade, monte seu pedido e acompanhe em tempo real."
+    "description": "A plataforma de comércio unificado. Escolha uma unidade, monte seu pedido e acompanhe em tempo real."
   },
   "common": {
     "loading": "Carregando...",
@@ -15,8 +15,8 @@
     "backendBadgeTitle": "Endpoint real do backend."
   },
   "header": {
-    "brand": "Raízes do Nordeste",
-    "tagline": "Sabores · do · sertão",
+    "brand": "Nexio",
+    "tagline": "Comércio · em · movimento",
     "units": "Unidades",
     "myOrders": "Meus pedidos",
     "points": "Pontos",
@@ -37,20 +37,20 @@
     "switchToDark": "Mudar para tema escuro"
   },
   "footer": {
-    "tagline": "© {year} {name} — Sabores que contam histórias."
+    "tagline": "© {year} {name} — Comércio unificado, do pedido à entrega."
   },
   "home": {
-    "heroTitle": "Sabores autênticos do Nordeste",
-    "heroSubtitle": "Carne de sol, baião de dois, bode guisado e muito mais. Escolha a unidade mais próxima e monte seu pedido.",
+    "heroTitle": "Seu comércio, em movimento",
+    "heroSubtitle": "Uma plataforma para conectar unidades, pedidos e clientes em tempo real. Escolha uma unidade e comece agora.",
     "chooseUnit": "Escolha sua unidade",
     "viewMenu": "Ver cardápio",
     "select": "Selecionar",
     "unitSearchPlaceholder": "Buscar unidades — nome ou cidade...",
     "noUnits": "Nenhuma unidade encontrada.",
     "search": {
-      "placeholder": "Buscar pratos — carne de sol, baião...",
+      "placeholder": "Buscar itens do catálogo...",
       "searching": "Buscando...",
-      "empty": "Nenhum prato encontrado."
+      "empty": "Nenhum item encontrado."
     }
   },
   "menu": {

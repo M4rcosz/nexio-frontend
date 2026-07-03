@@ -1,4 +1,4 @@
-# Briefing de Frontend — Raízes do Nordeste
+# Briefing de Frontend — Nexio
 
 > **Como usar este documento**: este é um contrato de realidade entre você (próxima sessão Claude) e o estado atual do backend. Endpoints marcados ✅ existem e podem ser chamados. Endpoints marcados `[stub]` ainda **não existem** — você deve mockar com dados realistas seguindo o schema descrito nas seções 7 e 8. **Não invente endpoints novos** sem perguntar.
 
@@ -6,7 +6,7 @@
 
 ## 1. Visão de produto
 
-**Raízes do Nordeste** é um sistema de gestão multi-unidade para uma rede de restaurantes de comida nordestina. O backend é um monolito modular em NestJS, ainda em construção, e atende cinco canais de venda diferentes:
+**Nexio** é uma plataforma de comércio unificado multi-unidade. O backend é um monolito modular em NestJS, ainda em construção, e atende cinco canais de venda diferentes:
 
 - **APP** — aplicativo mobile do cliente final
 - **WEB** — site do cliente final (este frontend)
@@ -527,7 +527,7 @@ NEXT_PUBLIC_USE_MOCKS=true       # alterne para 'false' quando o backend entrega
 
 # Servidor (nunca expor)
 BACKEND_INTERNAL_URL=http://localhost:3000/api
-SESSION_COOKIE_NAME=raizes_session
+SESSION_COOKIE_NAME=nexio_session
 SESSION_COOKIE_SECURE=false      # true em produção
 ```
 

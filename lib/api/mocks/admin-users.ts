@@ -14,7 +14,7 @@ function makeUser(
   name: string,
   role: Role,
   businessUnitIds: string[],
-  email = `${username}@raizes.com`,
+  email = `${username}@nexio.com`,
   phone: string | null = '(81) 99999-0000',
 ): User {
   return {
@@ -32,20 +32,20 @@ function makeUser(
 /** Internal store — mutated by admin CRUD. Seeded with realistic data. */
 const STORE: User[] = [
   // Top-level (ADMIN carries no unit binding)
-  makeUser('usr_admin_demo', 'admin', 'Administradora Geral', 'ADMIN', [], 'admin@raizes.com'),
+  makeUser('usr_admin_demo', 'admin', 'Administradora Geral', 'ADMIN', [], 'admin@nexio.com'),
 
   // Managers (one per unit)
-  makeUser('usr_manager_recife', 'manager.recife', 'Beatriz Lima', 'MANAGER', [MOCK_BUSINESS_UNITS[0].id], 'beatriz@raizes.com'),
-  makeUser('usr_manager_olinda', 'manager.olinda', 'Rafael Souza', 'MANAGER', [MOCK_BUSINESS_UNITS[1].id], 'rafael@raizes.com'),
+  makeUser('usr_manager_recife', 'manager.recife', 'Beatriz Lima', 'MANAGER', [MOCK_BUSINESS_UNITS[0].id], 'beatriz@nexio.com'),
+  makeUser('usr_manager_olinda', 'manager.olinda', 'Rafael Souza', 'MANAGER', [MOCK_BUSINESS_UNITS[1].id], 'rafael@nexio.com'),
 
   // Attendants
-  makeUser('usr_attendant_maria', 'maria.atendente', 'Maria Silva', 'ATTENDANT', [MOCK_BUSINESS_UNITS[0].id], 'maria@raizes.com'),
-  makeUser('usr_attendant_pedro', 'pedro.atendente', 'Pedro Henrique', 'ATTENDANT', [MOCK_BUSINESS_UNITS[0].id], 'pedro@raizes.com'),
-  makeUser('usr_attendant_ana', 'ana.atendente', 'Ana Costa', 'ATTENDANT', [MOCK_BUSINESS_UNITS[1].id], 'ana@raizes.com'),
+  makeUser('usr_attendant_maria', 'maria.atendente', 'Maria Silva', 'ATTENDANT', [MOCK_BUSINESS_UNITS[0].id], 'maria@nexio.com'),
+  makeUser('usr_attendant_pedro', 'pedro.atendente', 'Pedro Henrique', 'ATTENDANT', [MOCK_BUSINESS_UNITS[0].id], 'pedro@nexio.com'),
+  makeUser('usr_attendant_ana', 'ana.atendente', 'Ana Costa', 'ATTENDANT', [MOCK_BUSINESS_UNITS[1].id], 'ana@nexio.com'),
 
   // Kitchen
-  makeUser('usr_kitchen_jose', 'jose.cozinha', 'José Cozinha', 'KITCHEN', [MOCK_BUSINESS_UNITS[0].id], 'jose@raizes.com'),
-  makeUser('usr_kitchen_lucia', 'lucia.cozinha', 'Lúcia Mendes', 'KITCHEN', [MOCK_BUSINESS_UNITS[1].id], 'lucia@raizes.com'),
+  makeUser('usr_kitchen_jose', 'jose.cozinha', 'José Cozinha', 'KITCHEN', [MOCK_BUSINESS_UNITS[0].id], 'jose@nexio.com'),
+  makeUser('usr_kitchen_lucia', 'lucia.cozinha', 'Lúcia Mendes', 'KITCHEN', [MOCK_BUSINESS_UNITS[1].id], 'lucia@nexio.com'),
 ]
 
 function newId(prefix = 'usr'): string {

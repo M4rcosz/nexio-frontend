@@ -4,56 +4,56 @@
 
 @layer base {
   :root {
-    /* Light theme — clean porcelain with a crimson whisper. */
-    --bg: 252 245 246;
+    /* Light theme — cool porcelain with a violet whisper. */
+    --bg: 250 250 252;
     --bg-elevated: 255 255 255;
     --surface: 255 255 255;
-    --surface-2: 252 240 242;
-    --border: 235 214 219;
-    --border-strong: 214 180 188;
-    --fg: 26 8 12;
-    --fg-muted: 122 84 92;
-    --fg-subtle: 158 122 130;
+    --surface-2: 245 244 250;
+    --border: 228 226 240;
+    --border-strong: 205 202 225;
+    --fg: 20 18 33;
+    --fg-muted: 92 88 112;
+    --fg-subtle: 130 126 150;
 
-    /* Default brand/accent palette (rubro-negro crimson). These are the
-       fallback values; the layout overrides them per tenant via inline vars
-       on <html>. See lib/tenant/config.ts. */
-    --brand-50: 255 240 243;
-    --brand-100: 255 219 226;
-    --brand-200: 255 184 198;
-    --brand-300: 255 132 153;
-    --brand-400: 251 64 99;
-    --brand-500: 230 12 52;
-    --brand-600: 194 0 41;
-    --brand-700: 158 3 34;
-    --brand-800: 130 8 33;
-    --brand-900: 107 10 32;
-    --brand-950: 61 1 13;
+    /* Default brand/accent palette (indigo → violet + cyan accent). These are
+       the fallback values; the layout overrides them per tenant via inline
+       vars on <html>. See lib/tenant/config.ts. */
+    --brand-50: 245 243 255;
+    --brand-100: 237 233 254;
+    --brand-200: 221 214 254;
+    --brand-300: 196 181 253;
+    --brand-400: 167 139 250;
+    --brand-500: 124 58 237;
+    --brand-600: 109 40 217;
+    --brand-700: 91 33 182;
+    --brand-800: 76 29 149;
+    --brand-900: 59 21 128;
+    --brand-950: 46 16 101;
 
-    --accent-50: 255 240 244;
-    --accent-100: 255 217 227;
-    --accent-200: 255 176 203;
-    --accent-300: 255 117 163;
-    --accent-400: 255 45 110;
-    --accent-500: 255 10 76;
-    --accent-600: 230 0 57;
-    --accent-700: 189 0 48;
-    --accent-800: 155 5 44;
-    --accent-900: 130 10 42;
-    --accent-950: 72 0 18;
+    --accent-50: 236 254 255;
+    --accent-100: 207 250 254;
+    --accent-200: 165 243 252;
+    --accent-300: 103 232 249;
+    --accent-400: 34 211 238;
+    --accent-500: 6 182 212;
+    --accent-600: 8 145 178;
+    --accent-700: 14 116 144;
+    --accent-800: 21 94 117;
+    --accent-900: 22 78 99;
+    --accent-950: 8 51 68;
   }
 
   .dark {
-    /* Dark theme — rubro-negro: ink-black with a deep crimson core. */
-    --bg: 10 5 7;
-    --bg-elevated: 20 9 12;
-    --surface: 24 11 15;
-    --surface-2: 33 15 20;
-    --border: 58 24 32;
-    --border-strong: 92 36 48;
-    --fg: 245 232 235;
-    --fg-muted: 196 146 156;
-    --fg-subtle: 142 90 100;
+    /* Dark theme — ink-black with a deep violet core. */
+    --bg: 8 8 14;
+    --bg-elevated: 16 15 26;
+    --surface: 20 19 32;
+    --surface-2: 28 26 44;
+    --border: 44 41 68;
+    --border-strong: 66 60 100;
+    --fg: 236 234 246;
+    --fg-muted: 160 156 184;
+    --fg-subtle: 120 116 146;
   }
 
   html {
@@ -105,7 +105,8 @@
   }
   .btn-primary {
     @apply btn text-white shadow-soft;
-    background-image: linear-gradient(135deg, rgb(var(--accent-400)) 0%, rgb(var(--brand-500)) 100%);
+    /* Kept in the violet 500→700 band so white text clears WCAG AA. */
+    background-image: linear-gradient(135deg, rgb(var(--brand-500)) 0%, rgb(var(--brand-700)) 100%);
   }
   .btn-primary:hover {
     @apply shadow-glow -translate-y-px brightness-110;
@@ -164,9 +165,9 @@
   .text-gradient-brand {
     background-image: linear-gradient(
       135deg,
-      rgb(var(--accent-300)) 0%,
-      rgb(var(--accent-400)) 45%,
-      rgb(var(--brand-500)) 100%
+      rgb(var(--brand-500)) 0%,
+      rgb(var(--brand-600)) 45%,
+      rgb(var(--accent-600)) 100%
     );
     background-clip: text;
     -webkit-background-clip: text;
@@ -187,7 +188,7 @@
     @apply animate-shimmer rounded-md;
   }
   /* For skeleton blocks that sit on top of the brand gradient (hero) — uses
-     translucent white so the shimmer stays readable on the orange/red bg. */
+     translucent white so the shimmer stays readable on the violet/cyan bg. */
   .skeleton-light {
     background-image: linear-gradient(
       90deg,

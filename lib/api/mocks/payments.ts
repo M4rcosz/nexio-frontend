@@ -19,7 +19,7 @@ function fakePixCode(): string {
     '0014BR.GOV.BCB.PIX',
     '0114+5581999999999',
     '5204000053039865802BR',
-    '5913RAIZES NORD',
+    '5905NEXIO',
     '6009RECIFE',
     `62${Math.random().toString(36).slice(2, 12).toUpperCase()}`,
     '6304ABCD',

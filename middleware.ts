@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { routing } from './i18n/routing'
 
 const SESSION_COOKIE_NAME =
-  process.env.SESSION_COOKIE_NAME ?? 'raizes_session'
+  process.env.SESSION_COOKIE_NAME ?? 'nexio_session'
 
 const intlMiddleware = createIntlMiddleware(routing)
 

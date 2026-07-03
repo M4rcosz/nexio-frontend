@@ -1,8 +1,8 @@
-# Raízes do Nordeste — Web frontend (customer)
+# Nexio — Web frontend (customer)
 
-Next.js (App Router) frontend for the **WEB** sales channel of Raízes do
-Nordeste, a Brazilian Northeast restaurant chain. Built from the contract in
-`raizes-frontend-briefing.md` (the briefing document that lives at the root
+Next.js (App Router) frontend for the **WEB** sales channel of Nexio, a
+unified commerce platform. Built from the contract in
+`nexio-frontend-briefing.md` (the briefing document that lives at the root
 of the backend repository).
 
 The product targets Brazilian end-customers but the UI ships in two
@@ -26,7 +26,7 @@ PORT=3001 npm run dev
 
 Only **4 real endpoints** are available (menu + login). Everything else is
 mocked locally following the schema described in the briefing — see
-[briefing §6](raizes-frontend-briefing.md) for the full catalogue.
+[briefing §6](nexio-frontend-briefing.md) for the full catalogue.
 
 | Resource              | Source                                          |
 | --------------------- | ----------------------------------------------- |

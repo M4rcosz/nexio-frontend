@@ -14,7 +14,7 @@ const NOW = new Date().toISOString()
 export const MOCK_BUSINESS_UNITS: BusinessUnit[] = [
   {
     id: 'bu_recife_boavista',
-    name: 'Raízes Recife — Boa Vista',
+    name: 'Nexio Recife — Boa Vista',
     cnpj: '12345678000190',
     address: 'Rua da Aurora, 1042, Boa Vista',
     city: 'Recife',
@@ -25,7 +25,7 @@ export const MOCK_BUSINESS_UNITS: BusinessUnit[] = [
   },
   {
     id: 'bu_olinda_carmo',
-    name: 'Raízes Olinda — Carmo',
+    name: 'Nexio Olinda — Carmo',
     cnpj: '12345678000271',
     address: 'Praça do Carmo, 88, Carmo',
     city: 'Olinda',
@@ -36,7 +36,7 @@ export const MOCK_BUSINESS_UNITS: BusinessUnit[] = [
   },
   {
     id: 'bu_jpa_tambau',
-    name: 'Raízes João Pessoa — Tambaú',
+    name: 'Nexio João Pessoa — Tambaú',
     cnpj: '12345678000352',
     address: 'Av. Cabo Branco, 2400, Tambaú',
     city: 'João Pessoa',
@@ -47,7 +47,7 @@ export const MOCK_BUSINESS_UNITS: BusinessUnit[] = [
   },
   {
     id: 'bu_natal_ponta_negra',
-    name: 'Raízes Natal — Ponta Negra',
+    name: 'Nexio Natal — Ponta Negra',
     cnpj: '12345678000433',
     address: 'Av. Engenheiro Roberto Freire, 5500',
     city: 'Natal',

@@ -5,7 +5,7 @@ export const SESSION_COOKIE_NAME = SESSION_COOKIE
 
 /** Holds the opaque backend refresh token (rotated on every refresh). */
 export const REFRESH_COOKIE_NAME =
-  process.env.REFRESH_COOKIE_NAME ?? 'raizes_refresh'
+  process.env.REFRESH_COOKIE_NAME ?? 'nexio_refresh'
 
 /** Refresh tokens outlive the 30-min access token; keep the cookie for 7 days. */
 const REFRESH_MAX_AGE_SECONDS = 60 * 60 * 24 * 7

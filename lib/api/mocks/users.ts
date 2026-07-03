@@ -7,7 +7,7 @@ import type { UpdateMeRequest, User } from '@/lib/api/types'
 export const MOCK_CUSTOMER: User = {
   id: 'usr_customer_demo',
   username: 'demo.customer',
-  email: 'demo.customer@raizes.com',
+  email: 'demo.customer@nexio.com',
   name: 'Demo Customer',
   phone: '(81) 99999-0000',
   role: 'CUSTOMER',

@@ -90,7 +90,7 @@ export function CartView() {
                     </p>
                     <p className="mt-0.5 text-xs text-fg-muted">
                       {formatMoney(item.unitPrice, locale)} ·{' '}
-                      <span className="font-semibold text-gradient-brand">
+                      <span className="font-semibold text-brand-600 dark:text-brand-300">
                         {formatMoney(
                           multiplyMoney(item.unitPrice, item.quantity),
                           locale,

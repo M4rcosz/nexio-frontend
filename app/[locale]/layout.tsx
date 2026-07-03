@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Space_Grotesk } from 'next/font/google'
 import { notFound } from 'next/navigation'
 import { hasLocale, NextIntlClientProvider } from 'next-intl'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
@@ -18,6 +18,14 @@ const inter = Inter({
   display: 'swap',
   variable: '--font-sans',
   weight: ['300', '400', '500', '600', '700', '800'],
+})
+
+// Geometric display face for titles and the Nexio wordmark.
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-display',
+  weight: ['400', '500', '600', '700'],
 })
 
 export function generateStaticParams() {
@@ -56,7 +64,7 @@ export default async function LocaleLayout({
   return (
     <html
       lang={locale}
-      className={`${inter.variable} ${theme === 'dark' ? 'dark' : ''}`}
+      className={`${inter.variable} ${spaceGrotesk.variable} ${theme === 'dark' ? 'dark' : ''}`}
       style={themeVars}
       suppressHydrationWarning
     >

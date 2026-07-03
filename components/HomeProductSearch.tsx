@@ -117,7 +117,7 @@ export function HomeProductSearch({
                         </span>
                       ) : null}
                     </span>
-                    <span className="flex-none font-display text-sm font-bold text-gradient-brand">
+                    <span className="flex-none font-display text-sm font-bold text-brand-600 dark:text-brand-300">
                       {formatMoney(p.price, locale)}
                     </span>
                   </Link>

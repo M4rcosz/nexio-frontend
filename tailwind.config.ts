@@ -22,7 +22,7 @@ const config: Config = {
         'fg-subtle': 'rgb(var(--fg-subtle) / <alpha-value>)',
 
         // Brand + accent are driven by per-tenant CSS variables so a tenant
-        // can re-skin the whole UI. Defaults (rubro-negro crimson) live in
+        // can re-skin the whole UI. Defaults (indigo → violet + cyan) live in
         // globals.css `:root`; the layout overrides them per tenant.
         brand: {
           50: 'rgb(var(--brand-50) / <alpha-value>)',
@@ -62,8 +62,10 @@ const config: Config = {
         display: ['var(--font-display)', 'var(--font-sans)', 'system-ui', 'sans-serif'],
       },
       backgroundImage: {
+        // Deep accent-700 start keeps white text/glyphs on a brand-filled
+        // surface (badge, active pills, counters) clearing WCAG AA (~5.4:1).
         'brand-gradient':
-          'linear-gradient(135deg, rgb(var(--accent-400)) 0%, rgb(var(--brand-500)) 45%, rgb(var(--brand-800)) 100%)',
+          'linear-gradient(135deg, rgb(var(--accent-700)) 0%, rgb(var(--brand-500)) 45%, rgb(var(--brand-700)) 100%)',
         'brand-soft':
           'linear-gradient(135deg, rgb(var(--brand-500) / 0.20), rgb(var(--accent-400) / 0.08))',
         'hero-grain':

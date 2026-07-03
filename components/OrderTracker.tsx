@@ -155,7 +155,7 @@ function Timeline({ current }: { current: OrderStatus }) {
                 : 'border-border bg-surface text-fg-muted'
             } ${isCurrent ? 'ring-2 ring-brand-500/40' : ''}`}
           >
-            <span className="font-mono text-[10px] uppercase tracking-widest opacity-80">
+            <span className="font-mono text-[10px] uppercase tracking-widest opacity-90">
               0{i + 1}
             </span>
             <span className="font-semibold leading-tight">{t(status)}</span>

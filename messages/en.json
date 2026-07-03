@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "description": "Authentic flavors of Brazil's Northeast. Pick a unit, place your order and track it in real time."
+    "description": "The unified commerce platform. Pick a unit, place your order and track it in real time."
   },
   "common": {
     "loading": "Loading...",
@@ -15,8 +15,8 @@
     "backendBadgeTitle": "Real backend endpoint."
   },
   "header": {
-    "brand": "Raízes do Nordeste",
-    "tagline": "Flavors · from · the · sertão",
+    "brand": "Nexio",
+    "tagline": "Commerce · in · motion",
     "units": "Units",
     "myOrders": "My orders",
     "points": "Points",
@@ -37,20 +37,20 @@
     "switchToDark": "Switch to dark theme"
   },
   "footer": {
-    "tagline": "© {year} {name} — Flavors that tell stories."
+    "tagline": "© {year} {name} — Unified commerce, from order to delivery."
   },
   "home": {
-    "heroTitle": "Authentic flavors of Brazil's Northeast",
-    "heroSubtitle": "Carne de sol, baião de dois, slow-cooked goat and more. Pick the closest unit and place your order.",
+    "heroTitle": "Your commerce, in motion",
+    "heroSubtitle": "One platform connecting units, orders and customers in real time. Pick a unit and get started.",
     "chooseUnit": "Choose your unit",
     "viewMenu": "View menu",
     "select": "Select",
     "unitSearchPlaceholder": "Search units — name or city...",
     "noUnits": "No units found.",
     "search": {
-      "placeholder": "Search dishes — carne de sol, baião...",
+      "placeholder": "Search the catalog...",
       "searching": "Searching...",
-      "empty": "No dishes found."
+      "empty": "No items found."
     }
   },
   "menu": {

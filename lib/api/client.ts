@@ -1,7 +1,7 @@
 import { ApiError } from './errors'
 
 const SESSION_COOKIE_NAME =
-  process.env.SESSION_COOKIE_NAME ?? 'raizes_session'
+  process.env.SESSION_COOKIE_NAME ?? 'nexio_session'
 
 const BACKEND_URL =
   process.env.BACKEND_INTERNAL_URL ??

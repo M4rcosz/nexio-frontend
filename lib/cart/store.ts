@@ -95,7 +95,7 @@ export const useCartStore = create<CartState>()(
       clear: () => set({ items: [], businessUnitId: null, businessUnitName: null }),
     }),
     {
-      name: 'raizes-cart',
+      name: 'nexio-cart',
       storage: createJSONStorage(() => localStorage),
     },
   ),

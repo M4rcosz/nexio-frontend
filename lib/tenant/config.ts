@@ -29,7 +29,7 @@ export type LocalizedText = Record<string, string>
 
 export type Tenant = {
   id: string
-  /** Full display name, e.g. "Raízes do Nordeste". A proper noun — not translated. */
+  /** Full display name, e.g. "Nexio". A proper noun — not translated. */
   name: string
   /** Short name used in tight spots. */
   shortName: string
@@ -54,34 +54,39 @@ export type TenantBranding = Pick<
   'id' | 'name' | 'shortName' | 'logoMark' | 'logoUrl' | 'tagline'
 >
 
-export const DEFAULT_TENANT_ID = 'raizes'
+export const DEFAULT_TENANT_ID = 'nexio'
 
-const CRIMSON: ColorScale = {
-  '50': '255 240 243',
-  '100': '255 219 226',
-  '200': '255 184 198',
-  '300': '255 132 153',
-  '400': '251 64 99',
-  '500': '230 12 52',
-  '600': '194 0 41',
-  '700': '158 3 34',
-  '800': '130 8 33',
-  '900': '107 10 32',
-  '950': '61 1 13',
+/**
+ * Indigo → violet. Mid stops are deliberately deep (500 = #7c3aed) so that
+ * white text on a brand-filled surface (buttons, badge) clears WCAG AA.
+ */
+const VIOLET: ColorScale = {
+  '50': '245 243 255',
+  '100': '237 233 254',
+  '200': '221 214 254',
+  '300': '196 181 253',
+  '400': '167 139 250',
+  '500': '124 58 237',
+  '600': '109 40 217',
+  '700': '91 33 182',
+  '800': '76 29 149',
+  '900': '59 21 128',
+  '950': '46 16 101',
 }
 
-const NEON_ROSE: ColorScale = {
-  '50': '255 240 244',
-  '100': '255 217 227',
-  '200': '255 176 203',
-  '300': '255 117 163',
-  '400': '255 45 110',
-  '500': '255 10 76',
-  '600': '230 0 57',
-  '700': '189 0 48',
-  '800': '155 5 44',
-  '900': '130 10 42',
-  '950': '72 0 18',
+/** Cyan accent — the electric counterpoint to the violet brand. */
+const CYAN: ColorScale = {
+  '50': '236 254 255',
+  '100': '207 250 254',
+  '200': '165 243 252',
+  '300': '103 232 249',
+  '400': '34 211 238',
+  '500': '6 182 212',
+  '600': '8 145 178',
+  '700': '14 116 144',
+  '800': '21 94 117',
+  '900': '22 78 99',
+  '950': '8 51 68',
 }
 
 const AMBER: ColorScale = {
@@ -113,22 +118,22 @@ const EMBER: ColorScale = {
 }
 
 export const TENANTS: Record<string, Tenant> = {
-  raizes: {
-    id: 'raizes',
-    name: 'Raízes do Nordeste',
-    shortName: 'Raízes',
-    logoMark: 'R',
+  nexio: {
+    id: 'nexio',
+    name: 'Nexio',
+    shortName: 'Nexio',
+    logoMark: 'N',
     logoUrl: null,
     tagline: {
-      en: 'Flavors · from · the · sertão',
-      'pt-BR': 'Sabores · do · sertão',
+      en: 'Commerce · in · motion',
+      'pt-BR': 'Comércio · em · movimento',
     },
     description: {
-      en: "Authentic flavors of Brazil's Northeast. Pick a unit, place your order and track it in real time.",
+      en: 'The unified commerce platform. Pick a unit, place your order and track it in real time.',
       'pt-BR':
-        'Sabores autênticos do Nordeste brasileiro. Escolha sua unidade, monte seu pedido e acompanhe em tempo real.',
+        'A plataforma de comércio unificado. Escolha uma unidade, monte seu pedido e acompanhe em tempo real.',
     },
-    theme: { brand: CRIMSON, accent: NEON_ROSE },
+    theme: { brand: VIOLET, accent: CYAN },
   },
 
   // Example of a second white-label tenant — proves the theme/branding swap.
