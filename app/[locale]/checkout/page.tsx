@@ -1,6 +1,5 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { CheckoutView } from '@/components/CheckoutView'
-import { StubBadge } from '@/components/StubBadge'
 
 export default async function CheckoutPage({
   params,
@@ -16,7 +15,6 @@ export default async function CheckoutPage({
         <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg sm:text-3xl">
           {t('title')}
         </h1>
-        <StubBadge />
       </div>
       <CheckoutView />
     </div>

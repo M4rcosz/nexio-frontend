@@ -49,14 +49,20 @@ export function CheckoutView() {
     start(async () => {
       const res = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          // Retries of this exact submission return the same order instead of
+          // duplicating it (backend idempotency).
+          'idempotency-key': crypto.randomUUID(),
+        },
         body: JSON.stringify({
           businessUnitId,
           orderChannel: 'WEB',
           notes: orderNotes || undefined,
-          items: items.map((i) => ({
+          orderItems: items.map((i) => ({
             productId: i.productId,
             quantity: i.quantity,
+            unitPrice: i.unitPrice,
             notes: i.notes || undefined,
           })),
         }),

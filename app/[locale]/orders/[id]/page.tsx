@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { getOrder } from '@/lib/api/orders'
 import { OrderTracker } from '@/components/OrderTracker'
-import { StubBadge } from '@/components/StubBadge'
 import { formatDateTime } from '@/lib/format'
 
 export const dynamic = 'force-dynamic'
@@ -26,7 +25,6 @@ export default async function OrderTrackingPage({
             <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg sm:text-3xl">
               {t('title')}
             </h1>
-            <StubBadge />
           </div>
           <p className="mt-1 font-mono text-xs text-fg-subtle">
             {t('openedAt', {

@@ -14,6 +14,7 @@ const STATUS_CHIP: Record<PaymentStatus, string> = {
   APPROVED: 'chip-success',
   REFUSED: 'chip-warn',
   CANCELLED: 'chip',
+  REFUNDED: 'chip',
 }
 
 export function PaymentView({
@@ -35,7 +36,7 @@ export function PaymentView({
   useEffect(() => {
     let cancelled = false
     async function tick() {
-      const res = await fetch(`/api/orders/${orderId}/payments`, {
+      const res = await fetch(`/api/orders/${orderId}/payment`, {
         cache: 'no-store',
       })
       if (res.status === 404) return
@@ -54,7 +55,7 @@ export function PaymentView({
   function startPayment() {
     setError(null)
     start(async () => {
-      const res = await fetch(`/api/orders/${orderId}/payments`, {
+      const res = await fetch(`/api/orders/${orderId}/payment`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ method }),

@@ -5,8 +5,12 @@ import { useLocale, useTranslations } from 'next-intl'
 import type { LoyaltyAccount, LoyaltyTransactionType } from '@/lib/api/types'
 import { formatDateTime } from '@/lib/format'
 
-export function LoyaltyView({ initial }: { initial: LoyaltyAccount }) {
-  const [account, setAccount] = useState<LoyaltyAccount>(initial)
+/**
+ * `initial` is null while the loyalty account does not exist yet — the
+ * backend creates it on the first order or when consent is granted.
+ */
+export function LoyaltyView({ initial }: { initial: LoyaltyAccount | null }) {
+  const [account, setAccount] = useState<LoyaltyAccount | null>(initial)
   const [error, setError] = useState<string | null>(null)
   const [pending, start] = useTransition()
   const t = useTranslations('loyalty')
@@ -32,6 +36,21 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount }) {
     })
   }
 
+  function revokeConsent() {
+    setError(null)
+    start(async () => {
+      const res = await fetch('/api/loyalty/me/consent', { method: 'DELETE' })
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null
+        setError(body?.error ?? t('consentFailed'))
+        return
+      }
+      setAccount((await res.json()) as LoyaltyAccount)
+    })
+  }
+
+  const transactions = account?.transactions ?? []
+
   return (
     <div className="grid gap-5 md:grid-cols-3">
       <section className="relative overflow-hidden md:col-span-2">
@@ -46,7 +65,7 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount }) {
             </p>
             <p className="mt-3 flex items-baseline gap-3">
               <span className="font-display text-6xl font-extrabold text-gradient-brand">
-                {account.totalPoints}
+                {account?.totalPoints ?? 0}
               </span>
               <span className="text-sm font-medium text-fg-muted">
                 {t('points')}
@@ -56,11 +75,11 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount }) {
             <h3 className="mt-8 text-[11px] font-mono uppercase tracking-widest text-fg-subtle">
               {t('history')}
             </h3>
-            {!account.transactions || account.transactions.length === 0 ? (
+            {transactions.length === 0 ? (
               <p className="mt-3 text-sm text-fg-muted">{t('noHistory')}</p>
             ) : (
               <ul className="mt-3 divide-y divide-border">
-                {account.transactions.map((tx) => (
+                {transactions.map((tx) => (
                   <li
                     key={tx.id}
                     className="flex items-start justify-between gap-3 py-3 text-sm"
@@ -91,7 +110,7 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount }) {
         <p className="text-[11px] font-mono uppercase tracking-widest text-fg-subtle">
           {t('consentTitle')}
         </p>
-        {account.consentGiven ? (
+        {account?.consentGiven ? (
           <>
             <p className="mt-3 flex items-start gap-2 text-sm text-forest-500">
               <CheckCircle className="h-4 w-4 flex-none mt-0.5" />
@@ -104,6 +123,19 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount }) {
             <p className="mt-3 text-xs text-fg-subtle">
               {t('consentRevocation')}
             </p>
+            {error ? (
+              <p className="mt-3 rounded-xl border border-accent-500/30 bg-accent-500/10 p-2 text-xs text-accent-700 dark:text-accent-300">
+                {error}
+              </p>
+            ) : null}
+            <button
+              type="button"
+              onClick={revokeConsent}
+              disabled={pending}
+              className="btn-secondary mt-4 w-full"
+            >
+              {pending ? t('consentSubmitting') : t('consentRevoke')}
+            </button>
           </>
         ) : (
           <>

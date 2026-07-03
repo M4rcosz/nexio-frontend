@@ -1,6 +1,7 @@
-// TODO: backend not implemented yet — using mock data
+// Mock fallback for the `/orders` endpoints.
 import type {
   CreateOrderRequest,
+  ListOrdersQuery,
   Order,
   OrderItem,
   OrderStatus,
@@ -19,6 +20,16 @@ const ORDER_TIMELINE: OrderStatus[] = [
   'READY',
   'DELIVERED',
 ]
+
+// Mirrors the backend state machine (transitions outside this map → 422).
+const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
+  PENDING: ['CONFIRMED', 'CANCELLED'],
+  CONFIRMED: ['PREPARING', 'CANCELLED'],
+  PREPARING: ['READY', 'CANCELLED'],
+  READY: ['DELIVERED'],
+  DELIVERED: [],
+  CANCELLED: [],
+}
 
 function newId(prefix = 'ord'): string {
   const rand = Math.random().toString(36).slice(2, 10)
@@ -45,16 +56,17 @@ function tickStatus(order: Order): Order {
 }
 
 export async function createOrderMock(
-  customerId: string,
+  customerId: string | null,
   body: CreateOrderRequest,
 ): Promise<Order> {
   await mockDelay()
 
-  const items: OrderItem[] = body.items.map((it) => {
+  const orderItems: OrderItem[] = body.orderItems.map((it, idx) => {
     const product = MOCK_PRODUCTS.find((p) => p.id === it.productId)
-    const unitPrice = asMoney(product?.price ?? 0)
+    const unitPrice = asMoney(it.unitPrice)
     const subtotal = multiplyMoney(unitPrice, it.quantity)
     return {
+      id: `oi_${Date.now().toString(36)}_${idx}`,
       productId: it.productId,
       productName: product?.name,
       quantity: it.quantity,
@@ -64,23 +76,30 @@ export async function createOrderMock(
     }
   })
 
-  const total = sumMoney(items.map((i) => i.subtotal))
+  const pointsRedeemed = body.pointsRedeemed ?? 0
+  // Redeeming: 1pt = R$0.10 discount, mirroring the loyalty rule.
+  const total = sumMoney(orderItems.map((i) => i.subtotal)).minus(
+    asMoney(pointsRedeemed).times('0.10'),
+  )
+  const clampedTotal = total.lt(0) ? asMoney(0) : total
   const now = new Date().toISOString()
 
   const order: Order = {
     id: newId(),
     businessUnitId: body.businessUnitId,
-    customerId,
+    customerId: body.customerId ?? customerId,
     attendantId: null,
+    pointsRedeemed,
+    // Earning: 1 point per R$10, granted on payment approval server-side.
+    pointsEarned: Math.floor(Number(clampedTotal.toFixed(2)) / 10),
+    totalAmount: clampedTotal.toFixed(2),
+    notes: body.notes ?? null,
     orderChannel: body.orderChannel,
     orderStatus: 'PENDING',
-    totalAmount: total.toFixed(2),
-    pointsEarned: Math.floor(Number(total.toFixed(2))),
-    pointsRedeemed: 0,
-    notes: body.notes ?? null,
-    items,
     createdAt: now,
     updatedAt: now,
+    updatedById: null,
+    orderItems,
   }
   STORE.unshift(order)
   return { ...order }
@@ -103,6 +122,44 @@ export async function listMyOrdersMock(
     return { ...o }
   })
   return { data, meta: { limit: 20, nextCursor: null, hasMore: false } }
+}
+
+export async function listOrdersMock(
+  query: ListOrdersQuery = {},
+): Promise<Paginated<Order>> {
+  await mockDelay()
+  let data = STORE.map((o) => {
+    tickStatus(o)
+    return { ...o }
+  })
+  if (query.businessUnitId) {
+    data = data.filter((o) => o.businessUnitId === query.businessUnitId)
+  }
+  if (query.orderChannel) {
+    data = data.filter((o) => o.orderChannel === query.orderChannel)
+  }
+  if (query.orderStatus) {
+    data = data.filter((o) => o.orderStatus === query.orderStatus)
+  }
+  return { data, meta: { limit: 20, nextCursor: null, hasMore: false } }
+}
+
+export async function updateOrderStatusMock(
+  id: string,
+  orderStatus: OrderStatus,
+): Promise<Order | null> {
+  await mockDelay()
+  const found = STORE.find((o) => o.id === id)
+  if (!found) return null
+  if (!VALID_TRANSITIONS[found.orderStatus].includes(orderStatus)) {
+    throw Object.assign(
+      new Error(`Invalid transition ${found.orderStatus} → ${orderStatus}.`),
+      { code: 'invalid_transition' },
+    )
+  }
+  found.orderStatus = orderStatus
+  found.updatedAt = new Date().toISOString()
+  return { ...found }
 }
 
 export async function cancelOrderMock(id: string): Promise<Order | null> {

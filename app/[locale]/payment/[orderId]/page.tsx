@@ -3,7 +3,6 @@ import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { getOrder } from '@/lib/api/orders'
 import { formatMoney } from '@/lib/money'
 import { PaymentView } from '@/components/PaymentView'
-import { StubBadge } from '@/components/StubBadge'
 
 export default async function PaymentPage({
   params,
@@ -24,7 +23,6 @@ export default async function PaymentPage({
         <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg sm:text-3xl">
           {t('title')}
         </h1>
-        <StubBadge />
       </div>
 
       <div className="card grid gap-3 p-5 text-sm sm:grid-cols-3">

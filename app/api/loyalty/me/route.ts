@@ -9,6 +9,10 @@ export async function GET() {
   }
   try {
     const account = await getMyLoyalty()
+    if (!account) {
+      // Account does not exist yet — created on first order / consent.
+      return NextResponse.json({ error: 'No loyalty account.' }, { status: 404 })
+    }
     return NextResponse.json(account)
   } catch (err) {
     return NextResponse.json({ error: describeError(err) }, { status: 500 })

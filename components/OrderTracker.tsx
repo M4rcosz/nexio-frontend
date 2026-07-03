@@ -82,7 +82,7 @@ export function OrderTracker({ initialOrder }: { initialOrder: Order }) {
           </p>
         </div>
         <ul className="divide-y divide-border">
-          {order.items.map((item, idx) => (
+          {order.orderItems.map((item, idx) => (
             <li
               key={`${item.productId}-${idx}`}
               className="flex justify-between px-5 py-3 text-sm"

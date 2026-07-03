@@ -1,29 +1,125 @@
-// [stub] backend does not implement /orders yet — always uses mock.
+import { serverFetch, USE_MOCKS } from './client'
+import { ApiError } from './errors'
 import type {
   CreateOrderRequest,
+  ListOrdersQuery,
   Order,
+  OrderStatus,
   Paginated,
 } from './types'
 import {
+  cancelOrderMock,
   createOrderMock,
   getOrderMock,
   listMyOrdersMock,
-  cancelOrderMock,
+  listOrdersMock,
+  updateOrderStatusMock,
 } from './mocks/orders'
 import { MOCK_CUSTOMER } from './mocks/users'
+import { getSession } from '@/lib/auth/session'
 
-export async function createOrder(body: CreateOrderRequest): Promise<Order> {
-  return createOrderMock(MOCK_CUSTOMER.id, body)
+/**
+ * `POST /orders`. Pass an `Idempotency-Key` so retries of the same payload
+ * return the same order instead of duplicating it.
+ */
+export async function createOrder(
+  body: CreateOrderRequest,
+  opts: { idempotencyKey?: string } = {},
+): Promise<Order> {
+  if (USE_MOCKS) {
+    const session = await getSession()
+    return createOrderMock(session?.sub ?? MOCK_CUSTOMER.id, body)
+  }
+  return serverFetch<Order>('/orders', {
+    method: 'POST',
+    body,
+    headers: opts.idempotencyKey
+      ? { 'idempotency-key': opts.idempotencyKey }
+      : undefined,
+  })
 }
 
+/**
+ * `GET /orders/:id`. Customers only see their own orders — the backend
+ * answers 404 for anything not visible to the caller.
+ */
 export async function getOrder(id: string): Promise<Order | null> {
-  return getOrderMock(id)
+  if (USE_MOCKS) {
+    return getOrderMock(id)
+  }
+  try {
+    return await serverFetch<Order>(`/orders/${id}`, { cache: 'no-store' })
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null
+    throw err
+  }
 }
 
+// [stub] the backend has no customer-facing order listing (`GET /orders` is
+// staff-only), so "my orders" always comes from the mock store.
 export async function listMyOrders(): Promise<Paginated<Order>> {
-  return listMyOrdersMock(MOCK_CUSTOMER.id)
+  const session = await getSession()
+  return listMyOrdersMock(session?.sub ?? MOCK_CUSTOMER.id)
 }
 
+/**
+ * `GET /orders` (staff: ADMIN/MANAGER/ATTENDANT/KITCHEN). Cursor-paginated;
+ * results are limited to the actor's unit scope server-side.
+ */
+export async function listOrders(
+  query: ListOrdersQuery = {},
+): Promise<Paginated<Order>> {
+  if (USE_MOCKS) {
+    return listOrdersMock(query)
+  }
+  return serverFetch<Paginated<Order>>('/orders', {
+    query: {
+      limit: query.limit,
+      cursor: query.cursor,
+      businessUnitId: query.businessUnitId,
+      orderChannel: query.orderChannel,
+      orderStatus: query.orderStatus,
+    },
+    cache: 'no-store',
+  })
+}
+
+/**
+ * `PATCH /orders/:id/status` (staff). Invalid transitions answer 422 — the
+ * valid machine is PENDING→CONFIRMED→PREPARING→READY→DELIVERED, with
+ * CANCELLED reachable from any non-terminal state except READY.
+ */
+export async function updateOrderStatus(
+  id: string,
+  orderStatus: OrderStatus,
+): Promise<Order | null> {
+  if (USE_MOCKS) {
+    return updateOrderStatusMock(id, orderStatus)
+  }
+  try {
+    return await serverFetch<Order>(`/orders/${id}/status`, {
+      method: 'PATCH',
+      body: { orderStatus },
+    })
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null
+    throw err
+  }
+}
+
+/**
+ * `POST /orders/:id/cancel` — cancels and runs compensations (restock,
+ * refund, points reversal). Customers only while PENDING; staff while
+ * PENDING/CONFIRMED. Out-of-window answers 422.
+ */
 export async function cancelOrder(id: string): Promise<Order | null> {
-  return cancelOrderMock(id)
+  if (USE_MOCKS) {
+    return cancelOrderMock(id)
+  }
+  try {
+    return await serverFetch<Order>(`/orders/${id}/cancel`, { method: 'POST' })
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null
+    throw err
+  }
 }

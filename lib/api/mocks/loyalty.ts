@@ -1,4 +1,5 @@
-// TODO: backend not implemented yet — using mock data
+// Mock fallback for the `/loyalty` endpoints. The `transactions` list is a
+// front-side extra — the real backend only returns the account.
 import { mockDelay } from './_delay'
 import type { LoyaltyAccount, LoyaltyTransaction } from '@/lib/api/types'
 
@@ -25,10 +26,13 @@ function seed(customerId: string): Account {
     },
   ]
   return {
+    id: `loy_${customerId}`,
     customerId,
     totalPoints: 100,
     consentGiven: false,
     consentDate: null,
+    consentRevokedAt: null,
+    createdAt: new Date(now.getTime() - 86_400_000 * 7).toISOString(),
     transactions,
   }
 }
@@ -55,6 +59,19 @@ export async function giveConsentMock(
   }
   acc.consentGiven = true
   acc.consentDate = new Date().toISOString()
+  acc.consentRevokedAt = null
+  STORE.set(customerId, acc)
+  return { ...acc, transactions: [...acc.transactions] }
+}
+
+export async function revokeConsentMock(
+  customerId: string,
+): Promise<LoyaltyAccount | null> {
+  await mockDelay()
+  const acc = STORE.get(customerId)
+  if (!acc) return null
+  acc.consentGiven = false
+  acc.consentRevokedAt = new Date().toISOString()
   STORE.set(customerId, acc)
   return { ...acc, transactions: [...acc.transactions] }
 }

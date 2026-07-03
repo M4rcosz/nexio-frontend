@@ -1,4 +1,4 @@
-// TODO: backend not implemented yet — using mock data
+// Mock fallback for the `/payments` endpoints.
 import { mockDelay } from './_delay'
 import type {
   CreatePaymentRequest,
@@ -27,23 +27,24 @@ function fakePixCode(): string {
 }
 
 export async function createPaymentMock(
-  orderId: string,
-  amount: string,
   body: CreatePaymentRequest,
+  amount: string,
 ): Promise<Payment> {
   await mockDelay()
 
+  const now = new Date().toISOString()
   const payment: Payment = {
-    orderId,
+    id: `pay_${Math.random().toString(36).slice(2, 12)}`,
+    orderId: body.orderId,
     amount,
     method: body.method,
     status: body.method === 'PIX' ? 'PENDING' : 'PROCESSING',
     extTransactionId: fakeTxId(),
     pixCode: body.method === 'PIX' ? fakePixCode() : null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
   }
-  STORE.set(orderId, payment)
+  STORE.set(body.orderId, payment)
   return { ...payment }
 }
 
@@ -52,7 +53,7 @@ export async function getPaymentMock(orderId: string): Promise<Payment | null> {
   const p = STORE.get(orderId)
   if (!p) return null
   // Simulate status evolution: roughly 15-30s after creation it becomes APPROVED.
-  const elapsed = Date.now() - new Date(p.createdAt!).getTime()
+  const elapsed = Date.now() - new Date(p.createdAt).getTime()
   let next: PaymentStatus = p.status
   if (p.method === 'PIX') {
     if (elapsed > 30_000) next = 'APPROVED'

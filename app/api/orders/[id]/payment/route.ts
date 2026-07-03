@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createPayment, getPayment } from '@/lib/api/payments'
+import { createPayment, getOrderPayment } from '@/lib/api/payments'
 import { getOrder } from '@/lib/api/orders'
-import { describeError } from '@/lib/api/errors'
+import { ApiError, describeError } from '@/lib/api/errors'
 import { isAuthenticated } from '@/lib/auth/session'
 
 const Body = z.object({
@@ -27,12 +27,26 @@ export async function POST(
     )
   }
   try {
+    // The mock needs the order total; the real backend derives it itself.
     const order = await getOrder(id)
     if (!order) return NextResponse.json({ error: 'Order not found.' }, { status: 404 })
-    const payment = await createPayment(id, order.totalAmount, parsed)
+    const payment = await createPayment(
+      { orderId: id, method: parsed.method },
+      order.totalAmount,
+    )
     return NextResponse.json(payment, { status: 201 })
   } catch (err) {
-    return NextResponse.json({ error: describeError(err) }, { status: 500 })
+    const status = err instanceof ApiError ? err.status || 500 : 500
+    if (status === 422) {
+      return NextResponse.json(
+        { error: 'This order is not awaiting payment.', code: 'not_payable' },
+        { status: 422 },
+      )
+    }
+    return NextResponse.json(
+      { error: describeError(err) },
+      { status: status >= 500 ? 502 : status },
+    )
   }
 }
 
@@ -45,7 +59,7 @@ export async function GET(
   }
   const { id } = await ctx.params
   try {
-    const payment = await getPayment(id)
+    const payment = await getOrderPayment(id)
     if (!payment) return NextResponse.json({ error: 'Payment not found.' }, { status: 404 })
     return NextResponse.json(payment)
   } catch (err) {

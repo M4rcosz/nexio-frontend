@@ -73,7 +73,7 @@ export default async function OrdersPage({
                   <div className="mt-4 flex items-baseline justify-between border-t border-border pt-4">
                     <span className="text-xs text-fg-muted">
                       {t('itemsCount', {
-                        count: order.items.length,
+                        count: order.orderItems.length,
                         total: '',
                       }).replace('· ', '')}
                     </span>
