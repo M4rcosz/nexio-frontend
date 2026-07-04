@@ -147,6 +147,36 @@ implement client-side refresh until the backend exposes the endpoint.
 2. Optionally keep the `[stub]` fallback so you can run offline.
 3. Drop the `StubBadge` from the corresponding pages.
 
+## Backlog
+
+### Nearest-unit selection via GPS
+
+The home unit picker currently defaults to the first unit returned by
+`GET /business-units`. Planned enhancement: let the customer auto-select the
+**nearest** unit using device location (GPS).
+
+How it breaks down:
+
+1. **Read the customer's position — frontend only.** Use the browser
+   `navigator.geolocation.getCurrentPosition()` (combines GPS / Wi-Fi / IP under
+   the hood). Requires HTTPS and explicit user permission. Accurate on mobile
+   (real GPS), coarser on desktop.
+2. **Unit coordinates — requires the backend.** Today `PublicBusinessUnit` has
+   no coordinates. The backend must add `latitude` / `longitude` to business
+   units (migration) and expose them on `GET /business-units`. **This is the
+   blocker** — without unit coordinates there is nothing to measure distance to.
+3. **Pick the nearest — haversine.** With the customer position (1) and unit
+   coordinates (2), compute great-circle distance and take the minimum. Options:
+   - Frontend haversine over all units (fine when there are few units), or
+   - a backend `GET /business-units/nearest?lat=..&lng=..` endpoint that sorts by
+     distance in the DB (PostGIS `ST_Distance` / SQL) — better at scale.
+4. **Fallback — always.** If permission is denied, GPS fails, or no coordinates
+   exist, keep the current default (first unit). Never block the page on GPS.
+
+Frontend can ship a "📍 Use my location" button + a haversine helper ahead of
+time; it stays on the fallback until the backend serves `latitude`/`longitude`.
+(Note: this is GPS-based, not an LLM feature.)
+
 ## Useful scripts
 
 | Command            | Description                       |

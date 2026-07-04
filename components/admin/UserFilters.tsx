@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import { useRouter, usePathname } from '@/i18n/navigation'
 import { useEffect, useState } from 'react'
 import type { PublicBusinessUnit, Role } from '@/lib/api/types'
+import { Select } from '@/components/ui/Select'
 
 const ROLE_LABEL_KEY: Record<Role, string> = {
   ATTENDANT: 'roleAttendant',
@@ -55,31 +56,32 @@ export function UserFilters({
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
-      <select
-        className="input sm:max-w-[180px]"
-        value={role}
-        onChange={(e) => setRole(e.target.value)}
-      >
-        <option value="">{t('filterRoleAll')}</option>
-        {manageableRoles.map((r) => (
-          <option key={r} value={r}>
-            {tForm(ROLE_LABEL_KEY[r])}
-          </option>
-        ))}
-      </select>
+      <div className="sm:max-w-[180px] sm:flex-1">
+        <Select
+          value={role}
+          onChange={setRole}
+          ariaLabel={t('filterRoleAll')}
+          options={[
+            { value: '', label: t('filterRoleAll') },
+            ...manageableRoles.map((r) => ({
+              value: r,
+              label: tForm(ROLE_LABEL_KEY[r]),
+            })),
+          ]}
+        />
+      </div>
       {showUnitFilter ? (
-        <select
-          className="input sm:max-w-[220px]"
-          value={businessUnitId}
-          onChange={(e) => setBusinessUnitId(e.target.value)}
-        >
-          <option value="">{t('filterUnitAll')}</option>
-          {units.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name}
-            </option>
-          ))}
-        </select>
+        <div className="sm:max-w-[220px] sm:flex-1">
+          <Select
+            value={businessUnitId}
+            onChange={setBusinessUnitId}
+            ariaLabel={t('filterUnitAll')}
+            options={[
+              { value: '', label: t('filterUnitAll') },
+              ...units.map((u) => ({ value: u.id, label: u.name })),
+            ]}
+          />
+        </div>
       ) : null}
     </div>
   )

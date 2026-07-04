@@ -1,9 +1,11 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { listBusinessUnits } from '@/lib/api/business-units'
-import { SetBusinessUnitButton } from '@/components/SetBusinessUnitButton'
+import { listProductsByBusinessUnit } from '@/lib/api/products'
+import { listMenu } from '@/lib/api/menu'
 import { HomeProductSearch } from '@/components/HomeProductSearch'
-import { UnitSearch } from '@/components/UnitSearch'
+import { UnitDropdown } from '@/components/UnitDropdown'
+import { ProductCard } from '@/components/ProductCard'
 import { getTenant } from '@/lib/tenant/resolve'
 
 export default async function HomePage({
@@ -11,26 +13,58 @@ export default async function HomePage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>
-  searchParams: Promise<{ unitSearch?: string }>
+  searchParams: Promise<{ unit?: string }>
 }) {
   const { locale } = await params
   setRequestLocale(locale)
 
-  const { unitSearch } = await searchParams
+  const { unit } = await searchParams
   const t = await getTranslations('home')
+  const tMenu = await getTranslations('menu')
   const tenant = await getTenant()
-  const { data } = await listBusinessUnits({ search: unitSearch })
-  const defaultUnitId = data[0]?.id ?? null
+
+  const { data: units } = await listBusinessUnits({ limit: 50 })
+
+  // Default selection = first unit found; the `?unit=` param overrides it only
+  // when it points at a unit that actually exists (otherwise fall back).
+  const selectedUnit =
+    (unit ? units.find((u) => u.id === unit) : undefined) ?? units[0] ?? null
+
+  // Products of the selected unit, priced with its effective menu price
+  // (falling back to catalog price when the unit has no menu configured).
+  let products: Awaited<
+    ReturnType<typeof listProductsByBusinessUnit>
+  >['data'] = []
+  if (selectedUnit) {
+    const [productsPage, menuPage] = await Promise.all([
+      listProductsByBusinessUnit(selectedUnit.id, { limit: 100 }),
+      listMenu(selectedUnit.id, { limit: 100 }),
+    ])
+    const priceByProduct = new Map(
+      menuPage.data.map((m) => [m.productId, m.price]),
+    )
+    products =
+      priceByProduct.size > 0
+        ? productsPage.data
+            .filter((p) => priceByProduct.has(p.id))
+            .map((p) => ({ ...p, price: priceByProduct.get(p.id)! }))
+        : productsPage.data
+  }
 
   return (
     <div className="space-y-12">
       {/* Hero ----------------------------------------------------------- */}
-      <section className="relative overflow-hidden rounded-3xl border border-border bg-bg-elevated">
+      {/* No `overflow-hidden` on the section itself: the unit dropdown's popover
+          is absolutely positioned and must be free to overflow the hero. The
+          decorative gradient/grain is clipped by its own rounded wrapper. */}
+      <section className="relative rounded-3xl border border-border bg-bg-elevated">
         <div
-          className="grain absolute inset-0 bg-brand-gradient"
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl"
           aria-hidden
-        />
-        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/40" aria-hidden />
+        >
+          <div className="grain absolute inset-0 bg-brand-gradient" />
+          <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/40" />
+        </div>
         <div className="relative px-5 py-10 sm:px-12 sm:py-20 lg:py-24">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white backdrop-blur sm:text-[11px]">
             <span className="h-1.5 w-1.5 rounded-full bg-white" />
@@ -45,106 +79,69 @@ export default async function HomePage({
 
           {/* Global product search */}
           <div className="mt-6 sm:mt-8">
-            <HomeProductSearch defaultUnitId={defaultUnitId} />
+            <HomeProductSearch defaultUnitId={selectedUnit?.id ?? null} />
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-3">
-            <a
-              href="#units"
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-brand-700 shadow-soft-lg transition-transform hover:-translate-y-0.5 sm:px-5 sm:py-3"
+          {/* Unit picker (default = first unit) */}
+          {units.length > 0 ? (
+            <div className="mt-4">
+              <UnitDropdown units={units} selectedId={selectedUnit?.id ?? null} />
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      {/* Selected unit's products --------------------------------------- */}
+      {selectedUnit ? (
+        <section className="space-y-5">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-fg sm:text-3xl">
+                {t('menuHeading', { unit: selectedUnit.name })}
+              </h2>
+              <p className="mt-1 max-w-xl text-sm text-fg-muted">
+                {t('menuSubtitle')}
+              </p>
+            </div>
+            <Link
+              href={`/units/${selectedUnit.id}`}
+              className="btn-secondary flex-none"
             >
-              {t('chooseUnit')}
-              <ArrowDown className="h-4 w-4" />
-            </a>
+              {t('viewFullUnit')}
+            </Link>
           </div>
-        </div>
-      </section>
 
-      {/* Units ---------------------------------------------------------- */}
-      <section id="units" className="scroll-mt-24 space-y-5">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-bold tracking-tight text-fg sm:text-3xl">
-              {t('chooseUnit')}
-            </h2>
-            <p className="mt-1 text-sm text-fg-muted">
-              {data.length} {data.length === 1 ? 'unit' : 'units'}
-            </p>
+          {products.length === 0 ? (
+            <div className="card flex flex-col items-center gap-2 p-12 text-center">
+              <span className="text-4xl" aria-hidden>
+                🌶️
+              </span>
+              <p className="text-sm text-fg-muted">{tMenu('empty')}</p>
+            </div>
+          ) : (
+            <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {products.map((p) => (
+                <li key={p.id}>
+                  <ProductCard
+                    product={p}
+                    unitId={selectedUnit.id}
+                    unitName={selectedUnit.name}
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : (
+        <section>
+          <div className="card flex flex-col items-center gap-2 p-12 text-center">
+            <span className="text-4xl" aria-hidden>
+              🏬
+            </span>
+            <p className="text-sm text-fg-muted">{t('noUnitsHint')}</p>
           </div>
-          <UnitSearch initialSearch={unitSearch} />
-        </div>
-
-        {data.length === 0 ? (
-          <p className="card p-6 text-sm text-fg-muted">{t('noUnits')}</p>
-        ) : (
-        <ul className="grid gap-5 sm:grid-cols-2">
-          {data.map((unit, i) => (
-            <li key={unit.id}>
-              <article className="card card-hover group flex h-full flex-col p-6">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <span className="text-[11px] font-mono uppercase tracking-widest text-fg-subtle">
-                      0{i + 1} · {unit.city}
-                    </span>
-                    <h3 className="mt-1 text-xl font-semibold tracking-tight text-fg">
-                      {unit.name}
-                    </h3>
-                  </div>
-                  <span className="chip-success">
-                    <span className="h-1.5 w-1.5 rounded-full bg-forest-500" />
-                    open
-                  </span>
-                </div>
-                <dl className="mt-4 space-y-2 text-sm text-fg-muted">
-                  <div className="flex items-start gap-2">
-                    <PinIcon className="mt-0.5 h-4 w-4 flex-none text-brand-500" />
-                    <dd>{unit.address}</dd>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <PhoneIcon className="h-4 w-4 flex-none text-brand-500" />
-                    <dd>{unit.phone}</dd>
-                  </div>
-                </dl>
-                <div className="mt-6 flex items-center gap-2 border-t border-border pt-4">
-                  <Link
-                    href={`/units/${unit.id}`}
-                    className="btn-primary flex-1"
-                  >
-                    {t('viewMenu')}
-                  </Link>
-                  <SetBusinessUnitButton id={unit.id} name={unit.name} />
-                </div>
-              </article>
-            </li>
-          ))}
-        </ul>
-        )}
-      </section>
+        </section>
+      )}
     </div>
-  )
-}
-
-function ArrowDown({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
-      <path d="M12 5v14M19 12l-7 7-7-7" />
-    </svg>
-  )
-}
-
-function PinIcon({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-      <circle cx="12" cy="10" r="3" />
-    </svg>
-  )
-}
-
-function PhoneIcon({ className = '' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
-      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.37 1.9.72 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.35 1.85.59 2.81.72a2 2 0 0 1 1.72 2z" />
-    </svg>
   )
 }

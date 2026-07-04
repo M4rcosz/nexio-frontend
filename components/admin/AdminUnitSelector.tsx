@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl'
 import { usePathname, useRouter } from '@/i18n/navigation'
 import type { PublicBusinessUnit } from '@/lib/api/types'
+import { Select } from '@/components/ui/Select'
 
 /**
  * Unit picker for ADMIN pages. Pushes the chosen unit into the `businessUnitId`
@@ -35,18 +36,13 @@ export function AdminUnitSelector({
       <label className="label" htmlFor="admin-unit">
         {t(labelKey)}
       </label>
-      <select
+      <Select
         id="admin-unit"
-        className="input"
         value={selected}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {units.map((u) => (
-          <option key={u.id} value={u.id}>
-            {u.name}
-          </option>
-        ))}
-      </select>
+        onChange={onChange}
+        ariaLabel={t(labelKey)}
+        options={units.map((u) => ({ value: u.id, label: u.name }))}
+      />
     </div>
   )
 }

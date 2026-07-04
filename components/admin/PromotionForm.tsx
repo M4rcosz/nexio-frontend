@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
+import { Select } from '@/components/ui/Select'
 import { useRouter } from '@/i18n/navigation'
 import type {
   Promotion,
@@ -155,19 +156,14 @@ export function PromotionForm({
           <label className="label" htmlFor="promo-unit">
             {t('unit')}
           </label>
-          <select
+          <Select
             id="promo-unit"
-            className="input"
             disabled={unitLocked || mode === 'edit'}
             value={scopedBusinessUnitId ?? form.businessUnitId}
-            onChange={(e) => update('businessUnitId', e.target.value)}
-          >
-            {units.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => update('businessUnitId', v)}
+            ariaLabel={t('unit')}
+            options={units.map((u) => ({ value: u.id, label: u.name }))}
+          />
           {unitLocked ? (
             <p className="mt-1 text-xs text-fg-subtle">{t('unitLocked')}</p>
           ) : null}
@@ -179,17 +175,16 @@ export function PromotionForm({
           <label className="label" htmlFor="promo-type">
             {t('discountType')}
           </label>
-          <select
+          <Select
             id="promo-type"
-            className="input"
             value={form.discountType}
-            onChange={(e) =>
-              update('discountType', e.target.value as PromotionDiscountType)
-            }
-          >
-            <option value="PERCENTAGE">{t('discountTypePercentage')}</option>
-            <option value="FIXED_AMOUNT">{t('discountTypeFixed')}</option>
-          </select>
+            onChange={(v) => update('discountType', v as PromotionDiscountType)}
+            ariaLabel={t('discountType')}
+            options={[
+              { value: 'PERCENTAGE', label: t('discountTypePercentage') },
+              { value: 'FIXED_AMOUNT', label: t('discountTypeFixed') },
+            ]}
+          />
         </div>
         <div>
           <label className="label" htmlFor="promo-value">

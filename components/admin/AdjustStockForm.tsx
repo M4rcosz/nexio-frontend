@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
+import { Select } from '@/components/ui/Select'
 import { useRouter } from '@/i18n/navigation'
 import type { InventoryAdjustmentType } from '@/lib/api/types'
 
@@ -79,35 +80,28 @@ export function AdjustStockForm({
           <label className="label" htmlFor="adjust-product">
             {t('product')}
           </label>
-          <select
+          <Select
             id="adjust-product"
-            className="input"
             value={form.productId}
-            onChange={(e) => update('productId', e.target.value)}
-            required
-          >
-            {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => update('productId', v)}
+            ariaLabel={t('product')}
+            options={products.map((p) => ({ value: p.id, label: p.name }))}
+          />
         </div>
         <div>
           <label className="label" htmlFor="adjust-type">
             {t('type')}
           </label>
-          <select
+          <Select
             id="adjust-type"
-            className="input"
             value={form.type}
-            onChange={(e) =>
-              update('type', e.target.value as InventoryAdjustmentType)
-            }
-          >
-            <option value="IN">{t('typeIn')}</option>
-            <option value="OUT">{t('typeOut')}</option>
-          </select>
+            onChange={(v) => update('type', v as InventoryAdjustmentType)}
+            ariaLabel={t('type')}
+            options={[
+              { value: 'IN', label: t('typeIn') },
+              { value: 'OUT', label: t('typeOut') },
+            ]}
+          />
         </div>
       </div>
 

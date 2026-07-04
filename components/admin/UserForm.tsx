@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { PasswordInput } from '@/components/PasswordInput'
+import { Select } from '@/components/ui/Select'
 import { useRouter } from '@/i18n/navigation'
 import type { PublicBusinessUnit, Role, User } from '@/lib/api/types'
 
@@ -197,38 +198,33 @@ export function UserForm({
           <label className="label" htmlFor="role">
             {t('role')}
           </label>
-          <select
+          <Select
             id="role"
-            className="input"
             value={form.role}
-            onChange={(e) => update('role', e.target.value as Role)}
-          >
-            {manageableRoles.map((r) => (
-              <option key={r} value={r}>
-                {t(ROLE_LABEL_KEY[r])}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => update('role', v as Role)}
+            ariaLabel={t('role')}
+            options={manageableRoles.map((r) => ({
+              value: r,
+              label: t(ROLE_LABEL_KEY[r]),
+            }))}
+          />
         </div>
         {unitFieldVisible ? (
           <div>
             <label className="label" htmlFor="unit">
               {t('businessUnit')}
             </label>
-            <select
+            <Select
               id="unit"
-              className="input"
               disabled={unitLocked}
               value={scopedBusinessUnitId ?? form.businessUnitId}
-              onChange={(e) => update('businessUnitId', e.target.value)}
-            >
-              <option value="">—</option>
-              {units.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => update('businessUnitId', v)}
+              ariaLabel={t('businessUnit')}
+              options={[
+                { value: '', label: '—' },
+                ...units.map((u) => ({ value: u.id, label: u.name })),
+              ]}
+            />
             {unitLocked ? (
               <p className="mt-1 text-xs text-fg-subtle">
                 {t('businessUnitLocked')}
