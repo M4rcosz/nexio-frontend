@@ -3,6 +3,17 @@ import { z } from 'zod'
 import { createOrder, listMyOrders } from '@/lib/api/orders'
 import { ApiError, describeError } from '@/lib/api/errors'
 import { isAuthenticated } from '@/lib/auth/session'
+import type { OrderChannel, OrderStatus } from '@/lib/api/types'
+
+const ORDER_CHANNELS: OrderChannel[] = ['APP', 'WEB', 'TOTEM', 'COUNTER', 'PICKUP']
+const ORDER_STATUSES: OrderStatus[] = [
+  'PENDING',
+  'CONFIRMED',
+  'PREPARING',
+  'READY',
+  'DELIVERED',
+  'CANCELLED',
+]
 
 const MoneyString = z.string().regex(/^\d+(\.\d{1,2})?$/, 'Invalid price format.')
 
@@ -59,14 +70,46 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   if (!(await isAuthenticated())) {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
   }
+  const url = new URL(req.url)
+  const limitRaw = url.searchParams.get('limit')
+  const cursor = url.searchParams.get('cursor') ?? undefined
+  const channelRaw = url.searchParams.get('orderChannel')
+  const statusRaw = url.searchParams.get('orderStatus')
+
+  // Silently drop unknown enum values rather than 400 — the filter simply
+  // doesn't apply. Only the canonical values reach the backend.
+  const orderChannel = ORDER_CHANNELS.includes(channelRaw as OrderChannel)
+    ? (channelRaw as OrderChannel)
+    : undefined
+  const orderStatus = ORDER_STATUSES.includes(statusRaw as OrderStatus)
+    ? (statusRaw as OrderStatus)
+    : undefined
+  // Contract: 1..100, integer, default 20. Truncate to drop fractional
+  // values ("20.5" → 20) rather than forwarding them to the backend.
+  const limitNum = Number(limitRaw)
+  const limit =
+    limitRaw && Number.isFinite(limitNum)
+      ? Math.min(Math.max(Math.trunc(limitNum), 1), 100)
+      : 20
+
   try {
-    const data = await listMyOrders()
+    const data = await listMyOrders({ limit, cursor, orderChannel, orderStatus })
     return NextResponse.json(data)
   } catch (err) {
-    return NextResponse.json({ error: describeError(err) }, { status: 500 })
+    const status = err instanceof ApiError ? err.status || 500 : 500
+    if (status === 403) {
+      return NextResponse.json(
+        { error: 'Only customers can list their orders.', code: 'forbidden' },
+        { status: 403 },
+      )
+    }
+    return NextResponse.json(
+      { error: describeError(err) },
+      { status: status >= 500 ? 502 : status },
+    )
   }
 }

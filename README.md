@@ -24,9 +24,10 @@ PORT=3001 npm run dev
 
 ## Backend status
 
-Only **4 real endpoints** are available (menu + login). Everything else is
-mocked locally following the schema described in the briefing — see
-[briefing §6](nexio-frontend-briefing.md) for the full catalogue.
+A growing set of endpoints is wired to the real backend; the rest is mocked
+locally following the schema described in the briefing — see
+[briefing §6](nexio-frontend-briefing.md) for the full catalogue. Every
+resource marked "real backend + mock fallback" honours `NEXT_PUBLIC_USE_MOCKS`.
 
 | Resource              | Source                                          |
 | --------------------- | ----------------------------------------------- |
@@ -35,7 +36,9 @@ mocked locally following the schema described in the briefing — see
 | Signup                | Stub (`/api/auth/register` Next route handler)  |
 | Business units, categories | Mock (`lib/api/mocks/*`)                   |
 | Business units (internal/admin list) | Real backend + mock fallback (`GET /api/business-units/internal`) |
-| Orders / Payment      | Mock                                            |
+| User profile          | Real backend + mock fallback (`GET /api/users/me`) |
+| Orders / Payment      | Real backend + mock fallback (`GET /api/orders/me`, `POST/GET /api/orders`, `/api/payments/...`) |
+| Products (admin catalog edit) | Real backend + mock fallback (`PATCH /api/products/:id`) |
 | Loyalty               | Mock                                            |
 | Inventory (admin)     | Real backend + mock fallback (`GET/POST /api/inventory/...`)  |
 | Promotions (admin)    | Real backend + mock fallback (`/api/promotions/...`)         |
@@ -108,9 +111,10 @@ app/
 │   ├── cart/                    # Cart (client state)
 │   ├── checkout/                # Checkout
 │   ├── payment/[orderId]/       # Payment
-│   ├── orders/                  # History + tracking
+│   ├── orders/                  # History + tracking (cursor pagination, channel/status filters)
 │   ├── loyalty/                 # Points and LGPD consent
-│   ├── admin/                   # Admin area: overview, users, inventory, promotions
+│   ├── profile/                 # Own account (GET /users/me)
+│   ├── admin/                   # Admin area: overview, users, products, inventory, promotions
 │   ├── error.tsx                # Boundary
 │   ├── loading.tsx
 │   ├── not-found.tsx

@@ -81,9 +81,13 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
                 </Link>
               ) : null}
               <div className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
-              <span className="hidden text-xs text-fg-muted xl:inline">
+              <Link
+                href="/profile"
+                aria-label={t('myProfile')}
+                className="hidden rounded-xl px-3 py-2 text-xs font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg xl:inline-flex"
+              >
                 {t('greeting', { name: session?.username ?? '' })}
-              </span>
+              </Link>
               <LogoutButton />
             </>
           ) : (

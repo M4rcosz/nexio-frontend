@@ -1,0 +1,117 @@
+import { getTranslations, setRequestLocale } from 'next-intl/server'
+import { Link } from '@/i18n/navigation'
+import { getAdminContext } from '@/lib/auth/access'
+import { listProducts } from '@/lib/api/products'
+import { formatMoney } from '@/lib/money'
+
+export const dynamic = 'force-dynamic'
+
+export default async function AdminProductsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}) {
+  const { locale } = await params
+  setRequestLocale(locale)
+  const ctx = await getAdminContext()
+  if (!ctx) return null
+
+  const t = await getTranslations('admin.products')
+  const { data } = await listProducts({ limit: 50 })
+  // Only ADMIN may edit products; MANAGER creates but cannot edit.
+  const canEdit = ctx.role === 'ADMIN'
+
+  return (
+    <div className="space-y-6">
+      <header>
+        <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl text-fg">
+          {t('title')}
+        </h1>
+        <p className="mt-1 text-sm text-fg-muted">{t('subtitle')}</p>
+      </header>
+
+      {data.length === 0 ? (
+        <div className="card flex flex-col items-center gap-3 p-12 text-center">
+          <span className="text-5xl" aria-hidden>
+            🍽️
+          </span>
+          <p className="text-fg-muted">{t('empty')}</p>
+        </div>
+      ) : (
+        <div className="card hidden overflow-hidden p-0 md:block">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-surface-2 text-[10px] font-mono uppercase tracking-widest text-fg-subtle">
+                <tr>
+                  <th className="px-4 py-3 font-medium">{t('tableName')}</th>
+                  <th className="px-4 py-3 font-medium">{t('tablePrice')}</th>
+                  <th className="px-4 py-3 font-medium">{t('tableStatus')}</th>
+                  <th className="px-4 py-3 text-right font-medium">
+                    {t('tableActions')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.map((p) => (
+                  <tr key={p.id} className="border-t border-border">
+                    <td className="px-4 py-3 font-medium text-fg">{p.name}</td>
+                    <td className="px-4 py-3 text-fg-muted">
+                      {formatMoney(p.price, locale)}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
+                          p.isActive
+                            ? 'bg-forest-500/10 text-forest-700 dark:text-forest-300'
+                            : 'bg-surface-2 text-fg-subtle'
+                        }`}
+                      >
+                        {p.isActive ? t('statusActive') : t('statusInactive')}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {canEdit ? (
+                        <Link
+                          href={`/admin/products/${p.id}`}
+                          className="btn-ghost !px-2 !py-1 text-xs"
+                        >
+                          {t('edit')}
+                        </Link>
+                      ) : (
+                        <span className="text-xs text-fg-subtle">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile: card list */}
+      {data.length > 0 ? (
+        <div className="grid gap-3 md:hidden">
+          {data.map((p) => (
+            <div key={p.id} className="card space-y-3 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <p className="font-medium text-fg">{p.name}</p>
+                <span className="font-display text-lg font-bold text-gradient-brand">
+                  {formatMoney(p.price, locale)}
+                </span>
+              </div>
+              {canEdit ? (
+                <Link
+                  href={`/admin/products/${p.id}`}
+                  className="btn-ghost w-full justify-center text-xs"
+                >
+                  {t('edit')}
+                </Link>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}

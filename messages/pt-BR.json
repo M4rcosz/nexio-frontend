@@ -27,7 +27,8 @@
     "signIn": "Entrar",
     "signUp": "Cadastrar",
     "signOut": "Sair",
-    "signingOut": "Saindo..."
+    "signingOut": "Saindo...",
+    "myProfile": "Meu perfil"
   },
   "languageSwitcher": {
     "label": "Idioma",
@@ -45,10 +46,15 @@
     "heroTitle": "Seu comércio, em movimento",
     "heroSubtitle": "Uma plataforma para conectar unidades, pedidos e clientes em tempo real. Escolha uma unidade e comece agora.",
     "chooseUnit": "Escolha sua unidade",
+    "yourUnit": "Sua unidade",
     "viewMenu": "Ver cardápio",
+    "viewFullUnit": "Ver unidade completa",
+    "menuHeading": "Cardápio de {unit}",
+    "menuSubtitle": "Produtos disponíveis nesta unidade. Troque a unidade acima para ver outro cardápio.",
     "select": "Selecionar",
     "unitSearchPlaceholder": "Buscar unidades — nome ou cidade...",
     "noUnits": "Nenhuma unidade encontrada.",
+    "noUnitsHint": "Nenhuma unidade disponível no momento. Tente novamente mais tarde.",
     "search": {
       "placeholder": "Buscar itens do catálogo...",
       "searching": "Buscando...",
@@ -119,7 +125,18 @@
     "empty": "Você ainda não fez nenhum pedido.",
     "browseUnits": "Escolher unidade",
     "itemsCount": "{count} item(s) · {total}",
-    "track": "Acompanhar"
+    "track": "Acompanhar",
+    "forbidden": "Apenas clientes podem ver seus pedidos.",
+    "signInLink": "Entrar",
+    "noResults": "Nenhum pedido corresponde a esses filtros.",
+    "loadMore": "Carregar mais",
+    "loadingMore": "Carregando…",
+    "filters": {
+      "channel": "Canal",
+      "status": "Status",
+      "allChannels": "Todos os canais",
+      "allStatuses": "Todos os status"
+    }
   },
   "order": {
     "title": "Pedido",
@@ -185,7 +202,8 @@
       "users": "Usuários",
       "inventory": "Estoque",
       "promotions": "Promoções",
-      "title": "Administração"
+      "title": "Administração",
+      "products": "Produtos"
     },
     "overview": {
       "title": "Painel administrativo",
@@ -332,6 +350,40 @@
     "errors": {
       "forbiddenTitle": "Área restrita",
       "forbiddenBody": "Você precisa de acesso de administrador ou gerente para ver esta página."
+    },
+    "products": {
+      "title": "Produtos",
+      "subtitle": "Itens do catálogo disponíveis nas unidades.",
+      "edit": "Editar",
+      "empty": "Nenhum produto ainda.",
+      "tableName": "Nome",
+      "tablePrice": "Preço",
+      "tableStatus": "Situação",
+      "tableActions": "Ações",
+      "statusActive": "Ativo",
+      "statusInactive": "Inativo",
+      "form": {
+        "title": "Produto",
+        "editTitle": "Editar produto",
+        "editSubtitle": "Atualize os dados de catálogo deste produto.",
+        "back": "← Voltar aos produtos",
+        "name": "Nome",
+        "description": "Descrição",
+        "descriptionHint": "Deixe como está para manter o texto atual — não é possível limpá-lo por aqui.",
+        "price": "Preço",
+        "priceHint": "Valor em BRL, ex.: 58.90.",
+        "categoryId": "ID da categoria",
+        "categoryHint": "UUID da categoria. Um seletor substituirá este campo quando houver endpoint de categorias.",
+        "imageUrl": "URL da imagem",
+        "imageUrlHint": "Deixe como está para manter a imagem atual — não é possível limpá-la por aqui.",
+        "invalidMoney": "Use um valor decimal positivo como 58.90.",
+        "invalidCategory": "Informe um UUID de categoria válido.",
+        "invalidName": "O nome deve ter ao menos 2 caracteres.",
+        "noChanges": "Altere ao menos um campo antes de salvar.",
+        "submitEdit": "Salvar alterações",
+        "submitting": "Salvando…",
+        "failed": "Não foi possível salvar o produto."
+      }
     }
   },
   "errors": {
@@ -353,7 +405,8 @@
       "already_exists": "Usuário, e-mail ou telefone já cadastrado.",
       "rate_limited": "Muitas tentativas. Aguarde um instante e tente novamente.",
       "validation": "Há informações inválidas. Revise os campos e tente novamente.",
-      "unknown": "Algo deu errado. Tente novamente."
+      "unknown": "Algo deu errado. Tente novamente.",
+      "name_taken": "Nome de produto já em uso."
     }
   },
   "orderStatus": {
@@ -384,5 +437,22 @@
     "TOTEM": "Totem",
     "COUNTER": "Balcão",
     "PICKUP": "Retirada"
+  },
+  "profile": {
+    "title": "Meu perfil",
+    "subtitle": "Os dados da sua conta.",
+    "username": "Usuário",
+    "name": "Nome",
+    "email": "E-mail",
+    "phone": "Telefone",
+    "role": "Papel",
+    "units": "Unidades",
+    "noUnits": "Nenhuma unidade vinculada",
+    "status": "Situação",
+    "active": "Ativo",
+    "inactive": "Inativo",
+    "notProvided": "Não informado",
+    "back": "Voltar ao início",
+    "accountGone": "Sua conta não está mais disponível. Encerrando a sessão…"
   }
 }

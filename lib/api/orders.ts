@@ -2,6 +2,7 @@ import { serverFetch, USE_MOCKS } from './client'
 import { ApiError } from './errors'
 import type {
   CreateOrderRequest,
+  ListMyOrdersQuery,
   ListOrdersQuery,
   Order,
   OrderStatus,
@@ -55,11 +56,26 @@ export async function getOrder(id: string): Promise<Order | null> {
   }
 }
 
-// [stub] the backend has no customer-facing order listing (`GET /orders` is
-// staff-only), so "my orders" always comes from the mock store.
-export async function listMyOrders(): Promise<Paginated<Order>> {
-  const session = await getSession()
-  return listMyOrdersMock(session?.sub ?? MOCK_CUSTOMER.id)
+/**
+ * `GET /orders/me` (CUSTOMER) — the caller's own orders, cursor-paginated and
+ * ordered `createdAt` desc server-side. Staff callers get 403 from the backend.
+ */
+export async function listMyOrders(
+  query: ListMyOrdersQuery = {},
+): Promise<Paginated<Order>> {
+  if (USE_MOCKS) {
+    const session = await getSession()
+    return listMyOrdersMock(session?.sub ?? MOCK_CUSTOMER.id, query)
+  }
+  return serverFetch<Paginated<Order>>('/orders/me', {
+    query: {
+      limit: query.limit,
+      cursor: query.cursor,
+      orderChannel: query.orderChannel,
+      orderStatus: query.orderStatus,
+    },
+    cache: 'no-store',
+  })
 }
 
 /**

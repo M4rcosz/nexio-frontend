@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { updateMe } from '@/lib/api/users'
+import { getMe, isAccountGoneError, updateMe } from '@/lib/api/users'
 import { ApiError, describeError } from '@/lib/api/errors'
 import { isAuthenticated } from '@/lib/auth/session'
 
@@ -13,6 +13,31 @@ const Body = z
   .refine((v) => v.name !== undefined || v.phone !== undefined, {
     message: 'Provide at least one field to update.',
   })
+
+export async function GET() {
+  if (!(await isAuthenticated())) {
+    // 401 → the browser may attempt a refresh, then retry.
+    return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
+  }
+  try {
+    const user = await getMe()
+    return NextResponse.json(user)
+  } catch (err) {
+    const status = err instanceof ApiError ? err.status || 500 : 500
+    // Only sign out on an unambiguous account-removed signal — a bare 404 can
+    // also come from a missing route/gateway and must not log a valid user out.
+    if (isAccountGoneError(err)) {
+      return NextResponse.json(
+        { error: 'Account no longer exists.', code: 'account_gone' },
+        { status: 404 },
+      )
+    }
+    return NextResponse.json(
+      { error: describeError(err) },
+      { status: status >= 500 ? 502 : status },
+    )
+  }
+}
 
 export async function PATCH(req: Request) {
   if (!(await isAuthenticated())) {
