@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
+import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { useRouter } from '@/i18n/navigation'
 import type { InventoryAdjustmentType } from '@/lib/api/types'
 
@@ -16,6 +17,7 @@ export function AdjustStockForm({
 }) {
   const router = useRouter()
   const t = useTranslations('admin.inventory.form')
+  const errorMessage = useErrorMessage()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -60,7 +62,7 @@ export function AdjustStockForm({
           | null
         if (data?.code === 'inventory_not_found') setError(t('notFound'))
         else if (data?.code === 'inventory_below_zero') setError(t('belowZero'))
-        else setError(data?.error ?? t('failed'))
+        else setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }
       setSuccess(t('success'))

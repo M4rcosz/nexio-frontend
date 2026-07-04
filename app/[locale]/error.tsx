@@ -21,9 +21,17 @@ export default function LocaleError({
         </h2>
       </div>
       <div className="space-y-4 p-6">
+        {/* Never render error.message directly: it may be an English backend
+            string or leak internals (JWT expiry, stack traces). Show a
+            localized, user-friendly message instead. */}
         <p className="text-sm text-fg-muted leading-relaxed">
-          {error.message || t('errors.fallback')}
+          {t('errors.fallback')}
         </p>
+        {error.digest ? (
+          <p className="font-mono text-[10px] text-fg-muted/70">
+            {error.digest}
+          </p>
+        ) : null}
         <button onClick={reset} className="btn-primary">
           {t('common.tryAgain')}
         </button>

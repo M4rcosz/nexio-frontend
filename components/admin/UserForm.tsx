@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
+import { useErrorMessage } from '@/lib/errors/useErrorMessage'
+import { PasswordInput } from '@/components/PasswordInput'
 import { useRouter } from '@/i18n/navigation'
 import type { PublicBusinessUnit, Role, User } from '@/lib/api/types'
 
@@ -31,6 +33,7 @@ export function UserForm({
 }) {
   const router = useRouter()
   const t = useTranslations('admin.form')
+  const errorMessage = useErrorMessage()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
@@ -106,7 +109,7 @@ export function UserForm({
         else if (data?.code === 'email_taken') setError(t('emailTaken'))
         else if (data?.code === 'role_forbidden') setError(t('roleForbidden'))
         else if (data?.code === 'unit_required') setError(t('unitRequired'))
-        else setError(data?.error ?? t('failed'))
+        else setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }
       router.push('/admin/users')
@@ -178,10 +181,8 @@ export function UserForm({
           <label className="label" htmlFor="password">
             {t('password')}
           </label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
-            className="input"
             required
             minLength={8}
             autoComplete="new-password"
@@ -244,7 +245,7 @@ export function UserForm({
       </div>
 
       {error ? (
-        <p className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
+        <p role="alert" className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
           {error}
         </p>
       ) : null}

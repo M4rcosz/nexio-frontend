@@ -80,9 +80,6 @@ export default async function LocaleLayout({
               <footer className="mx-auto w-full max-w-6xl px-3 pb-8 pt-12 text-xs text-fg-subtle sm:px-6 sm:pb-10 sm:pt-16 lg:px-8">
                 <div className="flex flex-col items-start justify-between gap-2 border-t border-border pt-5 sm:flex-row sm:items-center sm:pt-6">
                   <p>{t('tagline', { year: new Date().getFullYear(), name: tenant.name })}</p>
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-fg-subtle">
-                    v0.1 · made with ☼
-                  </p>
                 </div>
               </footer>
             </div>

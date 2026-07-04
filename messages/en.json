@@ -9,6 +9,8 @@
     "save": "Save",
     "cancel": "Cancel",
     "remove": "remove",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
     "stub": "mock",
     "stubTitle": "Backend endpoint not implemented yet — using mock data.",
     "backendBadge": "backend",
@@ -78,6 +80,8 @@
     "items": "Items",
     "total": "Total",
     "checkout": "Go to checkout",
+    "viewCart": "View cart",
+    "previewEmpty": "Your cart is empty.",
     "switchUnitConfirm": "You already have items from another unit. Switching will empty the cart. Continue?"
   },
   "checkout": {
@@ -332,10 +336,25 @@
   },
   "errors": {
     "title": "Something went wrong",
-    "fallback": "The server didn't respond properly. The backend may be down or this endpoint may not be implemented yet.",
+    "fallback": "We couldn't complete the operation. Please try again shortly.",
     "notFoundTitle": "Page not found",
     "notFoundBody": "The address you accessed doesn't exist or was removed.",
-    "notFoundHome": "Back to home"
+    "notFoundHome": "Back to home",
+    "codes": {
+      "network": "We couldn't reach the server. Check your connection and try again.",
+      "server": "The server is unavailable right now. Please try again shortly.",
+      "session_expired": "Your session has expired. Please sign in again to continue.",
+      "invalid_credentials": "Incorrect username or password.",
+      "forbidden": "You don't have permission to perform this action.",
+      "not_found": "We couldn't find what you're looking for.",
+      "conflict": "This operation conflicts with existing data.",
+      "username_taken": "Username already in use.",
+      "email_taken": "Email already registered.",
+      "already_exists": "Username, email or phone already registered.",
+      "rate_limited": "Too many attempts. Please wait a moment and try again.",
+      "validation": "Some information is invalid. Please review the fields and try again.",
+      "unknown": "Something went wrong. Please try again."
+    }
   },
   "orderStatus": {
     "PENDING": "Awaiting confirmation",

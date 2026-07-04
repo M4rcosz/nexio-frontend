@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
+import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { useRouter } from '@/i18n/navigation'
 import type {
   Promotion,
@@ -44,6 +45,7 @@ export function PromotionForm({
 }) {
   const router = useRouter()
   const t = useTranslations('admin.promotions.form')
+  const errorMessage = useErrorMessage()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
@@ -121,9 +123,9 @@ export function PromotionForm({
       })
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as
-          | { error?: string }
+          | { code?: string }
           | null
-        setError(data?.error ?? t('failed'))
+        setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }
       router.push('/admin/promotions')

@@ -1,9 +1,8 @@
-import { getLocale, getTranslations } from 'next-intl/server'
+import { getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { getSession } from '@/lib/auth/session'
 import type { Theme } from '@/lib/theme'
 import { getTenant } from '@/lib/tenant/resolve'
-import { localized } from '@/lib/tenant/config'
 import { CartBadge } from './CartBadge'
 import { LogoutButton } from './LogoutButton'
 import { LanguageSwitcher } from './LanguageSwitcher'
@@ -14,17 +13,23 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
   const isLogged = session !== null
   const showAdminLink =
     session?.role === 'ADMIN' || session?.role === 'MANAGER'
+  // Orders, loyalty points and the cart are customer-facing — staff get none.
+  const isCustomer = session?.role === 'CUSTOMER'
+  // The cart stays available to logged-out guests too (guest checkout).
+  const showCart = !isLogged || isCustomer
   const t = await getTranslations('header')
   const tAdmin = await getTranslations('admin')
-  const locale = await getLocale()
   const tenant = await getTenant()
+  // Wordmark: first letter gets the fancy gradient treatment, rest stays plain.
+  const brandInitial = tenant.name.slice(0, 1)
+  const brandRest = tenant.name.slice(1)
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-bg/70 backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3 lg:px-8">
         <Link
           href="/"
-          className="group flex min-w-0 items-center gap-2.5 transition-opacity hover:opacity-90 sm:gap-3"
+          className="group flex min-w-0 items-center gap-1.5 transition-opacity hover:opacity-90 sm:gap-2"
         >
           {tenant.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -34,44 +39,35 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
               className="h-9 w-9 flex-none rounded-xl object-cover sm:h-10 sm:w-10"
             />
           ) : (
-            <span className="relative inline-flex h-9 w-9 flex-none items-center justify-center overflow-hidden rounded-xl bg-brand-gradient text-white shadow-glow sm:h-10 sm:w-10">
-              <span className="relative z-10 font-display text-base font-extrabold sm:text-lg">
-                {tenant.logoMark}
-              </span>
-              <span className="absolute inset-0 bg-hero-grain opacity-30 mix-blend-overlay" />
-            </span>
+            <BoltIcon className="h-5 w-5 flex-none rotate-[18deg] drop-shadow-[0_0_10px_rgb(var(--brand-500)/0.8)] sm:h-6 sm:w-6" />
           )}
-          <span className="flex min-w-0 flex-col leading-tight">
-            <span className="truncate text-sm font-semibold tracking-tight text-fg sm:text-lg">
-              {tenant.name}
+          <span className="font-display flex items-baseline truncate text-xl font-extrabold tracking-tight text-fg sm:text-2xl">
+            <span className="text-gradient-brand mr-[0.02em] inline-block -skew-x-[16deg] text-[1.3em] font-black">
+              {brandInitial}
             </span>
-            <span className="hidden truncate text-[10px] font-medium uppercase tracking-[0.18em] text-fg-subtle sm:inline">
-              {localized(tenant.tagline, locale)}
-            </span>
+            <span className="inline-block -skew-x-[6deg]">{brandRest}</span>
           </span>
         </Link>
 
         <nav className="flex flex-none items-center gap-1 text-sm sm:gap-2">
-          <Link
-            href="/"
-            className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:inline-flex"
-          >
-            {t('units')}
-          </Link>
           {isLogged ? (
             <>
-              <Link
-                href="/orders"
-                className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:inline-flex"
-              >
-                {t('myOrders')}
-              </Link>
-              <Link
-                href="/loyalty"
-                className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:inline-flex"
-              >
-                {t('points')}
-              </Link>
+              {isCustomer ? (
+                <>
+                  <Link
+                    href="/orders"
+                    className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:inline-flex"
+                  >
+                    {t('myOrders')}
+                  </Link>
+                  <Link
+                    href="/loyalty"
+                    className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:inline-flex"
+                  >
+                    {t('points')}
+                  </Link>
+                </>
+              ) : null}
               {showAdminLink ? (
                 <Link
                   href="/admin"
@@ -84,7 +80,6 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
                   </span>
                 </Link>
               ) : null}
-              <CartBadge />
               <div className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
               <span className="hidden text-xs text-fg-muted xl:inline">
                 {t('greeting', { name: session?.username ?? '' })}
@@ -93,7 +88,6 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
             </>
           ) : (
             <>
-              <CartBadge />
               <Link
                 href="/login"
                 className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg sm:inline-flex"
@@ -111,9 +105,33 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
           <div className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
           <LanguageSwitcher />
           <ThemeToggle initial={initialTheme} />
+          {showCart ? <CartBadge /> : null}
         </nav>
       </div>
     </header>
+  )
+}
+
+function BoltIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      aria-hidden
+    >
+      <defs>
+        {/* Same brand ramp as the .text-gradient-brand "N": brand → accent. */}
+        <linearGradient id="bolt-gradient" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" style={{ stopColor: 'rgb(var(--brand-500))' }} />
+          <stop offset="45%" style={{ stopColor: 'rgb(var(--brand-600))' }} />
+          <stop offset="100%" style={{ stopColor: 'rgb(var(--accent-600))' }} />
+        </linearGradient>
+      </defs>
+      <path
+        fill="url(#bolt-gradient)"
+        d="M13.5 1 L3.5 14.2 L10 13.6 L8 23 L20.5 8.2 L13.2 8.9 Z"
+      />
+    </svg>
   )
 }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { Link, useRouter } from '@/i18n/navigation'
 import { cartTotal, useCartStore } from '@/lib/cart/store'
 import { formatMoney, multiplyMoney } from '@/lib/money'
@@ -19,6 +20,7 @@ export function CheckoutView() {
   const [hydrated, setHydrated] = useState(false)
   useEffect(() => setHydrated(true), [])
   const t = useTranslations('checkout')
+  const errorMessage = useErrorMessage()
   const tCommon = useTranslations('common')
   const locale = useLocale()
 
@@ -72,8 +74,8 @@ export function CheckoutView() {
           router.push('/login?redirect=/checkout')
           return
         }
-        const body = (await res.json().catch(() => null)) as { error?: string } | null
-        setError(body?.error ?? t('submitFailed'))
+        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        setError(errorMessage(body?.code, res.status) ?? t('submitFailed'))
         return
       }
       const order = (await res.json()) as Order
@@ -133,7 +135,7 @@ export function CheckoutView() {
         </section>
 
         {error ? (
-          <p className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
+          <p role="alert" className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
             {error}
           </p>
         ) : null}

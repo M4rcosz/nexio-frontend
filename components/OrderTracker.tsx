@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { ORDER_STATUS_TIMELINE } from '@/lib/format'
 import { formatMoney } from '@/lib/money'
 import type { Order, OrderStatus } from '@/lib/api/types'
@@ -13,6 +14,7 @@ export function OrderTracker({ initialOrder }: { initialOrder: Order }) {
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
   const t = useTranslations('order')
+  const errorMessage = useErrorMessage()
   const locale = useLocale()
 
   useEffect(() => {
@@ -39,8 +41,8 @@ export function OrderTracker({ initialOrder }: { initialOrder: Order }) {
     start(async () => {
       const res = await fetch(`/api/orders/${order.id}/cancel`, { method: 'POST' })
       if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null
-        setError(body?.error ?? t('cancelFailed'))
+        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        setError(errorMessage(body?.code, res.status) ?? t('cancelFailed'))
         return
       }
       setOrder((await res.json()) as Order)
@@ -110,7 +112,7 @@ export function OrderTracker({ initialOrder }: { initialOrder: Order }) {
       </div>
 
       {error ? (
-        <p className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
+        <p role="alert" className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
           {error}
         </p>
       ) : null}

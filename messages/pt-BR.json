@@ -9,6 +9,8 @@
     "save": "Salvar",
     "cancel": "Cancelar",
     "remove": "remover",
+    "showPassword": "Mostrar senha",
+    "hidePassword": "Ocultar senha",
     "stub": "mock",
     "stubTitle": "Endpoint ainda não existe no backend — usando dados de mock.",
     "backendBadge": "backend",
@@ -78,6 +80,8 @@
     "items": "Itens",
     "total": "Total",
     "checkout": "Ir para o checkout",
+    "viewCart": "Ver carrinho",
+    "previewEmpty": "Seu carrinho está vazio.",
     "switchUnitConfirm": "Você já tem itens de outra unidade no carrinho. Trocar limpa o carrinho. Deseja continuar?"
   },
   "checkout": {
@@ -332,10 +336,25 @@
   },
   "errors": {
     "title": "Algo deu errado",
-    "fallback": "O servidor não respondeu corretamente. O backend pode estar fora do ar ou ainda não implementou este endpoint.",
+    "fallback": "Não foi possível concluir a operação. Tente novamente em instantes.",
     "notFoundTitle": "Página não encontrada",
     "notFoundBody": "O endereço acessado não existe ou foi removido.",
-    "notFoundHome": "Voltar para a home"
+    "notFoundHome": "Voltar para a home",
+    "codes": {
+      "network": "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.",
+      "server": "O servidor está indisponível no momento. Tente novamente em instantes.",
+      "session_expired": "Sua sessão expirou. Entre novamente para continuar.",
+      "invalid_credentials": "Usuário ou senha incorretos.",
+      "forbidden": "Você não tem permissão para realizar esta ação.",
+      "not_found": "Não encontramos o que você procura.",
+      "conflict": "Esta operação conflita com dados que já existem.",
+      "username_taken": "Nome de usuário já em uso.",
+      "email_taken": "E-mail já cadastrado.",
+      "already_exists": "Usuário, e-mail ou telefone já cadastrado.",
+      "rate_limited": "Muitas tentativas. Aguarde um instante e tente novamente.",
+      "validation": "Há informações inválidas. Revise os campos e tente novamente.",
+      "unknown": "Algo deu errado. Tente novamente."
+    }
   },
   "orderStatus": {
     "PENDING": "Aguardando confirmação",
