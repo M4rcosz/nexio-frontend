@@ -203,7 +203,8 @@
       "inventory": "Estoque",
       "promotions": "Promoções",
       "title": "Administração",
-      "products": "Produtos"
+      "products": "Produtos",
+      "categories": "Categorias"
     },
     "overview": {
       "title": "Painel administrativo",
@@ -372,8 +373,9 @@
         "descriptionHint": "Deixe como está para manter o texto atual — não é possível limpá-lo por aqui.",
         "price": "Preço",
         "priceHint": "Valor em BRL, ex.: 58.90.",
-        "categoryId": "ID da categoria",
-        "categoryHint": "UUID da categoria. Um seletor substituirá este campo quando houver endpoint de categorias.",
+        "categoryId": "Categoria",
+        "categoryHint": "Escolha a categoria à qual este produto pertence.",
+        "categoryInactiveOption": "Categoria atual (inativa)",
         "imageUrl": "URL da imagem",
         "imageUrlHint": "Deixe como está para manter a imagem atual — não é possível limpá-la por aqui.",
         "invalidMoney": "Use um valor decimal positivo como 58.90.",
@@ -383,6 +385,42 @@
         "submitEdit": "Salvar alterações",
         "submitting": "Salvando…",
         "failed": "Não foi possível salvar o produto."
+      }
+    },
+    "categories": {
+      "title": "Categorias",
+      "subtitle": "Taxonomia do cardápio usada para agrupar produtos.",
+      "newCategory": "Nova categoria",
+      "count": "{count} categoria(s)",
+      "empty": "Nenhuma categoria ativa ainda.",
+      "inactiveNote": "Categorias desativadas ficam ocultas nesta lista, mas continuam acessíveis pelo link direto.",
+      "tableName": "Nome",
+      "tableDescription": "Descrição",
+      "tableStatus": "Situação",
+      "tableUpdated": "Atualizado",
+      "tableActions": "Ações",
+      "statusActive": "Ativa",
+      "statusInactive": "Inativa",
+      "noDescription": "—",
+      "actionEdit": "Editar",
+      "form": {
+        "createTitle": "Nova categoria",
+        "createSubtitle": "Crie uma categoria para agrupar produtos do cardápio.",
+        "editTitle": "Editar categoria",
+        "editSubtitle": "Atualize o nome, a descrição ou a disponibilidade.",
+        "back": "← Voltar às categorias",
+        "name": "Nome",
+        "description": "Descrição (opcional)",
+        "descriptionHint": "Rótulo curto exibido para a equipe.",
+        "descriptionCannotBeCleared": "A descrição não pode ser apagada depois de definida — substitua por outro texto.",
+        "isActive": "Ativa",
+        "isActiveHint": "Desativar oculta a categoria do cardápio público.",
+        "invalidName": "O nome deve ter ao menos 2 caracteres.",
+        "noChanges": "Altere ao menos um campo antes de salvar.",
+        "submitCreate": "Criar categoria",
+        "submitEdit": "Salvar alterações",
+        "submitting": "Salvando…",
+        "failed": "Não foi possível salvar a categoria."
       }
     }
   },
@@ -406,7 +444,7 @@
       "rate_limited": "Muitas tentativas. Aguarde um instante e tente novamente.",
       "validation": "Há informações inválidas. Revise os campos e tente novamente.",
       "unknown": "Algo deu errado. Tente novamente.",
-      "name_taken": "Nome de produto já em uso."
+      "name_taken": "Nome já em uso."
     }
   },
   "orderStatus": {

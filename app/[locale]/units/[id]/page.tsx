@@ -6,7 +6,7 @@ import { listProductsByBusinessUnit } from '@/lib/api/products'
 import { listMenu } from '@/lib/api/menu'
 import { listCategories } from '@/lib/api/categories'
 import { ProductCard } from '@/components/ProductCard'
-import { StubBadge, BackendBadge } from '@/components/StubBadge'
+import { BackendBadge } from '@/components/StubBadge'
 import { CategoryFilter } from '@/components/CategoryFilter'
 
 type SearchParams = { search?: string; categoryId?: string }
@@ -118,7 +118,6 @@ export default async function MenuPage({
             search={sp.search}
             unitId={id}
           />
-          <StubBadge />
         </div>
 
         {products.length === 0 ? (

@@ -203,7 +203,8 @@
       "inventory": "Inventory",
       "promotions": "Promotions",
       "title": "Admin",
-      "products": "Products"
+      "products": "Products",
+      "categories": "Categories"
     },
     "overview": {
       "title": "Admin overview",
@@ -372,8 +373,9 @@
         "descriptionHint": "Leave it unchanged to keep the current text — it cannot be cleared here.",
         "price": "Price",
         "priceHint": "BRL amount, e.g. 58.90.",
-        "categoryId": "Category ID",
-        "categoryHint": "Category UUID. A picker will replace this once categories are exposed.",
+        "categoryId": "Category",
+        "categoryHint": "Pick the category this product belongs to.",
+        "categoryInactiveOption": "Current category (inactive)",
         "imageUrl": "Image URL",
         "imageUrlHint": "Leave it unchanged to keep the current image — it cannot be cleared here.",
         "invalidMoney": "Use a positive decimal amount like 58.90.",
@@ -383,6 +385,42 @@
         "submitEdit": "Save changes",
         "submitting": "Saving…",
         "failed": "Could not save the product."
+      }
+    },
+    "categories": {
+      "title": "Categories",
+      "subtitle": "Menu taxonomy used to group products.",
+      "newCategory": "New category",
+      "count": "{count} category(ies)",
+      "empty": "No active categories yet.",
+      "inactiveNote": "Deactivated categories are hidden from this list, but stay reachable by their direct link.",
+      "tableName": "Name",
+      "tableDescription": "Description",
+      "tableStatus": "Status",
+      "tableUpdated": "Updated",
+      "tableActions": "Actions",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "noDescription": "—",
+      "actionEdit": "Edit",
+      "form": {
+        "createTitle": "New category",
+        "createSubtitle": "Create a category to group menu products.",
+        "editTitle": "Edit category",
+        "editSubtitle": "Update the name, description or availability.",
+        "back": "← Back to categories",
+        "name": "Name",
+        "description": "Description (optional)",
+        "descriptionHint": "Short label shown to your team.",
+        "descriptionCannotBeCleared": "Description can't be cleared once set — replace it with new text instead.",
+        "isActive": "Active",
+        "isActiveHint": "Deactivating hides the category from the public menu.",
+        "invalidName": "Name must be at least 2 characters.",
+        "noChanges": "Change at least one field before saving.",
+        "submitCreate": "Create category",
+        "submitEdit": "Save changes",
+        "submitting": "Saving…",
+        "failed": "Could not save the category."
       }
     }
   },
@@ -406,7 +444,7 @@
       "rate_limited": "Too many attempts. Please wait a moment and try again.",
       "validation": "Some information is invalid. Please review the fields and try again.",
       "unknown": "Something went wrong. Please try again.",
-      "name_taken": "Product name already in use."
+      "name_taken": "Name already in use."
     }
   },
   "orderStatus": {

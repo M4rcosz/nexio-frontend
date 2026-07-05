@@ -2,13 +2,12 @@ import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { getAdminContext } from '@/lib/auth/access'
-import { getProduct } from '@/lib/api/products'
-import { listCategories } from '@/lib/api/categories'
-import { ProductForm } from '@/components/admin/ProductForm'
+import { getCategory } from '@/lib/api/categories'
+import { CategoryForm } from '@/components/admin/CategoryForm'
 
 export const dynamic = 'force-dynamic'
 
-export default async function EditProductPage({
+export default async function EditCategoryPage({
   params,
 }: {
   params: Promise<{ id: string; locale: string }>
@@ -17,20 +16,21 @@ export default async function EditProductPage({
   setRequestLocale(locale)
   const ctx = await getAdminContext()
   if (!ctx) return null
-  // Only ADMIN edits products; hide the page from MANAGER.
+  // Only ADMIN manages categories; hide the page from MANAGER.
   if (ctx.role !== 'ADMIN') notFound()
 
-  const [product, categoriesPage, t] = await Promise.all([
-    getProduct(id),
-    listCategories({ limit: 100 }),
-    getTranslations('admin.products.form'),
+  const [category, t] = await Promise.all([
+    // GET by id returns the category even when it is inactive, so a deactivated
+    // one stays reachable (and reactivatable) through its direct link.
+    getCategory(id),
+    getTranslations('admin.categories.form'),
   ])
-  if (!product) notFound()
+  if (!category) notFound()
 
   return (
     <div className="space-y-6">
       <Link
-        href="/admin/products"
+        href="/admin/categories"
         className="text-sm font-medium text-fg-muted hover:text-brand-500"
       >
         {t('back')}
@@ -42,7 +42,7 @@ export default async function EditProductPage({
         <p className="mt-1 text-sm text-fg-muted">{t('editSubtitle')}</p>
       </header>
       <div className="card p-6">
-        <ProductForm product={product} categories={categoriesPage.data} />
+        <CategoryForm mode="edit" category={category} />
       </div>
     </div>
   )

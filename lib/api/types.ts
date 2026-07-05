@@ -97,11 +97,35 @@ export type ProductUpdateDto = {
   imageUrl?: string
 }
 
-// [stub] categories are not exposed by the backend yet — mock-only concept.
+// --- Categories ---
+
 export type Category = {
   id: string
   name: string
   description: string | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+/** `POST /categories` (ADMIN) — born active; never send isActive/id. */
+export type CreateCategoryRequest = {
+  name: string
+  description?: string
+}
+
+/** `PATCH /categories/:id` (ADMIN) — at least one field; isActive soft-deletes. */
+export type UpdateCategoryRequest = {
+  name?: string
+  description?: string
+  isActive?: boolean
+}
+
+/** `GET /categories` filters (public) — only active categories are listed. */
+export type ListCategoriesQuery = {
+  limit?: number
+  cursor?: string
+  search?: string
 }
 
 // --- Business Units ---

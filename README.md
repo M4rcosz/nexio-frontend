@@ -34,7 +34,8 @@ resource marked "real backend + mock fallback" honours `NEXT_PUBLIC_USE_MOCKS`.
 | Login                 | Real backend (`POST /api/auth/login`)           |
 | Menu (products)       | Real backend (`GET /api/products/...`)          |
 | Signup                | Stub (`/api/auth/register` Next route handler)  |
-| Business units, categories | Mock (`lib/api/mocks/*`)                   |
+| Business units        | Mock (`lib/api/mocks/*`)                        |
+| Categories (public list + admin CRUD) | Real backend + mock fallback (`GET/POST /api/categories`, `GET/PATCH /api/categories/:id`) |
 | Business units (internal/admin list) | Real backend + mock fallback (`GET /api/business-units/internal`) |
 | User profile          | Real backend + mock fallback (`GET /api/users/me`) |
 | Orders / Payment      | Real backend + mock fallback (`GET /api/orders/me`, `POST/GET /api/orders`, `/api/payments/...`) |
@@ -114,7 +115,7 @@ app/
 │   ├── orders/                  # History + tracking (cursor pagination, channel/status filters)
 │   ├── loyalty/                 # Points and LGPD consent
 │   ├── profile/                 # Own account (GET /users/me)
-│   ├── admin/                   # Admin area: overview, users, products, inventory, promotions
+│   ├── admin/                   # Admin area: overview, users, products, categories, inventory, promotions
 │   ├── error.tsx                # Boundary
 │   ├── loading.tsx
 │   ├── not-found.tsx

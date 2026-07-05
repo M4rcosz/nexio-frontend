@@ -3,8 +3,13 @@
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
+import { Select } from '@/components/ui/Select'
 import { useRouter } from '@/i18n/navigation'
-import type { ProductResponseDto, ProductUpdateDto } from '@/lib/api/types'
+import type {
+  Category,
+  ProductResponseDto,
+  ProductUpdateDto,
+} from '@/lib/api/types'
 
 const MONEY_RE = /^\d+(\.\d{1,2})?$/
 const UUID_RE =
@@ -15,7 +20,13 @@ const UUID_RE =
  * fields that actually changed. `isActive` is managed elsewhere (activate/
  * deactivate) and `description` cannot be cleared to null here.
  */
-export function ProductForm({ product }: { product: ProductResponseDto }) {
+export function ProductForm({
+  product,
+  categories,
+}: {
+  product: ProductResponseDto
+  categories: Category[]
+}) {
   const router = useRouter()
   const t = useTranslations('admin.products.form')
   const errorMessage = useErrorMessage()
@@ -26,10 +37,20 @@ export function ProductForm({ product }: { product: ProductResponseDto }) {
     name: product.name,
     description: product.description ?? '',
     price: product.price,
-    // TODO: turn categoryId into a Select once a categories endpoint exists.
     categoryId: product.categoryId,
     imageUrl: product.imageUrl ?? '',
   })
+
+  // Only active categories are listed, so a product tied to a deactivated
+  // category would have no matching option. Surface it explicitly so the Select
+  // still shows the current value instead of appearing empty.
+  const categoryOptions = categories.map((c) => ({ value: c.id, label: c.name }))
+  if (!categoryOptions.some((o) => o.value === product.categoryId)) {
+    categoryOptions.unshift({
+      value: product.categoryId,
+      label: t('categoryInactiveOption'),
+    })
+  }
 
   function update<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((s) => ({ ...s, [k]: v }))
@@ -152,11 +173,12 @@ export function ProductForm({ product }: { product: ProductResponseDto }) {
           <label className="label" htmlFor="product-category">
             {t('categoryId')}
           </label>
-          <input
+          <Select
             id="product-category"
-            className="input font-mono text-xs"
             value={form.categoryId}
-            onChange={(e) => update('categoryId', e.target.value)}
+            onChange={(v) => update('categoryId', v)}
+            ariaLabel={t('categoryId')}
+            options={categoryOptions}
           />
           <p className="mt-1 text-xs text-fg-subtle">{t('categoryHint')}</p>
         </div>
