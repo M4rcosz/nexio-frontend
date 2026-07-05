@@ -2,6 +2,9 @@
 
 import { useMemo, useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
+import { useErrorMessage } from '@/lib/errors/useErrorMessage'
+import { PasswordInput } from '@/components/PasswordInput'
+import { Select } from '@/components/ui/Select'
 import { useRouter } from '@/i18n/navigation'
 import type { PublicBusinessUnit, Role, User } from '@/lib/api/types'
 
@@ -31,6 +34,7 @@ export function UserForm({
 }) {
   const router = useRouter()
   const t = useTranslations('admin.form')
+  const errorMessage = useErrorMessage()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
@@ -106,7 +110,7 @@ export function UserForm({
         else if (data?.code === 'email_taken') setError(t('emailTaken'))
         else if (data?.code === 'role_forbidden') setError(t('roleForbidden'))
         else if (data?.code === 'unit_required') setError(t('unitRequired'))
-        else setError(data?.error ?? t('failed'))
+        else setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }
       router.push('/admin/users')
@@ -178,10 +182,8 @@ export function UserForm({
           <label className="label" htmlFor="password">
             {t('password')}
           </label>
-          <input
+          <PasswordInput
             id="password"
-            type="password"
-            className="input"
             required
             minLength={8}
             autoComplete="new-password"
@@ -196,38 +198,33 @@ export function UserForm({
           <label className="label" htmlFor="role">
             {t('role')}
           </label>
-          <select
+          <Select
             id="role"
-            className="input"
             value={form.role}
-            onChange={(e) => update('role', e.target.value as Role)}
-          >
-            {manageableRoles.map((r) => (
-              <option key={r} value={r}>
-                {t(ROLE_LABEL_KEY[r])}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => update('role', v as Role)}
+            ariaLabel={t('role')}
+            options={manageableRoles.map((r) => ({
+              value: r,
+              label: t(ROLE_LABEL_KEY[r]),
+            }))}
+          />
         </div>
         {unitFieldVisible ? (
           <div>
             <label className="label" htmlFor="unit">
               {t('businessUnit')}
             </label>
-            <select
+            <Select
               id="unit"
-              className="input"
               disabled={unitLocked}
               value={scopedBusinessUnitId ?? form.businessUnitId}
-              onChange={(e) => update('businessUnitId', e.target.value)}
-            >
-              <option value="">—</option>
-              {units.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => update('businessUnitId', v)}
+              ariaLabel={t('businessUnit')}
+              options={[
+                { value: '', label: '—' },
+                ...units.map((u) => ({ value: u.id, label: u.name })),
+              ]}
+            />
             {unitLocked ? (
               <p className="mt-1 text-xs text-fg-subtle">
                 {t('businessUnitLocked')}
@@ -244,7 +241,7 @@ export function UserForm({
       </div>
 
       {error ? (
-        <p className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
+        <p role="alert" className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
           {error}
         </p>
       ) : null}

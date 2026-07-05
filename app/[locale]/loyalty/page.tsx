@@ -1,4 +1,6 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
+import { redirect } from '@/i18n/navigation'
+import { getSession } from '@/lib/auth/session'
 import { getMyLoyalty } from '@/lib/api/loyalty'
 import { LoyaltyView } from '@/components/LoyaltyView'
 
@@ -11,6 +13,12 @@ export default async function LoyaltyPage({
 }) {
   const { locale } = await params
   setRequestLocale(locale)
+  // Loyalty points are a customer-only program. Staff roles have no account,
+  // so guard the page against direct navigation (the header hides the link).
+  const session = await getSession()
+  if (session?.role !== 'CUSTOMER') {
+    redirect({ href: '/', locale })
+  }
   const t = await getTranslations('loyalty')
   const account = await getMyLoyalty()
   return (

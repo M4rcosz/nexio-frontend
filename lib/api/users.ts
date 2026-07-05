@@ -5,11 +5,43 @@ import { getSession } from '@/lib/auth/session'
 import { ApiError } from './errors'
 import { mockDelay } from './mocks/_delay'
 
-// [stub] the backend does not expose a `GET /users/me` — the profile shown in
-// the UI is reconstructed from the JWT claims + mock store.
+/**
+ * `GET /users/me` — the authenticated user's profile. A 404 here means the
+ * account no longer exists server-side (deleted/disabled): the {@link ApiError}
+ * is propagated so callers can force a logout instead of showing a generic
+ * "not found".
+ */
+// Explicit backend signals that the account itself was removed. A bare 404 is
+// ambiguous (deleted account vs. missing route/gateway), so we only force a
+// sign-out when one of these codes is present in the error body.
+const ACCOUNT_GONE_CODES = new Set([
+  'account_gone',
+  'account_deleted',
+  'user_deleted',
+  'user_gone',
+])
+
+/**
+ * True only when a `GET /users/me` failure carries an unambiguous
+ * account-removed signal. Generic 404s (missing route, gateway) return false so
+ * a still-valid user is not signed out by mistake.
+ */
+export function isAccountGoneError(err: unknown): boolean {
+  if (!(err instanceof ApiError) || err.status !== 404) return false
+  const body = err.body
+  if (!body || typeof body !== 'object') return false
+  const { code, error } = body as { code?: unknown; error?: unknown }
+  const codeStr = typeof code === 'string' ? code.toLowerCase() : ''
+  const errStr = typeof error === 'string' ? error.toLowerCase() : ''
+  return ACCOUNT_GONE_CODES.has(codeStr) || ACCOUNT_GONE_CODES.has(errStr)
+}
+
 export async function getMe(): Promise<User> {
-  const session = await getSession()
-  return getMeMock(session?.sub ?? null)
+  if (USE_MOCKS) {
+    const session = await getSession()
+    return getMeMock(session?.sub ?? null)
+  }
+  return serverFetch<User>('/users/me', { cache: 'no-store' })
 }
 
 /**

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import type { LoyaltyAccount, LoyaltyTransactionType } from '@/lib/api/types'
 import { formatDateTime } from '@/lib/format'
 
@@ -14,6 +15,7 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount | null }) {
   const [error, setError] = useState<string | null>(null)
   const [pending, start] = useTransition()
   const t = useTranslations('loyalty')
+  const errorMessage = useErrorMessage()
   const locale = useLocale()
 
   const TX_LABEL: Record<LoyaltyTransactionType, string> = {
@@ -28,8 +30,8 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount | null }) {
     start(async () => {
       const res = await fetch('/api/loyalty/me/consent', { method: 'POST' })
       if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null
-        setError(body?.error ?? t('consentFailed'))
+        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        setError(errorMessage(body?.code, res.status) ?? t('consentFailed'))
         return
       }
       setAccount((await res.json()) as LoyaltyAccount)
@@ -41,8 +43,8 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount | null }) {
     start(async () => {
       const res = await fetch('/api/loyalty/me/consent', { method: 'DELETE' })
       if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null
-        setError(body?.error ?? t('consentFailed'))
+        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        setError(errorMessage(body?.code, res.status) ?? t('consentFailed'))
         return
       }
       setAccount((await res.json()) as LoyaltyAccount)
@@ -124,7 +126,7 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount | null }) {
               {t('consentRevocation')}
             </p>
             {error ? (
-              <p className="mt-3 rounded-xl border border-accent-500/30 bg-accent-500/10 p-2 text-xs text-accent-700 dark:text-accent-300">
+              <p role="alert" className="mt-3 rounded-xl border border-accent-500/30 bg-accent-500/10 p-2 text-xs text-accent-700 dark:text-accent-300">
                 {error}
               </p>
             ) : null}
@@ -143,7 +145,7 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount | null }) {
               {t('consentText')}
             </p>
             {error ? (
-              <p className="mt-3 rounded-xl border border-accent-500/30 bg-accent-500/10 p-2 text-xs text-accent-700 dark:text-accent-300">
+              <p role="alert" className="mt-3 rounded-xl border border-accent-500/30 bg-accent-500/10 p-2 text-xs text-accent-700 dark:text-accent-300">
                 {error}
               </p>
             ) : null}

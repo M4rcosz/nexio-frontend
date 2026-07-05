@@ -1,4 +1,4 @@
-// [stub] the backend has no `GET /users/me` — profile reads are mock-only.
+// Mock fallback for `GET /users/me` (used when NEXT_PUBLIC_USE_MOCKS=true).
 import { mockDelay } from './_delay'
 import { findUserBySubMock } from './admin-users'
 import type { UpdateMeRequest, User } from '@/lib/api/types'

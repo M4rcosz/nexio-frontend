@@ -5,12 +5,14 @@ import type {
   Paginated,
   PaginationQuery,
   ProductResponseDto,
+  ProductUpdateDto,
 } from './types'
 import {
   createProductMock,
   getProductMock,
   listProductsMock,
   setProductActiveMock,
+  updateProductMock,
 } from './mocks/products'
 
 export async function listProducts(
@@ -78,6 +80,25 @@ export async function createProduct(
     method: 'POST',
     body: input,
   })
+}
+
+/** `PATCH /products/:productId` (ADMIN). 409 on duplicated name; 404 → null. */
+export async function updateProduct(
+  productId: string,
+  patch: ProductUpdateDto,
+): Promise<ProductResponseDto | null> {
+  if (USE_MOCKS) {
+    return updateProductMock(productId, patch)
+  }
+  try {
+    return await serverFetch<ProductResponseDto>(`/products/${productId}`, {
+      method: 'PATCH',
+      body: patch,
+    })
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null
+    throw err
+  }
 }
 
 /** `PATCH /products/:productId/activate|deactivate` (ADMIN). */

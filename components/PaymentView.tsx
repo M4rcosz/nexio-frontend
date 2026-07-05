@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { Link } from '@/i18n/navigation'
 import { formatMoney } from '@/lib/money'
 import type { Payment, PaymentMethod, PaymentStatus } from '@/lib/api/types'
@@ -29,6 +30,7 @@ export function PaymentView({
   const [error, setError] = useState<string | null>(null)
   const [pending, start] = useTransition()
   const t = useTranslations('payment')
+  const errorMessage = useErrorMessage()
   const tMethod = useTranslations('paymentMethod')
   const tStatus = useTranslations('paymentStatus')
   const locale = useLocale()
@@ -61,8 +63,8 @@ export function PaymentView({
         body: JSON.stringify({ method }),
       })
       if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null
-        setError(body?.error ?? t('failed'))
+        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        setError(errorMessage(body?.code, res.status) ?? t('failed'))
         return
       }
       setPayment((await res.json()) as Payment)
@@ -154,7 +156,7 @@ export function PaymentView({
           </div>
         </div>
         {error ? (
-          <p className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
+          <p role="alert" className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
             {error}
           </p>
         ) : null}

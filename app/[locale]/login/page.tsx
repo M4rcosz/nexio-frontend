@@ -1,6 +1,8 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link, redirect } from '@/i18n/navigation'
-import { isAuthenticated } from '@/lib/auth/session'
+import { getSession } from '@/lib/auth/session'
+import { safeRedirect } from '@/lib/auth/redirect'
+import { landingPathForRole } from '@/lib/auth/landing'
 import { LoginForm } from '@/components/LoginForm'
 
 export default async function LoginPage({
@@ -13,8 +15,15 @@ export default async function LoginPage({
   const { locale } = await params
   setRequestLocale(locale)
   const sp = await searchParams
-  if (await isAuthenticated()) {
-    redirect({ href: sp.redirect ?? '/', locale })
+  // Distinguish an explicit redirect (e.g. sent here from a protected route)
+  // from the default: only the former overrides the role-based landing page.
+  const explicitRedirect = sp.redirect ? safeRedirect(sp.redirect) : null
+  const session = await getSession()
+  if (session) {
+    redirect({
+      href: explicitRedirect ?? landingPathForRole(session.role),
+      locale,
+    })
   }
   const t = await getTranslations('login')
 
@@ -27,7 +36,7 @@ export default async function LoginPage({
             {t('title')}
           </h1>
           <p className="mt-1 text-sm text-fg-muted">{t('subtitle')}</p>
-          <LoginForm redirectTo={sp.redirect ?? '/'} />
+          <LoginForm redirectTo={explicitRedirect} />
           <p className="mt-5 text-sm text-fg-muted">
             {t('noAccount')}{' '}
             <Link

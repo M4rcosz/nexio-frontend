@@ -83,6 +83,20 @@ export type CreateProductRequest = {
   imageUrl: string
 }
 
+/**
+ * `PATCH /products/:productId` (ADMIN only) — every field optional; send only
+ * the ones that changed. `isActive` is not editable here (use the
+ * activate/deactivate routes). `description` cannot be cleared to null.
+ */
+export type ProductUpdateDto = {
+  name?: string
+  description?: string
+  /** Decimal string, positive, ≤2 decimal places. */
+  price?: string
+  categoryId?: string
+  imageUrl?: string
+}
+
 // [stub] categories are not exposed by the backend yet — mock-only concept.
 export type Category = {
   id: string
@@ -282,6 +296,14 @@ export type ListOrdersQuery = {
   limit?: number
   cursor?: string
   businessUnitId?: string
+  orderChannel?: OrderChannel
+  orderStatus?: OrderStatus
+}
+
+/** `GET /orders/me` (customer) filters — cursor-paginated. */
+export type ListMyOrdersQuery = {
+  limit?: number
+  cursor?: string
   orderChannel?: OrderChannel
   orderStatus?: OrderStatus
 }

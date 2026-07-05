@@ -218,6 +218,12 @@ Query: `limit`, `cursor`, e filtros opcionais `businessUnitId` (uuid), `username
 
 Response `200`: paginado de [UserResponse](#userresponse). Erros: `404` MANAGER pediu unidade fora do escopo.
 
+### GET /api/users/me
+
+**Autenticado** (qualquer role). Perfil do usuário chamador. Serve para tela de perfil / header.
+
+Response `200`: [UserResponse](#userresponse). Erros: `401` token ausente/expirado; `404` a conta não existe mais no backend (removida) — o front deve tratar como sessão inválida e forçar logout **apenas** com sinal explícito de conta removida no corpo (`code`/`error`); um `404` genérico não desloga.
+
 ### PATCH /api/users/me
 
 **CUSTOMER.** Atualiza nome e/ou telefone do próprio usuário. Pelo menos um dos campos é obrigatório. Rate limit 10/min.
@@ -409,6 +415,24 @@ Request:
 ```
 
 Response `201`: [Product](#product). Erros: `409` nome duplicado; `404` categoria inexistente.
+
+### PATCH /api/products/:productId
+
+**ADMIN** (MANAGER cria produto mas **não** edita aqui → `403`). Atualização parcial do catálogo: todos os campos são opcionais, mas **ao menos um** deve ser enviado. `isActive`, `id` e timestamps não são editáveis aqui (use `activate`/`deactivate`); campo desconhecido → `400`.
+
+Request (ao menos um):
+
+```jsonc
+{
+  "name": "Acarajé especial",                        // ≤100, único
+  "description": "…",                                 // ≤255, não pode ser limpo com null
+  "price": "13.50",                                   // decimal positivo, ≤2 casas
+  "categoryId": "<uuid>",
+  "imageUrl": "https://example.com/acaraje-2.jpg"     // URL http(s) válida, ≤2000
+}
+```
+
+Response `200`: [Product](#product). Erros: `400` validação (body vazio, campo desconhecido, valor inválido); `403` role ≠ ADMIN; `404` produto ou `categoryId` inexistente; `409` nome duplicado.
 
 ### PATCH /api/products/:productId/activate
 
@@ -608,6 +632,14 @@ Request:
 ```
 
 Response `201`: [Order](#order). O `totalAmount` é calculado no servidor (aplica promoção e resgate de pontos).
+
+### GET /api/orders/me
+
+**CUSTOMER.** Lista os próprios pedidos (paginado por cursor), ordenados por `createdAt` desc no servidor. Escopo sempre pelo `customerId` do token — não aceita `customerId` por query.
+
+Query: `limit` (1..100, default 20), `cursor`, `orderChannel` (enum), `orderStatus` (enum).
+
+Response `200`: paginado de [Order](#order). Erros: `401` token ausente/expirado; `403` chamador não é CUSTOMER (staff usa `GET /api/orders`).
 
 ### GET /api/orders
 

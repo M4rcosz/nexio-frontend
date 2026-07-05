@@ -14,6 +14,19 @@ const Body = z.object({
   password: z.string().min(1, 'Password is required.'),
 })
 
+/** Best-effort read of the `role` claim from a JWT access token. */
+function decodeRole(token: string): string | null {
+  try {
+    const part = token.split('.')[1]
+    if (!part) return null
+    const json = Buffer.from(part, 'base64url').toString('utf8')
+    const payload = JSON.parse(json) as { role?: string }
+    return payload.role ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function POST(req: Request) {
   let parsed: z.infer<typeof Body>
   try {
@@ -27,7 +40,10 @@ export async function POST(req: Request) {
 
   try {
     const { access_token, refresh_token } = await loginBackend(parsed)
-    const res = NextResponse.json({ ok: true })
+    // Surface the role so the client can route staff to their landing page.
+    // Decoding is cheap and the token is trusted here (just came from login).
+    const role = decodeRole(access_token)
+    const res = NextResponse.json({ ok: true, role })
     res.cookies.set(SESSION_COOKIE_NAME, access_token, sessionCookieOptions())
     res.cookies.set(REFRESH_COOKIE_NAME, refresh_token, refreshCookieOptions())
     return res

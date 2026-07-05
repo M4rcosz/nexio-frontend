@@ -3,14 +3,18 @@
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from '@/i18n/navigation'
+import { useErrorMessage } from '@/lib/errors/useErrorMessage'
+import { landingPathForRole } from '@/lib/auth/landing'
+import { PasswordInput } from '@/components/PasswordInput'
 
-export function LoginForm({ redirectTo }: { redirectTo: string }) {
+export function LoginForm({ redirectTo }: { redirectTo: string | null }) {
   const router = useRouter()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, start] = useTransition()
   const t = useTranslations('login')
+  const errorMessage = useErrorMessage()
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
@@ -26,11 +30,14 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
           setError(t('invalidCredentials'))
           return
         }
-        const body = (await res.json().catch(() => null)) as { error?: string } | null
-        setError(body?.error ?? t('failed'))
+        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        setError(errorMessage(body?.code, res.status) ?? t('failed'))
         return
       }
-      router.push(redirectTo)
+      // Honor an explicit redirect (protected route the user came from);
+      // otherwise send them to the landing page for their role.
+      const body = (await res.json().catch(() => null)) as { role?: string } | null
+      router.push(redirectTo ?? landingPathForRole(body?.role))
       router.refresh()
     })
   }
@@ -55,12 +62,10 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
         <label className="label" htmlFor="password">
           {t('passwordLabel')}
         </label>
-        <input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
-          className="input"
           required
           minLength={1}
           value={password}
@@ -68,7 +73,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string }) {
         />
       </div>
       {error ? (
-        <p className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
+        <p role="alert" className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
           {error}
         </p>
       ) : null}

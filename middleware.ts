@@ -37,7 +37,11 @@ export default function middleware(req: NextRequest) {
       )
       const localePrefix = localeMatch ? localeMatch[0] : ''
       url.pathname = `${localePrefix}/login`
-      url.searchParams.set('redirect', pathname)
+      // Store the locale-stripped path. The login page feeds this to
+      // next-intl's localized router, which re-adds the locale prefix — passing
+      // the already-prefixed pathname would double it (e.g. /pt-BR/pt-BR/cart)
+      // and land the user on a 404 after a successful sign-in.
+      url.searchParams.set('redirect', localeStripped)
       return NextResponse.redirect(url)
     }
   }

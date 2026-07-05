@@ -7,7 +7,9 @@ import type {
   CreateProductRequest,
   Paginated,
   ProductResponseDto,
+  ProductUpdateDto,
 } from '@/lib/api/types'
+import { ApiError } from '@/lib/api/errors'
 import { mockDelay } from './_delay'
 
 const NOW = new Date().toISOString()
@@ -128,6 +130,30 @@ export async function createProductMock(
     updatedAt: now,
   }
   MOCK_PRODUCTS.push(product)
+  return { ...product }
+}
+
+export async function updateProductMock(
+  id: string,
+  patch: ProductUpdateDto,
+): Promise<ProductResponseDto | null> {
+  await mockDelay()
+  const product = MOCK_PRODUCTS.find((p) => p.id === id)
+  if (!product) return null
+  if (
+    patch.name !== undefined &&
+    MOCK_PRODUCTS.some(
+      (p) => p.id !== id && p.name.toLowerCase() === patch.name!.toLowerCase(),
+    )
+  ) {
+    throw new ApiError(409, { code: 'name_taken' }, 'Product name already in use.')
+  }
+  if (patch.name !== undefined) product.name = patch.name
+  if (patch.description !== undefined) product.description = patch.description
+  if (patch.price !== undefined) product.price = patch.price
+  if (patch.categoryId !== undefined) product.categoryId = patch.categoryId
+  if (patch.imageUrl !== undefined) product.imageUrl = patch.imageUrl
+  product.updatedAt = new Date().toISOString()
   return { ...product }
 }
 

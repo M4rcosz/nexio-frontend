@@ -1,6 +1,7 @@
 // Mock fallback for the `/orders` endpoints.
 import type {
   CreateOrderRequest,
+  ListMyOrdersQuery,
   ListOrdersQuery,
   Order,
   OrderItem,
@@ -115,13 +116,31 @@ export async function getOrderMock(id: string): Promise<Order | null> {
 
 export async function listMyOrdersMock(
   customerId: string,
+  query: ListMyOrdersQuery = {},
 ): Promise<Paginated<Order>> {
   await mockDelay()
-  const data = STORE.filter((o) => o.customerId === customerId).map((o) => {
-    tickStatus(o)
-    return { ...o }
-  })
-  return { data, meta: { limit: 20, nextCursor: null, hasMore: false } }
+  let rows = STORE.filter((o) => o.customerId === customerId)
+  rows.forEach(tickStatus)
+  if (query.orderChannel) {
+    rows = rows.filter((o) => o.orderChannel === query.orderChannel)
+  }
+  if (query.orderStatus) {
+    rows = rows.filter((o) => o.orderStatus === query.orderStatus)
+  }
+  // Match the real endpoint: createdAt desc, cursor-paginated.
+  rows = [...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  if (query.cursor) {
+    const idx = rows.findIndex((o) => o.id === query.cursor)
+    // Unknown cursor → return an empty page rather than the whole list.
+    rows = idx >= 0 ? rows.slice(idx + 1) : []
+  }
+  const limit =
+    query.limit && query.limit > 0 ? Math.min(Math.trunc(query.limit), 100) : 20
+  const page = rows.slice(0, limit).map((o) => ({ ...o }))
+  const hasMore = rows.length > limit
+  const nextCursor =
+    hasMore && page.length > 0 ? page[page.length - 1].id : null
+  return { data: page, meta: { limit, nextCursor, hasMore } }
 }
 
 export async function listOrdersMock(
