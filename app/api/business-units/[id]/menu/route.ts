@@ -21,13 +21,13 @@ const AddBody = z
 
 export async function POST(
   req: Request,
-  ctx: { params: Promise<{ businessUnitId: string }> },
+  ctx: { params: Promise<{ id: string }> },
 ) {
   const admin = await getAdminContext()
   if (!admin) {
     return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
   }
-  const { businessUnitId } = await ctx.params
+  const { id: businessUnitId } = await ctx.params
   // Validate the id before it is concatenated into the backend URL — guards
   // against path/query injection through serverFetch's URL building.
   if (!z.string().uuid().safeParse(businessUnitId).success) {

@@ -23,13 +23,13 @@ const PatchBody = z
 
 export async function PATCH(
   req: Request,
-  ctx: { params: Promise<{ businessUnitId: string; menuItemId: string }> },
+  ctx: { params: Promise<{ id: string; menuItemId: string }> },
 ) {
   const admin = await getAdminContext()
   if (!admin) {
     return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
   }
-  const { businessUnitId, menuItemId } = await ctx.params
+  const { id: businessUnitId, menuItemId } = await ctx.params
   // Validate ids before they are concatenated into the backend URL.
   if (
     !z.string().uuid().safeParse(businessUnitId).success ||
@@ -63,7 +63,10 @@ export async function PATCH(
   try {
     const item = await updateMenuItem(businessUnitId, menuItemId, parsed)
     if (!item) {
-      return NextResponse.json({ error: 'Menu item not found.' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Menu item not found.' },
+        { status: 404 },
+      )
     }
     return NextResponse.json(item)
   } catch (err) {
