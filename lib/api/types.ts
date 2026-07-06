@@ -159,6 +159,18 @@ export type CreateBusinessUnitRequest = {
   phone: string
 }
 
+/**
+ * `PATCH /business-units/:id` (ADMIN) — partial update; at least one field.
+ * cnpj is immutable and isActive is only editable through the activate/
+ * deactivate routes, so neither is accepted here.
+ */
+export type UpdateBusinessUnitRequest = {
+  name?: string
+  address?: string
+  city?: string
+  phone?: string
+}
+
 // --- Users ---
 
 /** Mirrors the backend UserResponse. */

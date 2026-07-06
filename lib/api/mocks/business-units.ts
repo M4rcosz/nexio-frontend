@@ -4,7 +4,9 @@ import type {
   CreateBusinessUnitRequest,
   Paginated,
   PublicBusinessUnit,
+  UpdateBusinessUnitRequest,
 } from '@/lib/api/types'
+import { ApiError } from '@/lib/api/errors'
 import { mockDelay } from './_delay'
 
 const NOW = new Date().toISOString()
@@ -154,9 +156,11 @@ export async function createBusinessUnitMock(
 ): Promise<BusinessUnit> {
   await mockDelay()
   if (MOCK_BUSINESS_UNITS.some((u) => u.cnpj === input.cnpj || u.phone === input.phone)) {
-    throw Object.assign(new Error('cnpj or phone already in use.'), {
-      code: 'already_exists',
-    })
+    throw new ApiError(
+      409,
+      { code: 'cnpj_or_phone_taken' },
+      'cnpj or phone already in use.',
+    )
   }
   const now = new Date().toISOString()
   const unit: BusinessUnit = {
@@ -171,6 +175,31 @@ export async function createBusinessUnitMock(
     updatedAt: now,
   }
   MOCK_BUSINESS_UNITS.push(unit)
+  return { ...unit }
+}
+
+/**
+ * `PATCH /business-units/:id` — partial update; cnpj stays immutable; 409 on
+ * duplicated phone; 404 → null.
+ */
+export async function updateBusinessUnitMock(
+  id: string,
+  patch: UpdateBusinessUnitRequest,
+): Promise<BusinessUnit | null> {
+  await mockDelay()
+  const unit = MOCK_BUSINESS_UNITS.find((u) => u.id === id)
+  if (!unit) return null
+  if (
+    patch.phone !== undefined &&
+    MOCK_BUSINESS_UNITS.some((u) => u.id !== id && u.phone === patch.phone)
+  ) {
+    throw new ApiError(409, { code: 'phone_taken' }, 'Phone already in use.')
+  }
+  if (patch.name !== undefined) unit.name = patch.name
+  if (patch.address !== undefined) unit.address = patch.address
+  if (patch.city !== undefined) unit.city = patch.city
+  if (patch.phone !== undefined) unit.phone = patch.phone
+  unit.updatedAt = new Date().toISOString()
   return { ...unit }
 }
 

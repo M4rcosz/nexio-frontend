@@ -204,7 +204,8 @@
       "promotions": "Promotions",
       "title": "Admin",
       "products": "Products",
-      "categories": "Categories"
+      "categories": "Categories",
+      "businessUnits": "Business Units"
     },
     "overview": {
       "title": "Admin overview",
@@ -422,6 +423,59 @@
         "submitting": "Saving…",
         "failed": "Could not save the category."
       }
+    },
+    "businessUnits": {
+      "title": "Business Units",
+      "subtitle": "Physical locations where orders are placed and fulfilled.",
+      "newBusinessUnit": "New unit",
+      "count": "{count} unit(s)",
+      "searchPlaceholder": "Search by name, city or CNPJ",
+      "cityPlaceholder": "City",
+      "filterStatusAll": "All statuses",
+      "filterStatusActive": "Active only",
+      "filterStatusInactive": "Inactive only",
+      "empty": "No business units match these filters.",
+      "tableName": "Name",
+      "tableCnpj": "CNPJ",
+      "tableCity": "City",
+      "tablePhone": "Phone",
+      "tableStatus": "Status",
+      "tableUpdated": "Updated",
+      "tableActions": "Actions",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "actionEdit": "Edit",
+      "actionDisable": "Deactivate",
+      "actionEnable": "Activate",
+      "confirmDisable": "Deactivate this business unit? It will stop appearing on the public site.",
+      "actionFailed": "Could not update the unit. Please try again.",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…",
+      "form": {
+        "createTitle": "New business unit",
+        "createSubtitle": "Register a physical location for the operation.",
+        "editTitle": "Edit business unit",
+        "editSubtitle": "Update the name, address, city or phone. The CNPJ can't be changed.",
+        "back": "← Back to business units",
+        "name": "Name",
+        "cnpj": "CNPJ",
+        "cnpjHint": "14 digits. Identifies the legal entity.",
+        "cnpjImmutableHint": "The CNPJ is set on creation and can't be changed.",
+        "address": "Address",
+        "city": "City",
+        "phone": "Phone",
+        "invalidName": "Name must be at least 2 characters.",
+        "invalidAddress": "Address must be at least 2 characters.",
+        "invalidCity": "City must be at least 2 characters.",
+        "invalidPhone": "Enter a valid phone number.",
+        "invalidCnpj": "CNPJ must have 14 digits.",
+        "invalidFields": "Please fill in every field correctly.",
+        "noChanges": "Change at least one field before saving.",
+        "submitCreate": "Create unit",
+        "submitEdit": "Save changes",
+        "submitting": "Saving…",
+        "failed": "Could not save the business unit."
+      }
     }
   },
   "errors": {
@@ -444,7 +498,10 @@
       "rate_limited": "Too many attempts. Please wait a moment and try again.",
       "validation": "Some information is invalid. Please review the fields and try again.",
       "unknown": "Something went wrong. Please try again.",
-      "name_taken": "Name already in use."
+      "name_taken": "Name already in use.",
+      "cnpj_taken": "CNPJ already registered.",
+      "phone_taken": "Phone number already in use.",
+      "cnpj_or_phone_taken": "CNPJ or phone already registered."
     }
   },
   "orderStatus": {

@@ -11,6 +11,7 @@ import type {
   CreateBusinessUnitRequest,
   Paginated,
   PublicBusinessUnit,
+  UpdateBusinessUnitRequest,
 } from './types'
 import {
   createBusinessUnitMock,
@@ -19,6 +20,7 @@ import {
   listBusinessUnitsInternalMock,
   listBusinessUnitsMock,
   setBusinessUnitActiveMock,
+  updateBusinessUnitMock,
 } from './mocks/business-units'
 
 export type ListBusinessUnitsQuery = {
@@ -135,6 +137,28 @@ export async function createBusinessUnit(
     method: 'POST',
     body: input,
   })
+}
+
+/**
+ * `PATCH /business-units/:id` (ADMIN). Partial update carrying only the
+ * changed fields; cnpj is immutable. 409 on duplicated phone; 404 → null.
+ */
+export async function updateBusinessUnit(
+  id: string,
+  patch: UpdateBusinessUnitRequest,
+): Promise<BusinessUnit | null> {
+  if (USE_MOCKS) {
+    return updateBusinessUnitMock(id, patch)
+  }
+  try {
+    return await serverFetch<BusinessUnit>(`/business-units/${id}`, {
+      method: 'PATCH',
+      body: patch,
+    })
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null
+    throw err
+  }
 }
 
 /** `PATCH /business-units/:id/activate|deactivate` (ADMIN). */

@@ -204,7 +204,8 @@
       "promotions": "Promoções",
       "title": "Administração",
       "products": "Produtos",
-      "categories": "Categorias"
+      "categories": "Categorias",
+      "businessUnits": "Unidades"
     },
     "overview": {
       "title": "Painel administrativo",
@@ -422,6 +423,59 @@
         "submitting": "Salvando…",
         "failed": "Não foi possível salvar a categoria."
       }
+    },
+    "businessUnits": {
+      "title": "Unidades",
+      "subtitle": "Locais físicos onde os pedidos são feitos e atendidos.",
+      "newBusinessUnit": "Nova unidade",
+      "count": "{count} unidade(s)",
+      "searchPlaceholder": "Buscar por nome, cidade ou CNPJ",
+      "cityPlaceholder": "Cidade",
+      "filterStatusAll": "Todos os status",
+      "filterStatusActive": "Somente ativas",
+      "filterStatusInactive": "Somente inativas",
+      "empty": "Nenhuma unidade corresponde a estes filtros.",
+      "tableName": "Nome",
+      "tableCnpj": "CNPJ",
+      "tableCity": "Cidade",
+      "tablePhone": "Telefone",
+      "tableStatus": "Status",
+      "tableUpdated": "Atualizado",
+      "tableActions": "Ações",
+      "statusActive": "Ativa",
+      "statusInactive": "Inativa",
+      "actionEdit": "Editar",
+      "actionDisable": "Desativar",
+      "actionEnable": "Ativar",
+      "confirmDisable": "Desativar esta unidade? Ela deixará de aparecer no site público.",
+      "actionFailed": "Não foi possível atualizar a unidade. Tente novamente.",
+      "loadMore": "Carregar mais",
+      "loadingMore": "Carregando…",
+      "form": {
+        "createTitle": "Nova unidade",
+        "createSubtitle": "Cadastre um local físico da operação.",
+        "editTitle": "Editar unidade",
+        "editSubtitle": "Atualize o nome, endereço, cidade ou telefone. O CNPJ não pode ser alterado.",
+        "back": "← Voltar para unidades",
+        "name": "Nome",
+        "cnpj": "CNPJ",
+        "cnpjHint": "14 dígitos. Identifica a pessoa jurídica.",
+        "cnpjImmutableHint": "O CNPJ é definido na criação e não pode ser alterado.",
+        "address": "Endereço",
+        "city": "Cidade",
+        "phone": "Telefone",
+        "invalidName": "O nome deve ter ao menos 2 caracteres.",
+        "invalidAddress": "O endereço deve ter ao menos 2 caracteres.",
+        "invalidCity": "A cidade deve ter ao menos 2 caracteres.",
+        "invalidPhone": "Informe um telefone válido.",
+        "invalidCnpj": "O CNPJ deve ter 14 dígitos.",
+        "invalidFields": "Preencha todos os campos corretamente.",
+        "noChanges": "Altere ao menos um campo antes de salvar.",
+        "submitCreate": "Criar unidade",
+        "submitEdit": "Salvar alterações",
+        "submitting": "Salvando…",
+        "failed": "Não foi possível salvar a unidade."
+      }
     }
   },
   "errors": {
@@ -444,7 +498,10 @@
       "rate_limited": "Muitas tentativas. Aguarde um instante e tente novamente.",
       "validation": "Há informações inválidas. Revise os campos e tente novamente.",
       "unknown": "Algo deu errado. Tente novamente.",
-      "name_taken": "Nome já em uso."
+      "name_taken": "Nome já em uso.",
+      "cnpj_taken": "CNPJ já cadastrado.",
+      "phone_taken": "Telefone já cadastrado.",
+      "cnpj_or_phone_taken": "CNPJ ou telefone já cadastrado."
     }
   },
   "orderStatus": {
