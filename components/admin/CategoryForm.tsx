@@ -4,11 +4,8 @@ import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { useRouter } from '@/i18n/navigation'
-import type {
-  Category,
-  CreateCategoryRequest,
-  UpdateCategoryRequest,
-} from '@/lib/api/types'
+import { buildCategoryPatch } from '@/lib/admin/buildPatch'
+import type { Category, CreateCategoryRequest } from '@/lib/api/types'
 
 type Mode = 'create' | 'edit'
 
@@ -41,36 +38,6 @@ export function CategoryForm({
     setForm((s) => ({ ...s, [k]: v }))
   }
 
-  /** Collect only the fields that changed relative to the loaded category. */
-  function buildPatch(): { patch: UpdateCategoryRequest } | { error: string } {
-    const patch: UpdateCategoryRequest = {}
-
-    const name = form.name.trim()
-    if (name !== category!.name) {
-      if (name.length < 2) return { error: t('invalidName') }
-      patch.name = name
-    }
-
-    const description = form.description.trim()
-    if (description !== (category!.description ?? '')) {
-      if (description) {
-        patch.description = description
-      } else if (category!.description) {
-        // Clearing an existing description is not supported by the domain
-        // (backend rejects an empty description). Fail loudly instead of
-        // silently keeping the old text.
-        return { error: t('descriptionCannotBeCleared') }
-      }
-    }
-
-    if (form.isActive !== category!.isActive) {
-      patch.isActive = form.isActive
-    }
-
-    if (Object.keys(patch).length === 0) return { error: t('noChanges') }
-    return { patch }
-  }
-
   function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -93,9 +60,9 @@ export function CategoryForm({
           body: JSON.stringify(body),
         })
         if (!res.ok) {
-          const data = (await res.json().catch(() => null)) as
-            | { code?: string }
-            | null
+          const data = (await res.json().catch(() => null)) as {
+            code?: string
+          } | null
           setError(errorMessage(data?.code, res.status) ?? t('failed'))
           return
         }
@@ -105,9 +72,9 @@ export function CategoryForm({
       return
     }
 
-    const result = buildPatch()
+    const result = buildCategoryPatch(form, category!)
     if ('error' in result) {
-      setError(result.error)
+      setError(t(result.error))
       return
     }
 
@@ -118,9 +85,9 @@ export function CategoryForm({
         body: JSON.stringify(result.patch),
       })
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as
-          | { code?: string }
-          | null
+        const data = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }

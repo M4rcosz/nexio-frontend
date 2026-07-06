@@ -5,11 +5,11 @@ import { useTranslations } from 'next-intl'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { Select } from '@/components/ui/Select'
 import { useRouter } from '@/i18n/navigation'
+import { buildProductPatch } from '@/lib/admin/buildPatch'
 import type {
   Category,
   CreateProductRequest,
   ProductResponseDto,
-  ProductUpdateDto,
 } from '@/lib/api/types'
 
 type Mode = 'create' | 'edit'
@@ -50,11 +50,11 @@ export function ProductForm({
   // Only active categories are listed, so a product tied to a deactivated
   // category would have no matching option. Surface it explicitly so the Select
   // still shows the current value instead of appearing empty.
-  const categoryOptions = categories.map((c) => ({ value: c.id, label: c.name }))
-  if (
-    product &&
-    !categoryOptions.some((o) => o.value === product.categoryId)
-  ) {
+  const categoryOptions = categories.map((c) => ({
+    value: c.id,
+    label: c.name,
+  }))
+  if (product && !categoryOptions.some((o) => o.value === product.categoryId)) {
     categoryOptions.unshift({
       value: product.categoryId,
       label: t('categoryInactiveOption'),
@@ -79,7 +79,8 @@ export function ProductForm({
     if (!UUID_RE.test(categoryId)) return { error: t('invalidCategory') }
 
     const imageUrl = form.imageUrl.trim()
-    if (!/^https?:\/\/.+/i.test(imageUrl)) return { error: t('invalidImageUrl') }
+    if (!/^https?:\/\/.+/i.test(imageUrl))
+      return { error: t('invalidImageUrl') }
 
     const description = form.description.trim()
     return {
@@ -91,47 +92,6 @@ export function ProductForm({
         ...(description ? { description } : {}),
       },
     }
-  }
-
-  /** Collect only the fields that changed relative to the loaded product. */
-  function buildPatch(): { patch: ProductUpdateDto } | { error: string } {
-    const patch: ProductUpdateDto = {}
-
-    const name = form.name.trim()
-    if (name !== product!.name) {
-      if (name.length < 2) return { error: t('invalidName') }
-      patch.name = name
-    }
-
-    // description cannot be cleared to null — only send it when non-empty.
-    const description = form.description.trim()
-    if (description && description !== (product!.description ?? '')) {
-      patch.description = description
-    }
-
-    const price = form.price.trim()
-    if (price !== product!.price) {
-      if (!MONEY_RE.test(price) || Number(price) <= 0) {
-        return { error: t('invalidMoney') }
-      }
-      patch.price = price
-    }
-
-    const categoryId = form.categoryId.trim()
-    if (categoryId !== product!.categoryId) {
-      if (!UUID_RE.test(categoryId)) {
-        return { error: t('invalidCategory') }
-      }
-      patch.categoryId = categoryId
-    }
-
-    const imageUrl = form.imageUrl.trim()
-    if (imageUrl && imageUrl !== (product!.imageUrl ?? '')) {
-      patch.imageUrl = imageUrl
-    }
-
-    if (Object.keys(patch).length === 0) return { error: t('noChanges') }
-    return { patch }
   }
 
   function submit(e: React.FormEvent) {
@@ -151,9 +111,9 @@ export function ProductForm({
           body: JSON.stringify(result.body),
         })
         if (!res.ok) {
-          const data = (await res.json().catch(() => null)) as
-            | { code?: string }
-            | null
+          const data = (await res.json().catch(() => null)) as {
+            code?: string
+          } | null
           setError(errorMessage(data?.code, res.status) ?? t('failed'))
           return
         }
@@ -163,9 +123,9 @@ export function ProductForm({
       return
     }
 
-    const result = buildPatch()
+    const result = buildProductPatch(form, product!)
     if ('error' in result) {
-      setError(result.error)
+      setError(t(result.error))
       return
     }
 
@@ -176,9 +136,9 @@ export function ProductForm({
         body: JSON.stringify(result.patch),
       })
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as
-          | { code?: string }
-          | null
+        const data = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }

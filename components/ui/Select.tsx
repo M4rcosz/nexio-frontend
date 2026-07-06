@@ -146,7 +146,9 @@ export function Select({
       <button
         type="button"
         id={baseId}
+        role="combobox"
         disabled={disabled}
+        aria-controls={open ? `${baseId}-listbox` : undefined}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
@@ -167,8 +169,8 @@ export function Select({
       {open ? (
         <ul
           ref={listRef}
+          id={`${baseId}-listbox`}
           role="listbox"
-          aria-label={ariaLabel}
           tabIndex={-1}
           className={`absolute z-50 mt-2 max-h-64 min-w-full overflow-auto rounded-xl border border-border bg-bg-elevated p-1 shadow-soft-lg ${
             align === 'end' ? 'right-0' : 'left-0'

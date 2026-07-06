@@ -5,11 +5,8 @@ import { useTranslations } from 'next-intl'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { useRouter } from '@/i18n/navigation'
 import { cnpjDigits, maskCnpj } from '@/lib/format'
-import type {
-  BusinessUnit,
-  CreateBusinessUnitRequest,
-  UpdateBusinessUnitRequest,
-} from '@/lib/api/types'
+import { buildBusinessUnitPatch } from '@/lib/admin/buildPatch'
+import type { BusinessUnit, CreateBusinessUnitRequest } from '@/lib/api/types'
 
 type Mode = 'create' | 'edit'
 
@@ -44,38 +41,6 @@ export function BusinessUnitForm({
     setForm((s) => ({ ...s, [k]: v }))
   }
 
-  /** Collect only the fields that changed relative to the loaded unit. */
-  function buildPatch(): { patch: UpdateBusinessUnitRequest } | { error: string } {
-    const patch: UpdateBusinessUnitRequest = {}
-
-    const name = form.name.trim()
-    if (name !== unit!.name) {
-      if (name.length < 2) return { error: t('invalidName') }
-      patch.name = name
-    }
-
-    const address = form.address.trim()
-    if (address !== unit!.address) {
-      if (address.length < 2) return { error: t('invalidAddress') }
-      patch.address = address
-    }
-
-    const city = form.city.trim()
-    if (city !== unit!.city) {
-      if (city.length < 2) return { error: t('invalidCity') }
-      patch.city = city
-    }
-
-    const phone = form.phone.trim()
-    if (phone !== unit!.phone) {
-      if (phone.length < 3) return { error: t('invalidPhone') }
-      patch.phone = phone
-    }
-
-    if (Object.keys(patch).length === 0) return { error: t('noChanges') }
-    return { patch }
-  }
-
   function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -98,7 +63,13 @@ export function BusinessUnitForm({
         setError(t('invalidFields'))
         return
       }
-      const body: CreateBusinessUnitRequest = { name, cnpj, address, city, phone }
+      const body: CreateBusinessUnitRequest = {
+        name,
+        cnpj,
+        address,
+        city,
+        phone,
+      }
       start(async () => {
         const res = await fetch('/api/business-units', {
           method: 'POST',
@@ -106,9 +77,9 @@ export function BusinessUnitForm({
           body: JSON.stringify(body),
         })
         if (!res.ok) {
-          const data = (await res.json().catch(() => null)) as
-            | { code?: string }
-            | null
+          const data = (await res.json().catch(() => null)) as {
+            code?: string
+          } | null
           setError(errorMessage(data?.code, res.status) ?? t('failed'))
           return
         }
@@ -118,9 +89,9 @@ export function BusinessUnitForm({
       return
     }
 
-    const result = buildPatch()
+    const result = buildBusinessUnitPatch(form, unit!)
     if ('error' in result) {
-      setError(result.error)
+      setError(t(result.error))
       return
     }
 
@@ -131,9 +102,9 @@ export function BusinessUnitForm({
         body: JSON.stringify(result.patch),
       })
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as
-          | { code?: string }
-          | null
+        const data = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }

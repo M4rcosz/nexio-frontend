@@ -11,7 +11,7 @@
 // scoped to their own business units and limited to the roles they may manage.
 import { serverFetch, USE_MOCKS } from './client'
 import { ApiError } from './errors'
-import type { Paginated, Role, User } from './types'
+import type { Paginated, User } from './types'
 import type { AdminContext } from '@/lib/auth/access'
 import {
   type CreateInternalUserInput,
@@ -47,7 +47,10 @@ async function fetchUsersPage(query: {
 
 export async function listInternalUsers(
   ctx: AdminContext,
-  filters: Omit<InternalUserFilters, 'scopedBusinessUnitIds' | 'allowedRoles'> = {},
+  filters: Omit<
+    InternalUserFilters,
+    'scopedBusinessUnitIds' | 'allowedRoles'
+  > = {},
 ): Promise<User[]> {
   if (USE_MOCKS) {
     return listInternalUsersMock({
@@ -77,7 +80,11 @@ export async function getInternalUser(
   id: string,
 ): Promise<User | null> {
   if (USE_MOCKS) {
-    return getInternalUserMock(id, ctx.scopedBusinessUnitIds, ctx.manageableRoles)
+    return getInternalUserMock(
+      id,
+      ctx.scopedBusinessUnitIds,
+      ctx.manageableRoles,
+    )
   }
   let cursor: string | undefined
   for (let i = 0; i < 5; i++) {
