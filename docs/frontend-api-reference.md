@@ -400,7 +400,7 @@ Response `200`: paginado de [Product](#product).
 
 ### POST /api/products
 
-**ADMIN, MANAGER.** Cria produto.
+**ADMIN.** Cria produto.
 
 Request:
 
@@ -418,7 +418,7 @@ Response `201`: [Product](#product). Erros: `409` nome duplicado; `404` categori
 
 ### PATCH /api/products/:productId
 
-**ADMIN** (MANAGER cria produto mas **não** edita aqui → `403`). Atualização parcial do catálogo: todos os campos são opcionais, mas **ao menos um** deve ser enviado. `isActive`, `id` e timestamps não são editáveis aqui (use `activate`/`deactivate`); campo desconhecido → `400`.
+**ADMIN** (MANAGER não pode criar nem editar produtos do catálogo → `403`). Atualização parcial do catálogo: todos os campos são opcionais, mas **ao menos um** deve ser enviado. `isActive`, `id` e timestamps não são editáveis aqui (use `activate`/`deactivate`); campo desconhecido → `400`.
 
 Request (ao menos um):
 

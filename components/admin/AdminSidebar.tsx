@@ -11,6 +11,7 @@ const NAV: Array<{
     | 'users'
     | 'products'
     | 'categories'
+    | 'menu'
     | 'businessUnits'
     | 'inventory'
     | 'promotions'
@@ -22,6 +23,7 @@ const NAV: Array<{
   { href: '/admin/users', key: 'users', icon: UsersIcon },
   { href: '/admin/products', key: 'products', icon: DishIcon },
   { href: '/admin/categories', key: 'categories', icon: LayersIcon, adminOnly: true },
+  { href: '/admin/menu', key: 'menu', icon: MenuIcon },
   { href: '/admin/business-units', key: 'businessUnits', icon: StoreIcon, adminOnly: true },
   { href: '/admin/inventory', key: 'inventory', icon: BoxIcon },
   { href: '/admin/promotions', key: 'promotions', icon: TagIcon },
@@ -128,6 +130,16 @@ function StoreIcon({ className = '' }: { className?: string }) {
       <path d="M4 9v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9" />
       <path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" />
       <path d="M9 20v-6h6v6" />
+    </svg>
+  )
+}
+
+function MenuIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M3 12h18" />
+      <path d="M3 6h18" />
+      <path d="M3 18h18" />
     </svg>
   )
 }

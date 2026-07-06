@@ -38,7 +38,8 @@ resource marked "real backend + mock fallback" honours `NEXT_PUBLIC_USE_MOCKS`.
 | Categories (public list + admin CRUD) | Real backend + mock fallback (`GET/POST /api/categories`, `GET/PATCH /api/categories/:id`) |
 | User profile          | Real backend + mock fallback (`GET /api/users/me`) |
 | Orders / Payment      | Real backend + mock fallback (`GET /api/orders/me`, `POST/GET /api/orders`, `/api/payments/...`) |
-| Products (admin catalog edit) | Real backend + mock fallback (`PATCH /api/products/:id`) |
+| Products (admin CRUD) | Real backend + mock fallback (`POST /api/products`, `PATCH /api/products/:id`) |
+| Menu (business unit — admin) | Real backend + mock fallback (`POST /api/business-units/:id/menu`, `PATCH /api/business-units/:id/menu/:itemId`, `POST /api/business-units/:id/menu/:itemId/available`) |
 | Loyalty               | Mock                                            |
 | Inventory (admin)     | Real backend + mock fallback (`GET/POST /api/inventory/...`)  |
 | Promotions (admin)    | Real backend + mock fallback (`/api/promotions/...`)         |
@@ -114,7 +115,7 @@ app/
 │   ├── orders/                  # History + tracking (cursor pagination, channel/status filters)
 │   ├── loyalty/                 # Points and LGPD consent
 │   ├── profile/                 # Own account (GET /users/me)
-│   ├── admin/                   # Admin area: overview, users, products, categories, business-units, inventory, promotions
+│   ├── admin/                   # Admin area: overview, users, products, categories, menu, business-units, inventory, promotions
 │   ├── error.tsx                # Boundary
 │   ├── loading.tsx
 │   ├── not-found.tsx
