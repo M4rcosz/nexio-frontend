@@ -35,7 +35,7 @@ export async function PATCH(
   ctx: { params: Promise<{ productId: string }> },
 ) {
   const admin = await getAdminContext()
-  // ADMIN only: MANAGER may create products but not edit them.
+  // ADMIN only: MANAGER may neither create nor edit catalog products.
   if (!admin || admin.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Forbidden.', code: 'forbidden' }, { status: 403 })
   }

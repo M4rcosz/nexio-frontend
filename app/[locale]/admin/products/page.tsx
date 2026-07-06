@@ -18,16 +18,23 @@ export default async function AdminProductsPage({
 
   const t = await getTranslations('admin.products')
   const { data } = await listProducts({ limit: 50 })
-  // Only ADMIN may edit products; MANAGER creates but cannot edit.
+  // Only ADMIN may create and edit products.
   const canEdit = ctx.role === 'ADMIN'
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl text-fg">
-          {t('title')}
-        </h1>
-        <p className="mt-1 text-sm text-fg-muted">{t('subtitle')}</p>
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-extrabold tracking-tight sm:text-3xl text-fg">
+            {t('title')}
+          </h1>
+          <p className="mt-1 text-sm text-fg-muted">{t('subtitle')}</p>
+        </div>
+        {canEdit ? (
+          <Link href="/admin/products/new" className="btn-primary">
+            + {t('newProduct')}
+          </Link>
+        ) : null}
       </header>
 
       {data.length === 0 ? (
