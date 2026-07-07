@@ -33,13 +33,28 @@ export async function POST(req: Request) {
     parsed = Body.parse(await req.json())
   } catch (err) {
     return NextResponse.json(
-      { error: 'Invalid payload.', details: err instanceof z.ZodError ? err.flatten() : undefined },
+      {
+        error: 'Invalid payload.',
+        details: err instanceof z.ZodError ? err.flatten() : undefined,
+      },
       { status: 400 },
     )
   }
 
   try {
     const { access_token, refresh_token } = await loginBackend(parsed)
+    // A pair with an empty token is a broken backend response — refuse it rather
+    // than writing an unusable cookie that would masquerade as a live session.
+    if (!access_token || !refresh_token) {
+      return NextResponse.json(
+        {
+          error: describeError(
+            new ApiError(502, null, 'Malformed auth response.'),
+          ),
+        },
+        { status: 502 },
+      )
+    }
     // Surface the role so the client can route staff to their landing page.
     // Decoding is cheap and the token is trusted here (just came from login).
     const role = decodeRole(access_token)

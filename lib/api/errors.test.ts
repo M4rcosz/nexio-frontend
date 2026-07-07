@@ -57,11 +57,26 @@ describe('describeError', () => {
     expect(out).not.toContain('sql')
   })
 
-  it('returns the message for a plain Error', () => {
-    expect(describeError(new Error('boom'))).toBe('boom')
+  it('stays generic for a plain Error, never echoing its message', () => {
+    const out = describeError(new Error('boom'))
+    expect(out).toMatch(/server/i)
+    expect(out).not.toContain('boom')
   })
 
-  it('returns a fallback for a non-error value', () => {
-    expect(describeError('nope')).toBe('Unknown error.')
+  it('returns a generic fallback for a non-error value', () => {
+    expect(describeError('nope')).toMatch(/server/i)
+  })
+
+  it('never leaks the internal host from a network ApiError(0)', () => {
+    const out = describeError(
+      new ApiError(
+        0,
+        null,
+        'Network failure: connect ECONNREFUSED 10.0.0.5:3000',
+      ),
+    )
+    expect(out).toMatch(/server/i)
+    expect(out).not.toContain('10.0.0.5')
+    expect(out).not.toContain('ECONNREFUSED')
   })
 })

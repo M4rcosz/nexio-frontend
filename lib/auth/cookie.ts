@@ -13,14 +13,21 @@ const REFRESH_MAX_AGE_SECONDS = 60 * 60 * 24 * 7
 function baseOptions(maxAgeSeconds: number): Partial<ResponseCookie> {
   return {
     httpOnly: true,
-    secure: process.env.SESSION_COOKIE_SECURE === 'true',
+    // Secure by default in production; the env flag only relaxes it for local
+    // HTTP dev, so a misconfigured prod deploy can never ship a non-secure cookie.
+    secure:
+      process.env.NODE_ENV === 'production'
+        ? true
+        : process.env.SESSION_COOKIE_SECURE === 'true',
     sameSite: 'lax',
     path: '/',
     maxAge: maxAgeSeconds,
   }
 }
 
-export function sessionCookieOptions(maxAgeSeconds = 60 * 30): Partial<ResponseCookie> {
+export function sessionCookieOptions(
+  maxAgeSeconds = 60 * 30,
+): Partial<ResponseCookie> {
   return baseOptions(maxAgeSeconds)
 }
 

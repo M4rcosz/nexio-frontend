@@ -2,10 +2,16 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createOrder, listMyOrders } from '@/lib/api/orders'
 import { ApiError, describeError } from '@/lib/api/errors'
-import { isAuthenticated } from '@/lib/auth/session'
+import { hasActiveOrRefreshableSession } from '@/lib/auth/session'
 import type { OrderChannel, OrderStatus } from '@/lib/api/types'
 
-const ORDER_CHANNELS: OrderChannel[] = ['APP', 'WEB', 'TOTEM', 'COUNTER', 'PICKUP']
+const ORDER_CHANNELS: OrderChannel[] = [
+  'APP',
+  'WEB',
+  'TOTEM',
+  'COUNTER',
+  'PICKUP',
+]
 const ORDER_STATUSES: OrderStatus[] = [
   'PENDING',
   'CONFIRMED',
@@ -15,7 +21,9 @@ const ORDER_STATUSES: OrderStatus[] = [
   'CANCELLED',
 ]
 
-const MoneyString = z.string().regex(/^\d+(\.\d{1,2})?$/, 'Invalid price format.')
+const MoneyString = z
+  .string()
+  .regex(/^\d+(\.\d{1,2})?$/, 'Invalid price format.')
 
 // Mirrors the backend CreateOrderDto for the WEB channel (customer checkout).
 const Body = z.object({
@@ -28,15 +36,23 @@ const Body = z.object({
         productId: z.string().min(1),
         quantity: z.number().int().min(1).max(99),
         unitPrice: MoneyString,
-        notes: z.string().max(150).nullish().transform((v) => v ?? undefined),
+        notes: z
+          .string()
+          .max(150)
+          .nullish()
+          .transform((v) => v ?? undefined),
       }),
     )
     .min(1, 'Add at least one item to the order.'),
-  notes: z.string().max(150).nullish().transform((v) => v ?? undefined),
+  notes: z
+    .string()
+    .max(150)
+    .nullish()
+    .transform((v) => v ?? undefined),
 })
 
 export async function POST(req: Request) {
-  if (!(await isAuthenticated())) {
+  if (!(await hasActiveOrRefreshableSession())) {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
   }
   let parsed: z.infer<typeof Body>
@@ -44,7 +60,10 @@ export async function POST(req: Request) {
     parsed = Body.parse(await req.json())
   } catch (err) {
     return NextResponse.json(
-      { error: 'Invalid payload.', details: err instanceof z.ZodError ? err.flatten() : undefined },
+      {
+        error: 'Invalid payload.',
+        details: err instanceof z.ZodError ? err.flatten() : undefined,
+      },
       { status: 400 },
     )
   }
@@ -59,7 +78,10 @@ export async function POST(req: Request) {
     const status = err instanceof ApiError ? err.status || 500 : 500
     if (status === 422) {
       return NextResponse.json(
-        { error: 'The order could not be created. Review the items and try again.' },
+        {
+          error:
+            'The order could not be created. Review the items and try again.',
+        },
         { status: 422 },
       )
     }
@@ -71,7 +93,7 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  if (!(await isAuthenticated())) {
+  if (!(await hasActiveOrRefreshableSession())) {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 })
   }
   const url = new URL(req.url)
@@ -97,7 +119,12 @@ export async function GET(req: Request) {
       : 20
 
   try {
-    const data = await listMyOrders({ limit, cursor, orderChannel, orderStatus })
+    const data = await listMyOrders({
+      limit,
+      cursor,
+      orderChannel,
+      orderStatus,
+    })
     return NextResponse.json(data)
   } catch (err) {
     const status = err instanceof ApiError ? err.status || 500 : 500

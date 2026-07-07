@@ -28,6 +28,7 @@ export function PaymentView({
   const [payment, setPayment] = useState<Payment | null>(null)
   const [method, setMethod] = useState<PaymentMethod>('PIX')
   const [error, setError] = useState<string | null>(null)
+  const [sessionLost, setSessionLost] = useState(false)
   const [pending, start] = useTransition()
   const t = useTranslations('payment')
   const errorMessage = useErrorMessage()
@@ -38,13 +39,22 @@ export function PaymentView({
   useEffect(() => {
     let cancelled = false
     async function tick() {
+      if (cancelled) return
       const res = await fetch(`/api/orders/${orderId}/payment`, {
         cache: 'no-store',
       })
+      if (cancelled) return
+      // Session died and the self-heal refresh couldn't recover it: stop polling
+      // and surface it, instead of pulsing a misleading "waiting" state forever.
+      if (res.status === 401) {
+        cancelled = true
+        setSessionLost(true)
+        return
+      }
       if (res.status === 404) return
       if (!res.ok) return
       const body = (await res.json()) as Payment
-      if (!cancelled) setPayment(body)
+      setPayment(body)
     }
     tick()
     const interval = setInterval(tick, 4000)
@@ -63,7 +73,9 @@ export function PaymentView({
         body: JSON.stringify({ method }),
       })
       if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        const body = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         setError(errorMessage(body?.code, res.status) ?? t('failed'))
         return
       }
@@ -86,7 +98,9 @@ export function PaymentView({
               </p>
             </div>
             <span className={STATUS_CHIP[payment.status]}>
-              <span className={`h-1.5 w-1.5 rounded-full ${isApproved ? 'bg-forest-500' : 'bg-accent-500 animate-pulse'}`} />
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${isApproved ? 'bg-forest-500' : 'bg-accent-500 animate-pulse'}`}
+              />
               {tStatus(payment.status)}
             </span>
           </div>
@@ -98,21 +112,29 @@ export function PaymentView({
               <p className="label">{t('pix')}</p>
               <textarea
                 readOnly
-                onClick={(e) => (e.currentTarget as HTMLTextAreaElement).select()}
+                onClick={(e) =>
+                  (e.currentTarget as HTMLTextAreaElement).select()
+                }
                 className="input min-h-[110px] font-mono text-xs"
                 value={payment.pixCode}
               />
-              <p className="mt-2 text-xs text-fg-subtle">{t('pixDisclaimer')}</p>
+              <p className="mt-2 text-xs text-fg-subtle">
+                {t('pixDisclaimer')}
+              </p>
             </div>
           ) : null}
 
           {isApproved ? (
-            <Link
-              href={`/orders/${orderId}`}
-              className="btn-primary w-full"
-            >
+            <Link href={`/orders/${orderId}`} className="btn-primary w-full">
               {t('trackOrder')} →
             </Link>
+          ) : sessionLost ? (
+            <p
+              role="alert"
+              className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300"
+            >
+              {errorMessage(undefined, 401)}
+            </p>
           ) : (
             <p className="flex items-center gap-2 text-xs text-fg-muted">
               <span className="h-2 w-2 animate-pulse rounded-full bg-brand-500" />
@@ -149,15 +171,22 @@ export function PaymentView({
                     : 'border-border bg-surface text-fg-muted hover:border-border-strong hover:text-fg'
                 }`}
               >
-                {m === 'PIX' ? <PixIcon className="h-4 w-4" /> : <CardIcon className="h-4 w-4" />}
+                {m === 'PIX' ? (
+                  <PixIcon className="h-4 w-4" />
+                ) : (
+                  <CardIcon className="h-4 w-4" />
+                )}
                 {tMethod(m)}
               </button>
             ))}
           </div>
         </div>
-        {error ? (
-          <p role="alert" className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
-            {error}
+        {sessionLost || error ? (
+          <p
+            role="alert"
+            className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300"
+          >
+            {sessionLost ? errorMessage(undefined, 401) : error}
           </p>
         ) : null}
         <button
@@ -175,7 +204,16 @@ export function PaymentView({
 
 function CardIcon({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
       <rect x="2" y="5" width="20" height="14" rx="2" />
       <path d="M2 10h20" />
     </svg>
@@ -184,7 +222,16 @@ function CardIcon({ className = '' }: { className?: string }) {
 
 function PixIcon({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
       <path d="m12 2 4 4-4 4-4-4z" />
       <path d="m18 8 4 4-4 4-4-4z" />
       <path d="m6 8 4 4-4 4-4-4z" />
