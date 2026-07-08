@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import {
-  createInternalUser,
-  listInternalUsers,
-} from '@/lib/api/admin-users'
+import { createInternalUser, listInternalUsers } from '@/lib/api/admin-users'
 import { ApiError, describeError } from '@/lib/api/errors'
 import { canManageRole, getAdminContext } from '@/lib/auth/access'
 
@@ -16,8 +13,9 @@ const CreateBody = z.object({
   phone: z.string().optional(),
   password: z.string().min(8),
   role: RoleEnum,
-  /** Required for non-ADMIN roles. Validated below. */
-  businessUnitId: z.string().min(1).nullable().optional(),
+  /** Non-ADMIN roles may be bound to several units. Required (non-empty) for
+   * non-ADMIN roles — validated below. */
+  businessUnitIds: z.array(z.string().min(1)).optional(),
 })
 
 export async function GET(req: Request) {
@@ -64,13 +62,22 @@ export async function POST(req: Request) {
   }
   if (!canManageRole(ctx.role, parsed.role)) {
     return NextResponse.json(
-      { error: 'Role not allowed for your access level.', code: 'role_forbidden' },
+      {
+        error: 'Role not allowed for your access level.',
+        code: 'role_forbidden',
+      },
       { status: 403 },
     )
   }
-  if (parsed.role !== 'ADMIN' && !parsed.businessUnitId) {
+  if (
+    parsed.role !== 'ADMIN' &&
+    (!parsed.businessUnitIds || parsed.businessUnitIds.length === 0)
+  ) {
     return NextResponse.json(
-      { error: 'Business unit is required for this role.', code: 'unit_required' },
+      {
+        error: 'Business unit is required for this role.',
+        code: 'unit_required',
+      },
       { status: 400 },
     )
   }
@@ -82,8 +89,7 @@ export async function POST(req: Request) {
       phone: parsed.phone,
       password: parsed.password,
       role: parsed.role,
-      // The backend takes a set of units; the form still picks a single one.
-      businessUnitIds: parsed.businessUnitId ? [parsed.businessUnitId] : [],
+      businessUnitIds: parsed.businessUnitIds ?? [],
     })
     return NextResponse.json(user, { status: 201 })
   } catch (err) {
@@ -105,13 +111,19 @@ export async function POST(req: Request) {
     }
     if (err instanceof ApiError && err.status === 409) {
       return NextResponse.json(
-        { error: 'Username, e-mail or phone already in use.', code: 'username_taken' },
+        {
+          error: 'Username, e-mail or phone already in use.',
+          code: 'username_taken',
+        },
         { status: 409 },
       )
     }
     if (err instanceof ApiError && err.status === 403) {
       return NextResponse.json(
-        { error: 'Role not allowed for your access level.', code: 'role_forbidden' },
+        {
+          error: 'Role not allowed for your access level.',
+          code: 'role_forbidden',
+        },
         { status: 403 },
       )
     }

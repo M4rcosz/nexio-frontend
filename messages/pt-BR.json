@@ -256,7 +256,8 @@
       "roleManager": "Gerente",
       "roleAdmin": "Administrador",
       "businessUnit": "Unidade",
-      "businessUnitLocked": "Restrito à sua unidade",
+      "businessUnits": "Unidades",
+      "businessUnitLocked": "Você só pode atribuir suas próprias unidades.",
       "businessUnitAdminNote": "Administradores não pertencem a uma unidade.",
       "submitCreate": "Criar usuário",
       "submitEdit": "Salvar alterações",
@@ -266,7 +267,8 @@
       "usernameTaken": "Nome de usuário já em uso.",
       "emailTaken": "E-mail já cadastrado.",
       "roleForbidden": "Você não pode atribuir este papel.",
-      "unitRequired": "Selecione uma unidade."
+      "unitRequired": "Selecione uma unidade.",
+      "unitsRequired": "Selecione ao menos uma unidade."
     },
     "inventory": {
       "title": "Estoque",

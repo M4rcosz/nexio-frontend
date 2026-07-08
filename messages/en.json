@@ -256,7 +256,8 @@
       "roleManager": "Manager",
       "roleAdmin": "Administrator",
       "businessUnit": "Business unit",
-      "businessUnitLocked": "Scoped to your unit",
+      "businessUnits": "Business units",
+      "businessUnitLocked": "You can only assign your own units.",
       "businessUnitAdminNote": "Administrators are not tied to a unit.",
       "submitCreate": "Create user",
       "submitEdit": "Save changes",
@@ -266,7 +267,8 @@
       "usernameTaken": "Username already taken.",
       "emailTaken": "E-mail already registered.",
       "roleForbidden": "You can't assign this role.",
-      "unitRequired": "Pick a business unit."
+      "unitRequired": "Pick a business unit.",
+      "unitsRequired": "Pick at least one business unit."
     },
     "inventory": {
       "title": "Inventory",

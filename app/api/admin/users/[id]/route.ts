@@ -9,7 +9,7 @@ const PatchBody = z.object({
   name: z.string().min(2).optional(),
   phone: z.string().nullable().optional(),
   role: z.enum(['ATTENDANT', 'KITCHEN', 'MANAGER', 'ADMIN']).optional(),
-  businessUnitId: z.string().min(1).nullable().optional(),
+  businessUnitIds: z.array(z.string().min(1)).optional(),
 })
 
 export async function GET(
@@ -55,7 +55,10 @@ export async function PATCH(
   }
   if (parsed.role && !canManageRole(admin.role, parsed.role)) {
     return NextResponse.json(
-      { error: 'Role not allowed for your access level.', code: 'role_forbidden' },
+      {
+        error: 'Role not allowed for your access level.',
+        code: 'role_forbidden',
+      },
       { status: 403 },
     )
   }
@@ -65,13 +68,7 @@ export async function PATCH(
       name: parsed.name,
       phone: parsed.phone,
       role: parsed.role,
-      // The backend takes a set of units; the form still picks a single one.
-      businessUnitIds:
-        parsed.businessUnitId === undefined
-          ? undefined
-          : parsed.businessUnitId
-            ? [parsed.businessUnitId]
-            : [],
+      businessUnitIds: parsed.businessUnitIds,
     })
     if (!user) {
       return NextResponse.json({ error: 'User not found.' }, { status: 404 })
