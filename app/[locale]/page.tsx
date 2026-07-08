@@ -6,6 +6,7 @@ import { listMenu } from '@/lib/api/menu'
 import { HomeProductSearch } from '@/components/HomeProductSearch'
 import { UnitDropdown } from '@/components/UnitDropdown'
 import { ProductCard } from '@/components/ProductCard'
+import { PrefetchAuthRoutes } from '@/components/PrefetchAuthRoutes'
 import { getTenant } from '@/lib/tenant/resolve'
 
 export default async function HomePage({
@@ -32,9 +33,8 @@ export default async function HomePage({
 
   // Products of the selected unit, priced with its effective menu price
   // (falling back to catalog price when the unit has no menu configured).
-  let products: Awaited<
-    ReturnType<typeof listProductsByBusinessUnit>
-  >['data'] = []
+  let products: Awaited<ReturnType<typeof listProductsByBusinessUnit>>['data'] =
+    []
   if (selectedUnit) {
     const [productsPage, menuPage] = await Promise.all([
       listProductsByBusinessUnit(selectedUnit.id, { limit: 100 }),
@@ -53,6 +53,8 @@ export default async function HomePage({
 
   return (
     <div className="space-y-12">
+      {/* Background-prefetch the likely next destinations (login/register). */}
+      <PrefetchAuthRoutes />
       {/* Hero ----------------------------------------------------------- */}
       {/* No `overflow-hidden` on the section itself: the unit dropdown's popover
           is absolutely positioned and must be free to overflow the hero. The
@@ -85,7 +87,10 @@ export default async function HomePage({
           {/* Unit picker (default = first unit) */}
           {units.length > 0 ? (
             <div className="mt-4">
-              <UnitDropdown units={units} selectedId={selectedUnit?.id ?? null} />
+              <UnitDropdown
+                units={units}
+                selectedId={selectedUnit?.id ?? null}
+              />
             </div>
           ) : null}
         </div>
