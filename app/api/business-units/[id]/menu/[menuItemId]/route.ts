@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { updateMenuItem } from '@/lib/api/menu'
 import { ApiError, describeError } from '@/lib/api/errors'
@@ -68,6 +69,7 @@ export async function PATCH(
         { status: 404 },
       )
     }
+    revalidateTag(`menu:${businessUnitId}`)
     return NextResponse.json(item)
   } catch (err) {
     const status = err instanceof ApiError ? err.status || 500 : 500

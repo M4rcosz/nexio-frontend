@@ -3,6 +3,8 @@ import { ApiError } from '@/lib/api/errors'
 
 vi.mock('@/lib/auth/access')
 vi.mock('@/lib/api/products')
+// `revalidateTag` needs a Next request scope that doesn't exist under vitest.
+vi.mock('next/cache', () => ({ revalidateTag: vi.fn() }))
 
 import { getAdminContext, type AdminContext } from '@/lib/auth/access'
 import { createProduct, listProducts } from '@/lib/api/products'

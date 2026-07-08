@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { setMenuItemAvailable } from '@/lib/api/menu'
 import { describeError } from '@/lib/api/errors'
@@ -57,6 +58,7 @@ export async function POST(
         { status: 404 },
       )
     }
+    revalidateTag(`menu:${businessUnitId}`)
     return NextResponse.json(item)
   } catch (err) {
     return NextResponse.json({ error: describeError(err) }, { status: 500 })

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { createProduct, listProducts } from '@/lib/api/products'
 import { ApiError, describeError } from '@/lib/api/errors'
@@ -80,6 +81,10 @@ export async function POST(req: Request) {
 
   try {
     const product = await createProduct(parsed)
+    // Bust the server Data Cache for the product list so the admin table and
+    // home search reflect the new product on the next render (router.refresh()
+    // alone only clears the client Router Cache, not the tag-cached fetch).
+    revalidateTag('products')
     return NextResponse.json(product, { status: 201 })
   } catch (err) {
     const status = err instanceof ApiError ? err.status || 500 : 500
