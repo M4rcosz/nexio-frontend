@@ -1,5 +1,7 @@
 # Nexio — Web frontend (customer)
 
+[![version](https://img.shields.io/github/package-json/v/M4rcosz/nexio-frontend?label=version&color=blue)](https://github.com/M4rcosz/nexio-frontend/blob/main/package.json)
+
 Next.js (App Router) frontend for the **WEB** sales channel of Nexio, a
 unified commerce platform. Built from the contract in
 `nexio-frontend-briefing.md` (the briefing document that lives at the root
@@ -9,6 +11,14 @@ The product targets Brazilian end-customers but the UI ships in two
 languages so it can be demoed to a wider audience — see [Internationalization](#internationalization).
 
 ## Running locally
+
+**Node.js 20+** is required. With [nvm](https://github.com/nvm-sh/nvm):
+
+```bash
+nvm use   # reads .nvmrc
+```
+
+Then install and start the dev server:
 
 ```bash
 npm install
@@ -34,11 +44,12 @@ resource marked "real backend + mock fallback" honours `NEXT_PUBLIC_USE_MOCKS`.
 | Login                 | Real backend (`POST /api/auth/login`)           |
 | Menu (products)       | Real backend (`GET /api/products/...`)          |
 | Signup                | Stub (`/api/auth/register` Next route handler)  |
-| Business units, categories | Mock (`lib/api/mocks/*`)                   |
-| Business units (internal/admin list) | Real backend + mock fallback (`GET /api/business-units/internal`) |
+| Business units (public list + admin CRUD) | Real backend + mock fallback (`GET/POST /api/business-units`, `GET/PATCH /api/business-units/:id`, `POST /api/business-units/:id/active`) |
+| Categories (public list + admin CRUD) | Real backend + mock fallback (`GET/POST /api/categories`, `GET/PATCH /api/categories/:id`) |
 | User profile          | Real backend + mock fallback (`GET /api/users/me`) |
 | Orders / Payment      | Real backend + mock fallback (`GET /api/orders/me`, `POST/GET /api/orders`, `/api/payments/...`) |
-| Products (admin catalog edit) | Real backend + mock fallback (`PATCH /api/products/:id`) |
+| Products (admin CRUD) | Real backend + mock fallback (`POST /api/products`, `PATCH /api/products/:id`) |
+| Menu (business unit — admin) | Real backend + mock fallback (`POST /api/business-units/:id/menu`, `PATCH /api/business-units/:id/menu/:itemId`, `POST /api/business-units/:id/menu/:itemId/available`) |
 | Loyalty               | Mock                                            |
 | Inventory (admin)     | Real backend + mock fallback (`GET/POST /api/inventory/...`)  |
 | Promotions (admin)    | Real backend + mock fallback (`/api/promotions/...`)         |
@@ -114,7 +125,7 @@ app/
 │   ├── orders/                  # History + tracking (cursor pagination, channel/status filters)
 │   ├── loyalty/                 # Points and LGPD consent
 │   ├── profile/                 # Own account (GET /users/me)
-│   ├── admin/                   # Admin area: overview, users, products, inventory, promotions
+│   ├── admin/                   # Admin area: overview, users, products, categories, menu, business-units, inventory, promotions
 │   ├── error.tsx                # Boundary
 │   ├── loading.tsx
 │   ├── not-found.tsx
@@ -183,10 +194,36 @@ time; it stays on the fallback until the backend serves `latitude`/`longitude`.
 
 ## Useful scripts
 
-| Command            | Description                       |
-| ------------------ | --------------------------------- |
-| `npm run dev`      | Development server with HMR       |
-| `npm run build`    | Production build                  |
-| `npm run start`    | Run the production build          |
-| `npm run typecheck`| Run `tsc --noEmit`                |
-| `npm run lint`     | Next.js lint                      |
+| Command                | Description                     |
+| ---------------------- | ------------------------------- |
+| `npm run dev`          | Development server with HMR     |
+| `npm run build`        | Production build                |
+| `npm run start`        | Run the production build        |
+| `npm run typecheck`    | Run `tsc --noEmit`              |
+| `npm run lint`         | ESLint (flat config)            |
+| `npm test`             | Run the Vitest suite once       |
+| `npm run test:watch`   | Run Vitest in watch mode        |
+| `npm run coverage`     | Vitest suite + coverage report  |
+| `npm run format`       | Format the codebase (Prettier)  |
+| `npm run format:check` | Check formatting without writing |
+
+## Testing
+
+Tests live next to the code they cover (e.g. `lib/api/errors.test.ts`,
+`app/api/products/route.test.ts`) and run on [Vitest](https://vitest.dev/).
+The suite focuses on the security-critical surface — route-handler auth
+guards, unit-scoping, zod validation — and pure helpers. Run `npm test`
+before pushing; `npm run coverage` writes an HTML report to `coverage/`.
+
+## Continuous integration
+
+Every pull request and every push to `main` runs
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) on Node 20 and 22:
+type-check → lint → tests (with coverage) → production build.
+
+## Pre-commit hooks
+
+[Husky](https://typicode.github.io/husky/) + `lint-staged` lint and format
+staged files, then run the type-checker, on every commit. It is wired up
+automatically by `npm install` (the `prepare` script). If a hook fails, fix
+the reported issue and commit again.

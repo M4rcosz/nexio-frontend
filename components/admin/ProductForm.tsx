@@ -3,19 +3,36 @@
 import { useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
+import { Select } from '@/components/ui/Select'
 import { useRouter } from '@/i18n/navigation'
-import type { ProductResponseDto, ProductUpdateDto } from '@/lib/api/types'
+import { buildProductPatch } from '@/lib/admin/buildPatch'
+import type {
+  Category,
+  CreateProductRequest,
+  ProductResponseDto,
+} from '@/lib/api/types'
+
+type Mode = 'create' | 'edit'
 
 const MONEY_RE = /^\d+(\.\d{1,2})?$/
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
- * Edit form for a product (ADMIN only). Sends a partial update with only the
- * fields that actually changed. `isActive` is managed elsewhere (activate/
- * deactivate) and `description` cannot be cleared to null here.
+ * Create/edit form for a product (ADMIN only). On create, every field is sent
+ * and `imageUrl` is required (unlike edit). On edit, a partial update carries
+ * only the fields that changed; `isActive` is managed elsewhere (activate/
+ * deactivate) and `description`/`imageUrl` cannot be cleared to null here.
  */
-export function ProductForm({ product }: { product: ProductResponseDto }) {
+export function ProductForm({
+  mode,
+  product,
+  categories,
+}: {
+  mode: Mode
+  product?: ProductResponseDto
+  categories: Category[]
+}) {
   const router = useRouter()
   const t = useTranslations('admin.products.form')
   const errorMessage = useErrorMessage()
@@ -23,79 +40,105 @@ export function ProductForm({ product }: { product: ProductResponseDto }) {
   const [error, setError] = useState<string | null>(null)
 
   const [form, setForm] = useState({
-    name: product.name,
-    description: product.description ?? '',
-    price: product.price,
-    // TODO: turn categoryId into a Select once a categories endpoint exists.
-    categoryId: product.categoryId,
-    imageUrl: product.imageUrl ?? '',
+    name: product?.name ?? '',
+    description: product?.description ?? '',
+    price: product?.price ?? '',
+    categoryId: product?.categoryId ?? categories[0]?.id ?? '',
+    imageUrl: product?.imageUrl ?? '',
   })
+
+  // Only active categories are listed, so a product tied to a deactivated
+  // category would have no matching option. Surface it explicitly so the Select
+  // still shows the current value instead of appearing empty.
+  const categoryOptions = categories.map((c) => ({
+    value: c.id,
+    label: c.name,
+  }))
+  if (product && !categoryOptions.some((o) => o.value === product.categoryId)) {
+    categoryOptions.unshift({
+      value: product.categoryId,
+      label: t('categoryInactiveOption'),
+    })
+  }
 
   function update<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((s) => ({ ...s, [k]: v }))
   }
 
-  /** Collect only the fields that changed relative to the loaded product. */
-  function buildPatch(): { patch: ProductUpdateDto } | { error: string } {
-    const patch: ProductUpdateDto = {}
-
+  /** Validate and assemble the full create payload. */
+  function buildCreate(): { body: CreateProductRequest } | { error: string } {
     const name = form.name.trim()
-    if (name !== product.name) {
-      if (name.length < 2) return { error: t('invalidName') }
-      patch.name = name
-    }
-
-    // description cannot be cleared to null — only send it when non-empty.
-    const description = form.description.trim()
-    if (description && description !== (product.description ?? '')) {
-      patch.description = description
-    }
+    if (name.length < 2) return { error: t('invalidName') }
 
     const price = form.price.trim()
-    if (price !== product.price) {
-      if (!MONEY_RE.test(price) || Number(price) <= 0) {
-        return { error: t('invalidMoney') }
-      }
-      patch.price = price
+    if (!MONEY_RE.test(price) || Number(price) <= 0) {
+      return { error: t('invalidMoney') }
     }
 
     const categoryId = form.categoryId.trim()
-    if (categoryId !== product.categoryId) {
-      if (!UUID_RE.test(categoryId)) {
-        return { error: t('invalidCategory') }
-      }
-      patch.categoryId = categoryId
-    }
+    if (!UUID_RE.test(categoryId)) return { error: t('invalidCategory') }
 
     const imageUrl = form.imageUrl.trim()
-    if (imageUrl && imageUrl !== (product.imageUrl ?? '')) {
-      patch.imageUrl = imageUrl
-    }
+    if (!/^https?:\/\/.+/i.test(imageUrl))
+      return { error: t('invalidImageUrl') }
 
-    if (Object.keys(patch).length === 0) return { error: t('noChanges') }
-    return { patch }
+    const description = form.description.trim()
+    return {
+      body: {
+        name,
+        price,
+        categoryId,
+        imageUrl,
+        ...(description ? { description } : {}),
+      },
+    }
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
 
-    const result = buildPatch()
+    if (mode === 'create') {
+      const result = buildCreate()
+      if ('error' in result) {
+        setError(result.error)
+        return
+      }
+      start(async () => {
+        const res = await fetch('/api/products', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(result.body),
+        })
+        if (!res.ok) {
+          const data = (await res.json().catch(() => null)) as {
+            code?: string
+          } | null
+          setError(errorMessage(data?.code, res.status) ?? t('failed'))
+          return
+        }
+        router.push('/admin/products')
+        router.refresh()
+      })
+      return
+    }
+
+    const result = buildProductPatch(form, product!)
     if ('error' in result) {
-      setError(result.error)
+      setError(t(result.error))
       return
     }
 
     start(async () => {
-      const res = await fetch(`/api/products/${product.id}`, {
+      const res = await fetch(`/api/products/${product!.id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(result.patch),
       })
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as
-          | { code?: string }
-          | null
+        const data = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }
@@ -152,11 +195,12 @@ export function ProductForm({ product }: { product: ProductResponseDto }) {
           <label className="label" htmlFor="product-category">
             {t('categoryId')}
           </label>
-          <input
+          <Select
             id="product-category"
-            className="input font-mono text-xs"
             value={form.categoryId}
-            onChange={(e) => update('categoryId', e.target.value)}
+            onChange={(v) => update('categoryId', v)}
+            ariaLabel={t('categoryId')}
+            options={categoryOptions}
           />
           <p className="mt-1 text-xs text-fg-subtle">{t('categoryHint')}</p>
         </div>
@@ -170,11 +214,14 @@ export function ProductForm({ product }: { product: ProductResponseDto }) {
           id="product-image"
           className="input"
           type="url"
+          required={mode === 'create'}
           placeholder="https://…"
           value={form.imageUrl}
           onChange={(e) => update('imageUrl', e.target.value)}
         />
-        <p className="mt-1 text-xs text-fg-subtle">{t('imageUrlHint')}</p>
+        <p className="mt-1 text-xs text-fg-subtle">
+          {mode === 'create' ? t('imageUrlCreateHint') : t('imageUrlHint')}
+        </p>
       </div>
 
       {error ? (
@@ -188,7 +235,11 @@ export function ProductForm({ product }: { product: ProductResponseDto }) {
 
       <div className="flex items-center justify-end gap-2 pt-2">
         <button type="submit" className="btn-primary" disabled={pending}>
-          {pending ? t('submitting') : t('submitEdit')}
+          {pending
+            ? t('submitting')
+            : mode === 'create'
+              ? t('submitCreate')
+              : t('submitEdit')}
         </button>
       </div>
     </form>

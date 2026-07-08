@@ -20,19 +20,28 @@ export class ApiError extends Error {
  * The client side may further translate it via the i18n message catalog
  * before showing it to the user.
  */
+const GENERIC_SERVER_MESSAGE =
+  'The server did not respond properly. Please try again shortly.'
+
 export function describeError(err: unknown): string {
   if (err instanceof ApiError) {
     if (err.status === 401) return 'Session expired. Please sign in again.'
-    if (err.status === 403) return "You don't have permission to perform this action."
+    if (err.status === 403)
+      return "You don't have permission to perform this action."
     if (err.status === 404) return 'Resource not found.'
-    if (err.status >= 500)
-      return 'The server did not respond properly. Please try again shortly.'
+    if (err.status >= 500) return GENERIC_SERVER_MESSAGE
     // Other generic 4xx: never echo the raw backend message — it may leak
     // internal details. Known cases (401/403/404 above, and coded errors such
     // as 409 username_taken) are handled by their own branches or by callers
     // that key off the error `code`, not this message.
     if (err.status >= 400) return 'Invalid request.'
+    // Falsy/<400 status (e.g. a network failure surfaced as ApiError(0, ...,
+    // 'Network failure: host:port')): the raw message can leak the internal
+    // backend host, so stay generic.
+    return GENERIC_SERVER_MESSAGE
   }
-  if (err instanceof Error) return err.message
-  return 'Unknown error.'
+  // Any non-ApiError (raw Error/thrown value): never surface its message —
+  // it may carry internal details. Callers that need a specific 4xx/credential
+  // wording rely on the ApiError branches above, not on this fallback.
+  return GENERIC_SERVER_MESSAGE
 }

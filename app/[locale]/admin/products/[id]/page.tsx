@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { getAdminContext } from '@/lib/auth/access'
 import { getProduct } from '@/lib/api/products'
+import { listCategories } from '@/lib/api/categories'
 import { ProductForm } from '@/components/admin/ProductForm'
 
 export const dynamic = 'force-dynamic'
@@ -19,8 +20,9 @@ export default async function EditProductPage({
   // Only ADMIN edits products; hide the page from MANAGER.
   if (ctx.role !== 'ADMIN') notFound()
 
-  const [product, t] = await Promise.all([
+  const [product, categoriesPage, t] = await Promise.all([
     getProduct(id),
+    listCategories({ limit: 100 }),
     getTranslations('admin.products.form'),
   ])
   if (!product) notFound()
@@ -40,7 +42,7 @@ export default async function EditProductPage({
         <p className="mt-1 text-sm text-fg-muted">{t('editSubtitle')}</p>
       </header>
       <div className="card p-6">
-        <ProductForm product={product} />
+        <ProductForm mode="edit" product={product} categories={categoriesPage.data} />
       </div>
     </div>
   )

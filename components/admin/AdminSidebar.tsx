@@ -2,22 +2,38 @@
 
 import { useTranslations } from 'next-intl'
 import { Link, usePathname } from '@/i18n/navigation'
+import type { AdminRole } from '@/lib/auth/access'
 
 const NAV: Array<{
   href: string
-  key: 'overview' | 'users' | 'products' | 'inventory' | 'promotions'
+  key:
+    | 'overview'
+    | 'users'
+    | 'products'
+    | 'categories'
+    | 'menu'
+    | 'businessUnits'
+    | 'inventory'
+    | 'promotions'
   icon: React.FC<{ className?: string }>
+  /** When true, the entry is only shown to ADMIN. */
+  adminOnly?: boolean
 }> = [
   { href: '/admin', key: 'overview', icon: GridIcon },
   { href: '/admin/users', key: 'users', icon: UsersIcon },
   { href: '/admin/products', key: 'products', icon: DishIcon },
+  { href: '/admin/categories', key: 'categories', icon: LayersIcon, adminOnly: true },
+  { href: '/admin/menu', key: 'menu', icon: MenuIcon },
+  { href: '/admin/business-units', key: 'businessUnits', icon: StoreIcon, adminOnly: true },
   { href: '/admin/inventory', key: 'inventory', icon: BoxIcon },
   { href: '/admin/promotions', key: 'promotions', icon: TagIcon },
 ]
 
-export function AdminSidebar() {
+export function AdminSidebar({ role }: { role: AdminRole }) {
   const pathname = usePathname()
   const t = useTranslations('admin.nav')
+
+  const items = NAV.filter((item) => !item.adminOnly || role === 'ADMIN')
 
   return (
     <aside className="lg:sticky lg:top-24">
@@ -28,7 +44,7 @@ export function AdminSidebar() {
           </p>
         </div>
         <ul className="flex flex-row gap-1 p-2 lg:flex-col">
-          {NAV.map(({ href, key, icon: Icon }) => {
+          {items.map(({ href, key, icon: Icon }) => {
             const active =
               href === '/admin'
                 ? pathname === '/admin'
@@ -93,6 +109,37 @@ function DishIcon({ className = '' }: { className?: string }) {
       <path d="M3 11h18" />
       <path d="M12 11a9 9 0 0 1 9 9H3a9 9 0 0 1 9-9z" />
       <path d="M12 4v3" />
+    </svg>
+  )
+}
+
+function LayersIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="m12 2 9 5-9 5-9-5 9-5z" />
+      <path d="m3 12 9 5 9-5" />
+      <path d="m3 17 9 5 9-5" />
+    </svg>
+  )
+}
+
+function StoreIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M3 9 4.5 4.5A2 2 0 0 1 6.4 3h11.2a2 2 0 0 1 1.9 1.5L21 9" />
+      <path d="M4 9v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9" />
+      <path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" />
+      <path d="M9 20v-6h6v6" />
+    </svg>
+  )
+}
+
+function MenuIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path d="M3 12h18" />
+      <path d="M3 6h18" />
+      <path d="M3 18h18" />
     </svg>
   )
 }

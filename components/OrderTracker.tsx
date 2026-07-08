@@ -13,6 +13,7 @@ export function OrderTracker({ initialOrder }: { initialOrder: Order }) {
   const [order, setOrder] = useState<Order>(initialOrder)
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
+  const [sessionLost, setSessionLost] = useState(false)
   const t = useTranslations('order')
   const errorMessage = useErrorMessage()
   const locale = useLocale()
@@ -27,7 +28,15 @@ export function OrderTracker({ initialOrder }: { initialOrder: Order }) {
     let cancelled = false
     const interval = setInterval(async () => {
       const res = await fetch(`/api/orders/${order.id}`, { cache: 'no-store' })
-      if (!res.ok || cancelled) return
+      if (cancelled) return
+      // Session died and the self-heal refresh couldn't recover it: stop polling
+      // and surface it, instead of pulsing a misleading "live" indicator forever.
+      if (res.status === 401) {
+        setSessionLost(true)
+        clearInterval(interval)
+        return
+      }
+      if (!res.ok) return
       setOrder((await res.json()) as Order)
     }, POLL_INTERVAL_MS)
     return () => {
@@ -39,9 +48,13 @@ export function OrderTracker({ initialOrder }: { initialOrder: Order }) {
   function cancel() {
     setError(null)
     start(async () => {
-      const res = await fetch(`/api/orders/${order.id}/cancel`, { method: 'POST' })
+      const res = await fetch(`/api/orders/${order.id}/cancel`, {
+        method: 'POST',
+      })
       if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        const body = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         setError(errorMessage(body?.code, res.status) ?? t('cancelFailed'))
         return
       }
@@ -62,7 +75,8 @@ export function OrderTracker({ initialOrder }: { initialOrder: Order }) {
             {t('statusTitle')}
           </p>
           {order.orderStatus !== 'CANCELLED' &&
-          order.orderStatus !== 'DELIVERED' ? (
+          order.orderStatus !== 'DELIVERED' &&
+          !sessionLost ? (
             <span className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-fg-subtle">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand-500" />
               live
@@ -111,9 +125,12 @@ export function OrderTracker({ initialOrder }: { initialOrder: Order }) {
         </div>
       </div>
 
-      {error ? (
-        <p role="alert" className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
-          {error}
+      {sessionLost || error ? (
+        <p
+          role="alert"
+          className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300"
+        >
+          {sessionLost ? errorMessage(undefined, 401) : error}
         </p>
       ) : null}
 

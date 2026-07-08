@@ -69,7 +69,7 @@ export async function listProductsByBusinessUnit(
   )
 }
 
-/** `POST /products` (ADMIN/MANAGER). 409 on duplicated name. */
+/** `POST /products` (ADMIN only). 409 on duplicated name. */
 export async function createProduct(
   input: CreateProductRequest,
 ): Promise<ProductResponseDto> {

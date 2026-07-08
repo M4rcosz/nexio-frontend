@@ -33,7 +33,7 @@ export default async function AdminLayout({
 
   return (
     <div className="grid gap-4 sm:gap-6 lg:grid-cols-[220px_1fr]">
-      <AdminSidebar />
+      <AdminSidebar role={ctx.role} />
       <div className="min-w-0">{children}</div>
     </div>
   )
