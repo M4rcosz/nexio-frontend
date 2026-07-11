@@ -13,6 +13,15 @@ export default defineConfig({
       provider: 'v8',
       include: ['lib/**', 'app/api/**', 'components/**'],
       reporter: ['text', 'html'],
+      // Floors set a few points below the current numbers so CI fails on a
+      // meaningful regression without flaking on small, legitimate dips. Raise
+      // these as coverage grows.
+      thresholds: {
+        statements: 55,
+        branches: 82,
+        functions: 65,
+        lines: 55,
+      },
     },
   },
 })
