@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { updateOrderStatus } from '@/lib/api/orders'
-import { ApiError, describeError } from '@/lib/api/errors'
+import { ApiError, backendErrorStatus, describeError } from '@/lib/api/errors'
 import { getSession } from '@/lib/auth/session'
 
 const STAFF_ROLES = ['ADMIN', 'MANAGER', 'ATTENDANT', 'KITCHEN']
@@ -61,6 +61,12 @@ export async function PATCH(
         { status: 422 },
       )
     }
-    return NextResponse.json({ error: describeError(err) }, { status: 500 })
+    // Propagate a genuine upstream 4xx (e.g. a 403 the actor isn't allowed) and
+    // collapse 5xx/unknown into 502 — matching the sibling order handlers rather
+    // than masking everything as a 500.
+    return NextResponse.json(
+      { error: describeError(err) },
+      { status: backendErrorStatus(err) },
+    )
   }
 }

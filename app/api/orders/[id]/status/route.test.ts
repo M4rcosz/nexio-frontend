@@ -86,10 +86,17 @@ describe('PATCH /api/orders/[id]/status', () => {
     expect(res.status).toBe(422)
   })
 
-  it('returns 500 for an unexpected error', async () => {
+  it('collapses an unexpected backend 500 into a 502', async () => {
     mockedGetSession.mockResolvedValue(sessionWithRole('ADMIN'))
     mockedUpdateStatus.mockRejectedValue(new ApiError(500, null, 'boom'))
     const res = await PATCH(patchReq({ orderStatus: 'READY' }), ctx('o1'))
-    expect(res.status).toBe(500)
+    expect(res.status).toBe(502)
+  })
+
+  it('propagates a genuine backend 403 instead of masking it as 500', async () => {
+    mockedGetSession.mockResolvedValue(sessionWithRole('ATTENDANT'))
+    mockedUpdateStatus.mockRejectedValue(new ApiError(403, null, 'forbidden'))
+    const res = await PATCH(patchReq({ orderStatus: 'READY' }), ctx('o1'))
+    expect(res.status).toBe(403)
   })
 })

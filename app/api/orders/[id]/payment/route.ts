@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createPayment, getOrderPayment } from '@/lib/api/payments'
 import { getOrder } from '@/lib/api/orders'
-import { ApiError, describeError } from '@/lib/api/errors'
+import { ApiError, backendErrorStatus, describeError } from '@/lib/api/errors'
 import { hasActiveOrRefreshableSession } from '@/lib/auth/session'
 
 const Body = z.object({
@@ -40,8 +40,7 @@ export async function POST(
     )
     return NextResponse.json(payment, { status: 201 })
   } catch (err) {
-    const status = err instanceof ApiError ? err.status || 500 : 500
-    if (status === 422) {
+    if (err instanceof ApiError && err.status === 422) {
       return NextResponse.json(
         { error: 'This order is not awaiting payment.', code: 'not_payable' },
         { status: 422 },
@@ -49,7 +48,7 @@ export async function POST(
     }
     return NextResponse.json(
       { error: describeError(err) },
-      { status: status >= 500 ? 502 : status },
+      { status: backendErrorStatus(err) },
     )
   }
 }
@@ -68,6 +67,9 @@ export async function GET(
       return NextResponse.json({ error: 'Payment not found.' }, { status: 404 })
     return NextResponse.json(payment)
   } catch (err) {
-    return NextResponse.json({ error: describeError(err) }, { status: 500 })
+    return NextResponse.json(
+      { error: describeError(err) },
+      { status: backendErrorStatus(err) },
+    )
   }
 }

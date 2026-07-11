@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createOrder, listMyOrders } from '@/lib/api/orders'
-import { ApiError, describeError } from '@/lib/api/errors'
+import { ApiError, backendErrorStatus, describeError } from '@/lib/api/errors'
 import { hasActiveOrRefreshableSession } from '@/lib/auth/session'
 import type { OrderChannel, OrderStatus } from '@/lib/api/types'
 
@@ -75,8 +75,7 @@ export async function POST(req: Request) {
     const order = await createOrder(parsed, { idempotencyKey })
     return NextResponse.json(order, { status: 201 })
   } catch (err) {
-    const status = err instanceof ApiError ? err.status || 500 : 500
-    if (status === 422) {
+    if (err instanceof ApiError && err.status === 422) {
       return NextResponse.json(
         {
           error:
@@ -87,7 +86,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json(
       { error: describeError(err) },
-      { status: status >= 500 ? 502 : status },
+      { status: backendErrorStatus(err) },
     )
   }
 }
@@ -127,8 +126,7 @@ export async function GET(req: Request) {
     })
     return NextResponse.json(data)
   } catch (err) {
-    const status = err instanceof ApiError ? err.status || 500 : 500
-    if (status === 403) {
+    if (err instanceof ApiError && err.status === 403) {
       return NextResponse.json(
         { error: 'Only customers can list their orders.', code: 'forbidden' },
         { status: 403 },
@@ -136,7 +134,7 @@ export async function GET(req: Request) {
     }
     return NextResponse.json(
       { error: describeError(err) },
-      { status: status >= 500 ? 502 : status },
+      { status: backendErrorStatus(err) },
     )
   }
 }

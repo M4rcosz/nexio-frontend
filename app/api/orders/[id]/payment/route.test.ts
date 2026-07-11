@@ -125,13 +125,13 @@ describe('GET /api/orders/[id]/payment', () => {
     expect(res.status).toBe(404)
   })
 
-  it('returns 500 when the service throws', async () => {
+  it('collapses a backend 500 into a 502', async () => {
     mockedGate.mockResolvedValue(true)
     mockedGetPayment.mockRejectedValue(new ApiError(500, null, 'boom'))
     const res = await GET(
       new Request('http://localhost/api/orders/o1/payment'),
       ctx('o1'),
     )
-    expect(res.status).toBe(500)
+    expect(res.status).toBe(502)
   })
 })

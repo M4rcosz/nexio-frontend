@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ApiError, describeError } from './errors'
+import { ApiError, backendErrorStatus, describeError } from './errors'
 
 describe('ApiError', () => {
   it('carries status, body and message', () => {
@@ -78,5 +78,26 @@ describe('describeError', () => {
     expect(out).toMatch(/server/i)
     expect(out).not.toContain('10.0.0.5')
     expect(out).not.toContain('ECONNREFUSED')
+  })
+})
+
+describe('backendErrorStatus', () => {
+  it('propagates an upstream 4xx as-is', () => {
+    expect(backendErrorStatus(new ApiError(401, null, 'x'))).toBe(401)
+    expect(backendErrorStatus(new ApiError(403, null, 'x'))).toBe(403)
+    expect(backendErrorStatus(new ApiError(404, null, 'x'))).toBe(404)
+    expect(backendErrorStatus(new ApiError(409, null, 'x'))).toBe(409)
+    expect(backendErrorStatus(new ApiError(422, null, 'x'))).toBe(422)
+  })
+
+  it('collapses any upstream 5xx into 502', () => {
+    expect(backendErrorStatus(new ApiError(500, null, 'x'))).toBe(502)
+    expect(backendErrorStatus(new ApiError(503, null, 'x'))).toBe(502)
+  })
+
+  it('treats a network ApiError(0) and non-ApiError values as 502', () => {
+    expect(backendErrorStatus(new ApiError(0, null, 'network'))).toBe(502)
+    expect(backendErrorStatus(new Error('boom'))).toBe(502)
+    expect(backendErrorStatus('weird')).toBe(502)
   })
 })
