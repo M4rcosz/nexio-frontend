@@ -61,9 +61,9 @@ export function AddMenuItemForm({
         }),
       })
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as
-          | { code?: string }
-          | null
+        const data = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         if (data?.code === 'menu_item_exists') setError(t('alreadyOnMenu'))
         else setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return

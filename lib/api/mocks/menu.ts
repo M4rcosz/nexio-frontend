@@ -25,7 +25,9 @@ function seed(): MenuItem[] {
         businessUnitId: unit.id,
         productId: product.id,
         // Slight per-unit variation over the catalog price (+0.50 per unit idx).
-        customPrice: asMoney(product.price).plus(unitIdx * 0.5).toFixed(2),
+        customPrice: asMoney(product.price)
+          .plus(unitIdx * 0.5)
+          .toFixed(2),
         // One item per unit is left unavailable to exercise the manage view.
         isAvailable: productIdx !== MOCK_PRODUCTS.length - 1,
         createdAt: NOW,
@@ -94,7 +96,8 @@ export async function addMenuItemMock(
   await mockDelay()
   if (
     STORE.some(
-      (i) => i.businessUnitId === businessUnitId && i.productId === input.productId,
+      (i) =>
+        i.businessUnitId === businessUnitId && i.productId === input.productId,
     )
   ) {
     throw Object.assign(new Error('Product already on the menu.'), {

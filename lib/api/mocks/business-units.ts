@@ -155,7 +155,11 @@ export async function createBusinessUnitMock(
   input: CreateBusinessUnitRequest,
 ): Promise<BusinessUnit> {
   await mockDelay()
-  if (MOCK_BUSINESS_UNITS.some((u) => u.cnpj === input.cnpj || u.phone === input.phone)) {
+  if (
+    MOCK_BUSINESS_UNITS.some(
+      (u) => u.cnpj === input.cnpj || u.phone === input.phone,
+    )
+  ) {
     throw new ApiError(
       409,
       { code: 'cnpj_or_phone_taken' },

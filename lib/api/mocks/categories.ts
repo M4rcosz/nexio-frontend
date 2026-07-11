@@ -17,11 +17,46 @@ const NOW = new Date().toISOString()
 
 /** Internal store — mutated by create/update. */
 export const MOCK_CATEGORIES: Category[] = [
-  { id: 'cat_carnes', name: 'Carnes', description: 'Dishes with carne de sol, goat, chicken', isActive: true, createdAt: NOW, updatedAt: NOW },
-  { id: 'cat_acompanhamentos', name: 'Acompanhamentos', description: 'Cassava, baião, farofa and other side dishes', isActive: true, createdAt: NOW, updatedAt: NOW },
-  { id: 'cat_petiscos', name: 'Petiscos', description: 'Bar-style snacks to share', isActive: true, createdAt: NOW, updatedAt: NOW },
-  { id: 'cat_bebidas', name: 'Bebidas', description: 'Juices, sodas, beers', isActive: true, createdAt: NOW, updatedAt: NOW },
-  { id: 'cat_sobremesas', name: 'Sobremesas', description: 'Cocada, dulce de leche, bolo de rolo', isActive: true, createdAt: NOW, updatedAt: NOW },
+  {
+    id: 'cat_carnes',
+    name: 'Carnes',
+    description: 'Dishes with carne de sol, goat, chicken',
+    isActive: true,
+    createdAt: NOW,
+    updatedAt: NOW,
+  },
+  {
+    id: 'cat_acompanhamentos',
+    name: 'Acompanhamentos',
+    description: 'Cassava, baião, farofa and other side dishes',
+    isActive: true,
+    createdAt: NOW,
+    updatedAt: NOW,
+  },
+  {
+    id: 'cat_petiscos',
+    name: 'Petiscos',
+    description: 'Bar-style snacks to share',
+    isActive: true,
+    createdAt: NOW,
+    updatedAt: NOW,
+  },
+  {
+    id: 'cat_bebidas',
+    name: 'Bebidas',
+    description: 'Juices, sodas, beers',
+    isActive: true,
+    createdAt: NOW,
+    updatedAt: NOW,
+  },
+  {
+    id: 'cat_sobremesas',
+    name: 'Sobremesas',
+    description: 'Cocada, dulce de leche, bolo de rolo',
+    isActive: true,
+    createdAt: NOW,
+    updatedAt: NOW,
+  },
 ]
 
 function newId(): string {
@@ -50,7 +85,7 @@ export async function listCategoriesMock(
   }
   const page = data.slice(start, start + limit).map((c) => ({ ...c }))
   const hasMore = start + limit < data.length
-  const nextCursor = hasMore ? page[page.length - 1]?.id ?? null : null
+  const nextCursor = hasMore ? (page[page.length - 1]?.id ?? null) : null
   return { data: page, meta: { limit, nextCursor, hasMore } }
 }
 

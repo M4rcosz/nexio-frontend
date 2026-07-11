@@ -100,27 +100,23 @@ describe('useCartStore.addItem', () => {
 
 describe('useCartStore.setQuantity', () => {
   it('updates the quantity of a line', () => {
-    useCartStore
-      .getState()
-      .addItem({
-        productId: 'p1',
-        name: 'B',
-        unitPrice: '1.00',
-        imageUrl: null,
-      })
+    useCartStore.getState().addItem({
+      productId: 'p1',
+      name: 'B',
+      unitPrice: '1.00',
+      imageUrl: null,
+    })
     useCartStore.getState().setQuantity('p1', 4)
     expect(useCartStore.getState().items[0].quantity).toBe(4)
   })
 
   it('removes the line when quantity drops to 0 or below', () => {
-    useCartStore
-      .getState()
-      .addItem({
-        productId: 'p1',
-        name: 'B',
-        unitPrice: '1.00',
-        imageUrl: null,
-      })
+    useCartStore.getState().addItem({
+      productId: 'p1',
+      name: 'B',
+      unitPrice: '1.00',
+      imageUrl: null,
+    })
     useCartStore.getState().setQuantity('p1', 0)
     expect(useCartStore.getState().items).toHaveLength(0)
   })

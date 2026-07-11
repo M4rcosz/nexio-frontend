@@ -24,12 +24,18 @@ export async function POST(req: Request) {
   if (!admin) {
     return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
   }
-  const raw = (await req.json().catch(() => null)) as Record<string, unknown> | null
+  const raw = (await req.json().catch(() => null)) as Record<
+    string,
+    unknown
+  > | null
 
   // Guard FREE_ITEM explicitly so the message is clear even before Zod runs.
   if (raw && raw.discountType === 'FREE_ITEM') {
     return NextResponse.json(
-      { error: 'FREE_ITEM promotions are not supported.', code: 'free_item_unsupported' },
+      {
+        error: 'FREE_ITEM promotions are not supported.',
+        code: 'free_item_unsupported',
+      },
       { status: 400 },
     )
   }
@@ -66,7 +72,10 @@ export async function POST(req: Request) {
     return NextResponse.json(promotion, { status: 201 })
   } catch (err) {
     if (err instanceof ApiError && err.status < 500) {
-      return NextResponse.json({ error: describeError(err) }, { status: err.status })
+      return NextResponse.json(
+        { error: describeError(err) },
+        { status: err.status },
+      )
     }
     return NextResponse.json({ error: describeError(err) }, { status: 500 })
   }

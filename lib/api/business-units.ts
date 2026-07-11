@@ -40,15 +40,18 @@ export async function listBusinessUnits(
   if (USE_MOCKS) {
     return listBusinessUnitsMock({ search: query.search, city: query.city })
   }
-  return serverFetchAnonymous<Paginated<PublicBusinessUnit>>('/business-units', {
-    query: {
-      limit: query.limit,
-      cursor: query.cursor,
-      search: query.search,
-      city: query.city,
+  return serverFetchAnonymous<Paginated<PublicBusinessUnit>>(
+    '/business-units',
+    {
+      query: {
+        limit: query.limit,
+        cursor: query.cursor,
+        search: query.search,
+        city: query.city,
+      },
+      next: { revalidate: 30, tags: ['business-units'] },
     },
-    next: { revalidate: 30, tags: ['business-units'] },
-  })
+  )
 }
 
 /**
@@ -62,9 +65,15 @@ export async function getBusinessUnit(
     return getBusinessUnitMock(id)
   }
   try {
-    return await serverFetchAnonymous<PublicBusinessUnit>(`/business-units/${id}`, {
-      next: { revalidate: 30, tags: ['business-units', `business-units:${id}`] },
-    })
+    return await serverFetchAnonymous<PublicBusinessUnit>(
+      `/business-units/${id}`,
+      {
+        next: {
+          revalidate: 30,
+          tags: ['business-units', `business-units:${id}`],
+        },
+      },
+    )
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return null
     throw err
@@ -100,7 +109,9 @@ export async function listBusinessUnitsInternal(
       search: query.search,
       city: query.city,
       isActive:
-        typeof query.isActive === 'boolean' ? String(query.isActive) : undefined,
+        typeof query.isActive === 'boolean'
+          ? String(query.isActive)
+          : undefined,
     },
     next: { revalidate: 30, tags: ['business-units:internal'] },
   })
@@ -118,7 +129,10 @@ export async function getBusinessUnitInternal(
   }
   try {
     return await serverFetch<BusinessUnit>(`/business-units/internal/${id}`, {
-      next: { revalidate: 30, tags: ['business-units:internal', `business-units:${id}`] },
+      next: {
+        revalidate: 30,
+        tags: ['business-units:internal', `business-units:${id}`],
+      },
     })
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return null

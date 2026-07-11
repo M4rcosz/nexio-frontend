@@ -50,11 +50,7 @@ export function CategoryFilter({
         {t('all')}
       </Pill>
       {categories.map((c) => (
-        <Pill
-          key={c.id}
-          href={buildHref(c.id)}
-          active={selected === c.id}
-        >
+        <Pill key={c.id} href={buildHref(c.id)} active={selected === c.id}>
           {c.name}
         </Pill>
       ))}

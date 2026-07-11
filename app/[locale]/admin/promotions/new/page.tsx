@@ -21,7 +21,8 @@ export default async function NewPromotionPage({
   const sp = await searchParams
   const t = await getTranslations('admin.promotions.form')
 
-  let units = ctx.role === 'ADMIN' ? (await listBusinessUnitsInternal()).data : []
+  let units =
+    ctx.role === 'ADMIN' ? (await listBusinessUnitsInternal()).data : []
   // When the admin came from a specific unit, surface it first.
   if (sp.businessUnitId) {
     const idx = units.findIndex((u) => u.id === sp.businessUnitId)

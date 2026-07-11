@@ -14,7 +14,9 @@ export function PromotionCard({ promotion }: { promotion: Promotion }) {
   const discountLabel =
     promotion.discountType === 'PERCENTAGE'
       ? t('discountPercentage', { value: promotion.discountValue })
-      : t('discountFixed', { value: formatMoney(promotion.discountValue, locale) })
+      : t('discountFixed', {
+          value: formatMoney(promotion.discountValue, locale),
+        })
 
   return (
     <article className="card p-4">

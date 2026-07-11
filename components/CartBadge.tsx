@@ -88,7 +88,10 @@ export function CartBadge() {
                     {formatMoney(cartTotal(items), locale)}
                   </span>
                 </div>
-                <Link href="/cart" className="btn-primary w-full justify-center">
+                <Link
+                  href="/cart"
+                  className="btn-primary w-full justify-center"
+                >
                   {t('viewCart')}
                 </Link>
               </div>

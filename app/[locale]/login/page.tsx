@@ -30,7 +30,10 @@ export default async function LoginPage({
   return (
     <div className="mx-auto max-w-sm py-8">
       <div className="card relative overflow-hidden p-7">
-        <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-brand-gradient opacity-20 blur-3xl" aria-hidden />
+        <div
+          className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-brand-gradient opacity-20 blur-3xl"
+          aria-hidden
+        />
         <div className="relative">
           <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg sm:text-3xl">
             {t('title')}

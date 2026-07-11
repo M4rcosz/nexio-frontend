@@ -48,7 +48,10 @@ export async function PATCH(req: Request) {
     parsed = Body.parse(await req.json())
   } catch (err) {
     return NextResponse.json(
-      { error: 'Invalid payload.', details: err instanceof z.ZodError ? err.flatten() : undefined },
+      {
+        error: 'Invalid payload.',
+        details: err instanceof z.ZodError ? err.flatten() : undefined,
+      },
       { status: 400 },
     )
   }

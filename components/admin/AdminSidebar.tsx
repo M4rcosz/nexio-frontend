@@ -22,9 +22,19 @@ const NAV: Array<{
   { href: '/admin', key: 'overview', icon: GridIcon },
   { href: '/admin/users', key: 'users', icon: UsersIcon },
   { href: '/admin/products', key: 'products', icon: DishIcon },
-  { href: '/admin/categories', key: 'categories', icon: LayersIcon, adminOnly: true },
+  {
+    href: '/admin/categories',
+    key: 'categories',
+    icon: LayersIcon,
+    adminOnly: true,
+  },
   { href: '/admin/menu', key: 'menu', icon: MenuIcon },
-  { href: '/admin/business-units', key: 'businessUnits', icon: StoreIcon, adminOnly: true },
+  {
+    href: '/admin/business-units',
+    key: 'businessUnits',
+    icon: StoreIcon,
+    adminOnly: true,
+  },
   { href: '/admin/inventory', key: 'inventory', icon: BoxIcon },
   { href: '/admin/promotions', key: 'promotions', icon: TagIcon },
 ]
@@ -73,7 +83,16 @@ export function AdminSidebar({ role }: { role: AdminRole }) {
 
 function GridIcon({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
       <rect x="3" y="3" width="7" height="7" rx="1.5" />
       <rect x="14" y="3" width="7" height="7" rx="1.5" />
       <rect x="3" y="14" width="7" height="7" rx="1.5" />
@@ -84,7 +103,16 @@ function GridIcon({ className = '' }: { className?: string }) {
 
 function UsersIcon({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
       <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
       <circle cx="9" cy="7" r="4" />
       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
@@ -95,7 +123,16 @@ function UsersIcon({ className = '' }: { className?: string }) {
 
 function BoxIcon({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
       <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
       <path d="M3.27 6.96 12 12.01l8.73-5.05" />
       <path d="M12 22.08V12" />
@@ -105,7 +142,16 @@ function BoxIcon({ className = '' }: { className?: string }) {
 
 function DishIcon({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
       <path d="M3 11h18" />
       <path d="M12 11a9 9 0 0 1 9 9H3a9 9 0 0 1 9-9z" />
       <path d="M12 4v3" />
@@ -115,7 +161,16 @@ function DishIcon({ className = '' }: { className?: string }) {
 
 function LayersIcon({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
       <path d="m12 2 9 5-9 5-9-5 9-5z" />
       <path d="m3 12 9 5 9-5" />
       <path d="m3 17 9 5 9-5" />
@@ -125,7 +180,16 @@ function LayersIcon({ className = '' }: { className?: string }) {
 
 function StoreIcon({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
       <path d="M3 9 4.5 4.5A2 2 0 0 1 6.4 3h11.2a2 2 0 0 1 1.9 1.5L21 9" />
       <path d="M4 9v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9" />
       <path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" />
@@ -136,7 +200,16 @@ function StoreIcon({ className = '' }: { className?: string }) {
 
 function MenuIcon({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
       <path d="M3 12h18" />
       <path d="M3 6h18" />
       <path d="M3 18h18" />
@@ -146,7 +219,16 @@ function MenuIcon({ className = '' }: { className?: string }) {
 
 function TagIcon({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
       <path d="M20.59 13.41 13.42 20.6a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
       <circle cx="7" cy="7" r="1" />
     </svg>

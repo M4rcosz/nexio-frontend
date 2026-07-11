@@ -58,8 +58,7 @@ export async function getAdminContext(): Promise<AdminContext | null> {
   if (!ADMIN_ROLES.includes(role)) return null
 
   // Unit scoping comes from the JWT claim — no extra backend round-trip.
-  const scopedIds =
-    role === 'ADMIN' ? null : (session.businessUnitIds ?? [])
+  const scopedIds = role === 'ADMIN' ? null : (session.businessUnitIds ?? [])
 
   return {
     userId: session.sub,

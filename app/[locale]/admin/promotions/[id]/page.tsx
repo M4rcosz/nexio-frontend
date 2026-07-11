@@ -53,17 +53,21 @@ export default async function EditPromotionPage({
         <PromotionForm
           mode="edit"
           promotion={promotion}
-          units={units.length > 0 ? units : [
-            // Edit view locks the unit; ensure the current one renders even when
-            // the internal list is empty (MANAGER) by synthesizing a minimal row.
-            {
-              id: promotion.businessUnitId,
-              name: promotion.businessUnitId,
-              address: '',
-              city: '',
-              phone: '',
-            },
-          ]}
+          units={
+            units.length > 0
+              ? units
+              : [
+                  // Edit view locks the unit; ensure the current one renders even when
+                  // the internal list is empty (MANAGER) by synthesizing a minimal row.
+                  {
+                    id: promotion.businessUnitId,
+                    name: promotion.businessUnitId,
+                    address: '',
+                    city: '',
+                    phone: '',
+                  },
+                ]
+          }
           scopedBusinessUnitId={
             ctx.role === 'MANAGER'
               ? ctx.scopedBusinessUnitId

@@ -40,54 +40,56 @@ export function PromotionList({ promotions }: { promotions: Promotion[] }) {
       {/* Tablet/desktop: data table */}
       <div className="card hidden overflow-hidden p-0 md:block">
         <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-surface-2 text-[10px] font-mono uppercase tracking-widest text-fg-subtle">
-            <tr>
-              <th className="px-4 py-3 font-medium">{t('tableName')}</th>
-              <th className="px-4 py-3 font-medium">{t('tableDiscount')}</th>
-              <th className="px-4 py-3 font-medium">{t('tableMinOrder')}</th>
-              <th className="px-4 py-3 font-medium">{t('tableWindow')}</th>
-              <th className="px-4 py-3 font-medium">{t('tableStatus')}</th>
-              <th className="px-4 py-3 text-right font-medium">
-                {t('tableActions')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {promotions.map((p) => (
-              <tr key={p.id} className="border-t border-border">
-                <td className="px-4 py-3 font-medium text-fg">{p.name}</td>
-                <td className="px-4 py-3 text-fg-muted">{discountLabel(p)}</td>
-                <td className="px-4 py-3 text-fg-muted">
-                  {formatMoney(p.minOrderValue, locale)}
-                </td>
-                <td className="px-4 py-3 text-xs text-fg-subtle">
-                  {formatDateTime(p.startDate, locale)} —{' '}
-                  {formatDateTime(p.endDate, locale)}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
-                      p.isActive
-                        ? 'bg-forest-500/10 text-forest-700 dark:text-forest-300'
-                        : 'bg-surface-2 text-fg-subtle'
-                    }`}
-                  >
-                    {p.isActive ? t('statusActive') : t('statusInactive')}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <Link
-                    href={`/admin/promotions/${p.id}`}
-                    className="btn-ghost !px-2 !py-1 text-xs"
-                  >
-                    {t('actionEdit')}
-                  </Link>
-                </td>
+          <table className="w-full text-left text-sm">
+            <thead className="bg-surface-2 text-[10px] font-mono uppercase tracking-widest text-fg-subtle">
+              <tr>
+                <th className="px-4 py-3 font-medium">{t('tableName')}</th>
+                <th className="px-4 py-3 font-medium">{t('tableDiscount')}</th>
+                <th className="px-4 py-3 font-medium">{t('tableMinOrder')}</th>
+                <th className="px-4 py-3 font-medium">{t('tableWindow')}</th>
+                <th className="px-4 py-3 font-medium">{t('tableStatus')}</th>
+                <th className="px-4 py-3 text-right font-medium">
+                  {t('tableActions')}
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {promotions.map((p) => (
+                <tr key={p.id} className="border-t border-border">
+                  <td className="px-4 py-3 font-medium text-fg">{p.name}</td>
+                  <td className="px-4 py-3 text-fg-muted">
+                    {discountLabel(p)}
+                  </td>
+                  <td className="px-4 py-3 text-fg-muted">
+                    {formatMoney(p.minOrderValue, locale)}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-fg-subtle">
+                    {formatDateTime(p.startDate, locale)} —{' '}
+                    {formatDateTime(p.endDate, locale)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
+                        p.isActive
+                          ? 'bg-forest-500/10 text-forest-700 dark:text-forest-300'
+                          : 'bg-surface-2 text-fg-subtle'
+                      }`}
+                    >
+                      {p.isActive ? t('statusActive') : t('statusInactive')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Link
+                      href={`/admin/promotions/${p.id}`}
+                      className="btn-ghost !px-2 !py-1 text-xs"
+                    >
+                      {t('actionEdit')}
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </>

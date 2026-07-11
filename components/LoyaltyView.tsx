@@ -30,7 +30,9 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount | null }) {
     start(async () => {
       const res = await fetch('/api/loyalty/me/consent', { method: 'POST' })
       if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        const body = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         setError(errorMessage(body?.code, res.status) ?? t('consentFailed'))
         return
       }
@@ -43,7 +45,9 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount | null }) {
     start(async () => {
       const res = await fetch('/api/loyalty/me/consent', { method: 'DELETE' })
       if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        const body = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         setError(errorMessage(body?.code, res.status) ?? t('consentFailed'))
         return
       }
@@ -89,12 +93,15 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount | null }) {
                     <div>
                       <p className="font-medium text-fg">{tx.description}</p>
                       <p className="mt-0.5 text-xs text-fg-subtle">
-                        {TX_LABEL[tx.type]} · {formatDateTime(tx.createdAt, locale)}
+                        {TX_LABEL[tx.type]} ·{' '}
+                        {formatDateTime(tx.createdAt, locale)}
                       </p>
                     </div>
                     <span
                       className={`font-mono text-sm font-semibold ${
-                        tx.type === 'EARN' ? 'text-forest-500' : 'text-accent-500'
+                        tx.type === 'EARN'
+                          ? 'text-forest-500'
+                          : 'text-accent-500'
                       }`}
                     >
                       {tx.type === 'EARN' ? '+' : '−'}
@@ -126,7 +133,10 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount | null }) {
               {t('consentRevocation')}
             </p>
             {error ? (
-              <p role="alert" className="mt-3 rounded-xl border border-accent-500/30 bg-accent-500/10 p-2 text-xs text-accent-700 dark:text-accent-300">
+              <p
+                role="alert"
+                className="mt-3 rounded-xl border border-accent-500/30 bg-accent-500/10 p-2 text-xs text-accent-700 dark:text-accent-300"
+              >
                 {error}
               </p>
             ) : null}
@@ -145,7 +155,10 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount | null }) {
               {t('consentText')}
             </p>
             {error ? (
-              <p role="alert" className="mt-3 rounded-xl border border-accent-500/30 bg-accent-500/10 p-2 text-xs text-accent-700 dark:text-accent-300">
+              <p
+                role="alert"
+                className="mt-3 rounded-xl border border-accent-500/30 bg-accent-500/10 p-2 text-xs text-accent-700 dark:text-accent-300"
+              >
                 {error}
               </p>
             ) : null}
@@ -166,7 +179,16 @@ export function LoyaltyView({ initial }: { initial: LoyaltyAccount | null }) {
 
 function CheckCircle({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
       <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
       <path d="m9 11 3 3L22 4" />
     </svg>

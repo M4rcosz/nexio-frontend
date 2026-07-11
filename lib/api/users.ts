@@ -69,7 +69,11 @@ export async function changeMyPassword(
   if (USE_MOCKS) {
     await mockDelay()
     if (body.newPassword === body.currentPassword) {
-      throw new ApiError(422, null, 'New password must differ from the current one.')
+      throw new ApiError(
+        422,
+        null,
+        'New password must differ from the current one.',
+      )
     }
     if (body.newPassword.length < 10) {
       throw new ApiError(400, null, 'New password is too weak.')

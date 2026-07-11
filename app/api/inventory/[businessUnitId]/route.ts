@@ -24,7 +24,10 @@ export async function GET(
     return NextResponse.json(page)
   } catch (err) {
     if (err instanceof ApiError && err.status < 500) {
-      return NextResponse.json({ error: describeError(err) }, { status: err.status })
+      return NextResponse.json(
+        { error: describeError(err) },
+        { status: err.status },
+      )
     }
     return NextResponse.json({ error: describeError(err) }, { status: 500 })
   }

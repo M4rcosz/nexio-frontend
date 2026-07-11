@@ -59,7 +59,12 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['var(--font-display)', 'var(--font-sans)', 'system-ui', 'sans-serif'],
+        display: [
+          'var(--font-display)',
+          'var(--font-sans)',
+          'system-ui',
+          'sans-serif',
+        ],
       },
       backgroundImage: {
         // Deep accent-700 start keeps white text/glyphs on a brand-filled
@@ -76,10 +81,12 @@ const config: Config = {
       },
       boxShadow: {
         glow: '0 0 0 1px rgb(var(--brand-500) / 0.40), 0 18px 48px -14px rgb(var(--brand-500) / 0.65)',
-        'glow-accent': '0 0 0 1px rgb(var(--accent-500) / 0.40), 0 18px 48px -14px rgb(var(--accent-500) / 0.65)',
+        'glow-accent':
+          '0 0 0 1px rgb(var(--accent-500) / 0.40), 0 18px 48px -14px rgb(var(--accent-500) / 0.65)',
         'glow-sm': '0 0 16px -2px rgb(var(--brand-500) / 0.55)',
         soft: '0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px -8px rgb(0 0 0 / 0.16)',
-        'soft-lg': '0 1px 2px rgb(0 0 0 / 0.08), 0 24px 64px -16px rgb(0 0 0 / 0.30)',
+        'soft-lg':
+          '0 1px 2px rgb(0 0 0 / 0.08), 0 24px 64px -16px rgb(0 0 0 / 0.30)',
       },
       keyframes: {
         'fade-in': {

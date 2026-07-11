@@ -66,10 +66,7 @@ export function CartView() {
 
         <ul className="space-y-3">
           {items.map((item) => (
-            <li
-              key={item.productId}
-              className="card card-hover flex gap-4 p-4"
-            >
+            <li key={item.productId} className="card card-hover flex gap-4 p-4">
               <div className="flex h-24 w-24 flex-none items-center justify-center overflow-hidden rounded-xl bg-brand-soft text-3xl">
                 {item.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -111,7 +108,9 @@ export function CartView() {
                   <div className="inline-flex items-center overflow-hidden rounded-xl border border-border bg-surface">
                     <button
                       type="button"
-                      onClick={() => setQuantity(item.productId, item.quantity - 1)}
+                      onClick={() =>
+                        setQuantity(item.productId, item.quantity - 1)
+                      }
                       className="px-3 py-1.5 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
                       aria-label="−"
                     >
@@ -122,7 +121,9 @@ export function CartView() {
                     </span>
                     <button
                       type="button"
-                      onClick={() => setQuantity(item.productId, item.quantity + 1)}
+                      onClick={() =>
+                        setQuantity(item.productId, item.quantity + 1)
+                      }
                       className="px-3 py-1.5 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
                       aria-label="+"
                     >
@@ -180,7 +181,16 @@ export function CartView() {
 
 function TrashIcon({ className = '' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
       <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
     </svg>
   )

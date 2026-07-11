@@ -31,7 +31,10 @@ export async function PATCH(
     parsed = Body.parse(await req.json())
   } catch (err) {
     return NextResponse.json(
-      { error: 'Invalid payload.', details: err instanceof z.ZodError ? err.flatten() : undefined },
+      {
+        error: 'Invalid payload.',
+        details: err instanceof z.ZodError ? err.flatten() : undefined,
+      },
       { status: 400 },
     )
   }
@@ -46,9 +49,15 @@ export async function PATCH(
       err && typeof err === 'object' && 'code' in err
         ? String((err as { code: unknown }).code)
         : undefined
-    if (code === 'invalid_transition' || (err instanceof ApiError && err.status === 422)) {
+    if (
+      code === 'invalid_transition' ||
+      (err instanceof ApiError && err.status === 422)
+    ) {
       return NextResponse.json(
-        { error: 'This status transition is not allowed.', code: 'invalid_transition' },
+        {
+          error: 'This status transition is not allowed.',
+          code: 'invalid_transition',
+        },
         { status: 422 },
       )
     }

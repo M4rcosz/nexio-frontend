@@ -39,11 +39,7 @@ function mergeUnique(current: Order[], incoming: Order[]): Order[] {
   return next
 }
 
-export function MyOrdersList({
-  initial,
-}: {
-  initial: Paginated<Order>
-}) {
+export function MyOrdersList({ initial }: { initial: Paginated<Order> }) {
   const t = useTranslations('orders')
   const tStatus = useTranslations('orderStatus')
   const tChannel = useTranslations('orderChannel')

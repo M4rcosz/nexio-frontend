@@ -56,7 +56,8 @@ export function PromotionForm({
     businessUnitId:
       promotion?.businessUnitId ?? scopedBusinessUnitId ?? units[0]?.id ?? '',
     name: promotion?.name ?? '',
-    discountType: (promotion?.discountType ?? 'PERCENTAGE') as PromotionDiscountType,
+    discountType: (promotion?.discountType ??
+      'PERCENTAGE') as PromotionDiscountType,
     discountValue: promotion?.discountValue ?? '',
     minOrderValue: promotion?.minOrderValue ?? '',
     startDate: promotion ? toLocalInput(promotion.startDate) : '',
@@ -72,7 +73,10 @@ export function PromotionForm({
     e.preventDefault()
     setError(null)
 
-    if (!MONEY_RE.test(form.discountValue) || !MONEY_RE.test(form.minOrderValue)) {
+    if (
+      !MONEY_RE.test(form.discountValue) ||
+      !MONEY_RE.test(form.minOrderValue)
+    ) {
       setError(t('invalidMoney'))
       return
     }
@@ -123,9 +127,9 @@ export function PromotionForm({
         body: JSON.stringify(body),
       })
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as
-          | { code?: string }
-          | null
+        const data = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }

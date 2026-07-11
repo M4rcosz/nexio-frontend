@@ -17,7 +17,10 @@ export type BusinessUnitListFilters = {
 }
 
 /** Merge a new page into the current list, dropping ids already present. */
-function mergeUnique(current: BusinessUnit[], incoming: BusinessUnit[]): BusinessUnit[] {
+function mergeUnique(
+  current: BusinessUnit[],
+  incoming: BusinessUnit[],
+): BusinessUnit[] {
   const seen = new Set(current.map((u) => u.id))
   const next = [...current]
   for (const u of incoming) {
@@ -44,24 +47,30 @@ export function BusinessUnitList({
   const [meta, setMeta] = useState<Meta>(initial.meta)
   const [loadingMore, setLoadingMore] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
-  const [rowError, setRowError] = useState<{ id: string; message: string } | null>(null)
+  const [rowError, setRowError] = useState<{
+    id: string
+    message: string
+  } | null>(null)
 
   async function loadMore() {
     if (!meta.hasMore || !meta.nextCursor || loadingMore) return
     setLoadingMore(true)
     try {
-      const page = await clientFetch<Paginated<BusinessUnit>>('/api/business-units', {
-        query: {
-          limit: 20,
-          cursor: meta.nextCursor,
-          search: filters.search,
-          city: filters.city,
-          isActive:
-            typeof filters.isActive === 'boolean'
-              ? String(filters.isActive)
-              : undefined,
+      const page = await clientFetch<Paginated<BusinessUnit>>(
+        '/api/business-units',
+        {
+          query: {
+            limit: 20,
+            cursor: meta.nextCursor,
+            search: filters.search,
+            city: filters.city,
+            isActive:
+              typeof filters.isActive === 'boolean'
+                ? String(filters.isActive)
+                : undefined,
+          },
         },
-      })
+      )
       setUnits((cur) => mergeUnique(cur, page.data))
       setMeta(page.meta)
     } catch {
@@ -93,7 +102,9 @@ export function BusinessUnitList({
         setUnits((cur) =>
           cur.map((u) => (u.id === unit.id ? { ...u, isActive: !next } : u)),
         )
-        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        const body = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         setRowError({
           id: unit.id,
           message: errorMessage(body?.code, res.status) ?? t('actionFailed'),
