@@ -31,8 +31,10 @@ const MANAGER: AdminContext = {
   manageableRoles: ['ATTENDANT', 'KITCHEN'],
 }
 
+const PRODUCT_ID = '11111111-1111-4111-8111-111111111111'
+
 const validBody = {
-  productId: 'p1',
+  productId: PRODUCT_ID,
   type: 'IN' as const,
   quantity: 5,
   reason: 'restock',
@@ -76,7 +78,7 @@ describe('POST /api/inventory/[businessUnitId]/adjust', () => {
     expect(await res.json()).toMatchObject({ id: 'i1' })
     expect(mockedAdjustInventory).toHaveBeenCalledWith(
       'bu-1',
-      expect.objectContaining({ productId: 'p1', type: 'IN' }),
+      expect.objectContaining({ productId: PRODUCT_ID, type: 'IN' }),
     )
   })
 
@@ -110,12 +112,28 @@ describe('POST /api/inventory/[businessUnitId]/adjust', () => {
     expect(await res.json()).toMatchObject({ code: 'inventory_not_found' })
   })
 
-  it('maps an ApiError(422) to 422 inventory_below_zero', async () => {
+  it('maps an ApiError(422) on an OUT to inventory_below_zero', async () => {
     mockedGetAdminContext.mockResolvedValue(ADMIN)
     mockedAdjustInventory.mockRejectedValue(new ApiError(422, null, 'below'))
     const res = await POST(postReq({ ...validBody, type: 'OUT' }), ctx('bu-1'))
     expect(res.status).toBe(422)
     expect(await res.json()).toMatchObject({ code: 'inventory_below_zero' })
+  })
+
+  it('maps an ApiError(422) on an IN to inventory_over_max', async () => {
+    mockedGetAdminContext.mockResolvedValue(ADMIN)
+    mockedAdjustInventory.mockRejectedValue(new ApiError(422, null, 'over'))
+    const res = await POST(postReq({ ...validBody, type: 'IN' }), ctx('bu-1'))
+    expect(res.status).toBe(422)
+    expect(await res.json()).toMatchObject({ code: 'inventory_over_max' })
+  })
+
+  it('maps an inventory_over_max coded error to 422', async () => {
+    mockedGetAdminContext.mockResolvedValue(ADMIN)
+    mockedAdjustInventory.mockRejectedValue({ code: 'inventory_over_max' })
+    const res = await POST(postReq({ ...validBody, type: 'IN' }), ctx('bu-1'))
+    expect(res.status).toBe(422)
+    expect(await res.json()).toMatchObject({ code: 'inventory_over_max' })
   })
 
   it('maps a service 5xx to 500', async () => {

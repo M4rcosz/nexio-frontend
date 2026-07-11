@@ -33,7 +33,9 @@ describe('POST /api/auth/login', () => {
       refresh_token: 'r1',
     })
 
-    const res = await POST(loginReq({ username: 'admin', password: 'secret' }))
+    const res = await POST(
+      loginReq({ username: 'admin', password: 'secret12' }),
+    )
 
     expect(res.status).toBe(200)
     expect(res.cookies.get('nexio_session')?.value).toBeTruthy()
@@ -44,7 +46,9 @@ describe('POST /api/auth/login', () => {
   it('answers 502 and sets no cookie when the refresh token is empty', async () => {
     mockedLogin.mockResolvedValue({ access_token: 'a1', refresh_token: '' })
 
-    const res = await POST(loginReq({ username: 'admin', password: 'secret' }))
+    const res = await POST(
+      loginReq({ username: 'admin', password: 'secret12' }),
+    )
 
     expect(res.status).toBe(502)
     expect(res.cookies.get('nexio_session')).toBeUndefined()
@@ -54,7 +58,9 @@ describe('POST /api/auth/login', () => {
   it('answers 502 and sets no cookie when the access token is empty', async () => {
     mockedLogin.mockResolvedValue({ access_token: '', refresh_token: 'r1' })
 
-    const res = await POST(loginReq({ username: 'admin', password: 'secret' }))
+    const res = await POST(
+      loginReq({ username: 'admin', password: 'secret12' }),
+    )
 
     expect(res.status).toBe(502)
     expect(res.cookies.get('nexio_session')).toBeUndefined()
@@ -63,7 +69,9 @@ describe('POST /api/auth/login', () => {
   it('maps a backend 401 to invalid_credentials', async () => {
     mockedLogin.mockRejectedValue(new ApiError(401, null, 'nope'))
 
-    const res = await POST(loginReq({ username: 'admin', password: 'x' }))
+    const res = await POST(
+      loginReq({ username: 'admin', password: 'wrongpass' }),
+    )
 
     expect(res.status).toBe(401)
     expect(await res.json()).toMatchObject({ code: 'invalid_credentials' })

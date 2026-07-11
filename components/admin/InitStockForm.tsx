@@ -9,47 +9,55 @@ import {
   MAX_INVENTORY_QUANTITY,
   REASON_MAX_LENGTH,
 } from '@/lib/validation/constants'
-import type { InventoryAdjustmentType } from '@/lib/api/types'
 
 type ProductOption = { id: string; name: string }
 
-export function AdjustStockForm({
+export type InitPrefill = { productId: string; quantity: number }
+
+/**
+ * Opens the first stock row for a product at a unit. On 409 (a row already
+ * exists) it steers the operator to the adjustment flow — the common case.
+ */
+export function InitStockForm({
   businessUnitId,
   products,
-  prefillProductId,
-  onInitRequest,
+  prefill,
+  onAdjustRequest,
 }: {
   businessUnitId: string
   products: ProductOption[]
-  /** Product handed over from the init form's 409 ("already exists") message. */
-  prefillProductId?: string | null
-  /** Ask the parent to open the init form seeded with these values (on 404). */
-  onInitRequest?: (productId: string, quantity: number) => void
+  /** Seed values handed over from the adjust form's "not found" CTA. */
+  prefill?: InitPrefill | null
+  /** Ask the parent to focus the adjustment form for this product (on 409). */
+  onAdjustRequest?: (productId: string) => void
 }) {
   const router = useRouter()
-  const t = useTranslations('admin.inventory.form')
+  const t = useTranslations('admin.inventory.init')
   const errorMessage = useErrorMessage()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
-  const [notFound, setNotFound] = useState(false)
+  const [exists, setExists] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
 
   const [form, setForm] = useState({
     productId: products[0]?.id ?? '',
-    type: 'IN' as InventoryAdjustmentType,
-    quantity: 1,
+    quantity: 0,
+    minQuantity: 0,
     reason: '',
   })
 
-  // Focus the product handed over from the init form's "already exists" message.
+  // Apply a prefill handed over from the adjust form's "not found" CTA.
   useEffect(() => {
-    if (prefillProductId) {
-      setForm((s) => ({ ...s, productId: prefillProductId }))
-      setNotFound(false)
-      setError(null)
-      setSuccess(null)
-    }
-  }, [prefillProductId])
+    if (!prefill) return
+    setForm((s) => ({
+      ...s,
+      productId: prefill.productId || s.productId,
+      quantity: prefill.quantity,
+    }))
+    setExists(false)
+    setError(null)
+    setSuccess(null)
+  }, [prefill])
 
   function update<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((s) => ({ ...s, [k]: v }))
@@ -58,25 +66,30 @@ export function AdjustStockForm({
   function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    setNotFound(false)
+    setExists(false)
     setSuccess(null)
     const quantity = Number(form.quantity)
+    const minQuantity = Number(form.minQuantity)
     if (
       !Number.isInteger(quantity) ||
-      quantity < 1 ||
-      quantity > MAX_INVENTORY_QUANTITY
+      quantity < 0 ||
+      quantity > MAX_INVENTORY_QUANTITY ||
+      !Number.isInteger(minQuantity) ||
+      minQuantity < 0 ||
+      minQuantity > MAX_INVENTORY_QUANTITY
     ) {
       setError(t('invalidQuantity'))
       return
     }
     start(async () => {
-      const res = await fetch(`/api/inventory/${businessUnitId}/adjust`, {
+      // Never send businessUnitId in the body — the unit comes from the URL.
+      const res = await fetch(`/api/inventory/${businessUnitId}/items`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           productId: form.productId,
-          type: form.type,
           quantity,
+          minQuantity,
           reason: form.reason,
         }),
       })
@@ -85,14 +98,15 @@ export function AdjustStockForm({
           error?: string
           code?: string
         } | null
-        if (data?.code === 'inventory_not_found') setNotFound(true)
-        else if (data?.code === 'inventory_below_zero') setError(t('belowZero'))
-        else if (data?.code === 'inventory_over_max') setError(t('overMax'))
-        else setError(errorMessage(data?.code, res.status) ?? t('failed'))
+        if (data?.code === 'inventory_exists') {
+          setExists(true)
+          return
+        }
+        setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }
       setSuccess(t('success'))
-      setForm((s) => ({ ...s, quantity: 1, reason: '' }))
+      setForm((s) => ({ ...s, quantity: 0, minQuantity: 0, reason: '' }))
       router.refresh()
     })
   }
@@ -100,13 +114,15 @@ export function AdjustStockForm({
   return (
     <form onSubmit={submit} className="space-y-4">
       <h2 className="font-display text-lg font-bold text-fg">{t('title')}</h2>
+      <p className="text-sm text-fg-muted">{t('subtitle')}</p>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="label" htmlFor="adjust-product">
+          <label className="label" htmlFor="init-product">
             {t('product')}
           </label>
           <Select
-            id="adjust-product"
+            id="init-product"
             value={form.productId}
             onChange={(v) => update('productId', v)}
             ariaLabel={t('product')}
@@ -114,31 +130,30 @@ export function AdjustStockForm({
           />
         </div>
         <div>
-          <label className="label" htmlFor="adjust-type">
-            {t('type')}
+          <label className="label" htmlFor="init-reason">
+            {t('reason')}
           </label>
-          <Select
-            id="adjust-type"
-            value={form.type}
-            onChange={(v) => update('type', v as InventoryAdjustmentType)}
-            ariaLabel={t('type')}
-            options={[
-              { value: 'IN', label: t('typeIn') },
-              { value: 'OUT', label: t('typeOut') },
-            ]}
+          <input
+            id="init-reason"
+            className="input"
+            required
+            maxLength={REASON_MAX_LENGTH}
+            placeholder={t('reasonPlaceholder')}
+            value={form.reason}
+            onChange={(e) => update('reason', e.target.value)}
           />
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="label" htmlFor="adjust-qty">
+          <label className="label" htmlFor="init-qty">
             {t('quantity')}
           </label>
           <input
-            id="adjust-qty"
+            id="init-qty"
             type="number"
-            min={1}
+            min={0}
             max={MAX_INVENTORY_QUANTITY}
             step={1}
             className="input"
@@ -148,17 +163,19 @@ export function AdjustStockForm({
           />
         </div>
         <div>
-          <label className="label" htmlFor="adjust-reason">
-            {t('reason')}
+          <label className="label" htmlFor="init-min">
+            {t('minQuantity')}
           </label>
           <input
-            id="adjust-reason"
+            id="init-min"
+            type="number"
+            min={0}
+            max={MAX_INVENTORY_QUANTITY}
+            step={1}
             className="input"
             required
-            maxLength={REASON_MAX_LENGTH}
-            placeholder={t('reasonPlaceholder')}
-            value={form.reason}
-            onChange={(e) => update('reason', e.target.value)}
+            value={form.minQuantity}
+            onChange={(e) => update('minQuantity', Number(e.target.value))}
           />
         </div>
       </div>
@@ -171,21 +188,19 @@ export function AdjustStockForm({
           {error}
         </p>
       ) : null}
-      {notFound ? (
+      {exists ? (
         <div
           role="alert"
           className="space-y-2 rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300"
         >
-          <p>{t('notFound')}</p>
-          {onInitRequest ? (
+          <p>{t('exists')}</p>
+          {onAdjustRequest ? (
             <button
               type="button"
               className="btn-secondary"
-              onClick={() =>
-                onInitRequest(form.productId, Number(form.quantity) || 0)
-              }
+              onClick={() => onAdjustRequest(form.productId)}
             >
-              {t('initCta')}
+              {t('goToAdjust')}
             </button>
           ) : null}
         </div>

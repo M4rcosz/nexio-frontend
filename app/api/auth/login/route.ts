@@ -8,10 +8,15 @@ import {
   SESSION_COOKIE_NAME,
   sessionCookieOptions,
 } from '@/lib/auth/cookie'
+import { loginUsernameSchema } from '@/lib/validation/username'
+import { loginPasswordSchema } from '@/lib/validation/password'
 
+// Login is lenient: username is trimmed and length-bounded (no format/reserved
+// rules), and the password only has a length check (no complexity) so existing
+// accounts created before the strong-password rule still authenticate.
 const Body = z.object({
-  username: z.string().min(1, 'Username is required.'),
-  password: z.string().min(1, 'Password is required.'),
+  username: loginUsernameSchema,
+  password: loginPasswordSchema,
 })
 
 /** Best-effort read of the `role` claim from a JWT access token. */

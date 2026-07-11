@@ -3,19 +3,33 @@ import { z } from 'zod'
 import { createInternalUser, listInternalUsers } from '@/lib/api/admin-users'
 import { ApiError, describeError } from '@/lib/api/errors'
 import { canManageRole, getAdminContext } from '@/lib/auth/access'
+import {
+  EMAIL_MAX_LENGTH,
+  NAME_MAX_LENGTH,
+  PHONE_MAX_LENGTH,
+} from '@/lib/validation/constants'
+import { usernameSchema } from '@/lib/validation/username'
+import { passwordSchema } from '@/lib/validation/password'
 
+// KEEP the existing role enum (with KITCHEN) unchanged.
 const RoleEnum = z.enum(['ATTENDANT', 'KITCHEN', 'MANAGER', 'ADMIN'])
 
 const CreateBody = z.object({
-  username: z.string().min(3),
-  email: z.string().email(),
-  name: z.string().min(2),
-  phone: z.string().optional(),
-  password: z.string().min(8),
+  username: usernameSchema,
+  email: z.string().email().max(EMAIL_MAX_LENGTH),
+  name: z.string().min(2).max(NAME_MAX_LENGTH),
+  phone: z.string().max(PHONE_MAX_LENGTH).optional(),
+  password: passwordSchema,
   role: RoleEnum,
   /** Non-ADMIN roles may be bound to several units. Required (non-empty) for
-   * non-ADMIN roles — validated below. */
-  businessUnitIds: z.array(z.string().min(1)).optional(),
+   * non-ADMIN roles — validated below. Ids must be unique uuids. */
+  businessUnitIds: z
+    .array(z.string().uuid())
+    .refine(
+      (ids) => new Set(ids).size === ids.length,
+      'Duplicate business unit.',
+    )
+    .optional(),
 })
 
 export async function GET(req: Request) {

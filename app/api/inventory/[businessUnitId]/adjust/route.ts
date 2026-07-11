@@ -3,13 +3,10 @@ import { z } from 'zod'
 import { adjustInventory } from '@/lib/api/inventory'
 import { ApiError, describeError } from '@/lib/api/errors'
 import { canAccessUnit, getAdminContext } from '@/lib/auth/access'
-
-const AdjustBody = z.object({
-  productId: z.string().min(1),
-  type: z.enum(['IN', 'OUT']),
-  quantity: z.number().int().positive(),
-  reason: z.string().min(1),
-})
+import {
+  adjustInventorySchema,
+  type AdjustInventoryInput,
+} from '@/lib/validation/inventory'
 
 export async function POST(
   req: Request,
@@ -27,9 +24,9 @@ export async function POST(
     )
   }
 
-  let parsed: z.infer<typeof AdjustBody>
+  let parsed: AdjustInventoryInput
   try {
-    parsed = AdjustBody.parse(await req.json())
+    parsed = adjustInventorySchema.parse(await req.json())
   } catch (err) {
     return NextResponse.json(
       {
@@ -62,20 +59,46 @@ export async function POST(
         { status: 404 },
       )
     }
-    if (
-      code === 'inventory_below_zero' ||
-      (err instanceof ApiError && err.status === 422)
-    ) {
+    // A 422 is ambiguous on the wire, so we synthesize the code from the request
+    // `type` we already parsed (the repo convention ignores the backend message):
+    // an OUT that 422s went below zero; an IN that 422s exceeded the max.
+    if (code === 'inventory_over_max' || code === 'inventory_below_zero') {
+      const status = 422
       return NextResponse.json(
-        {
-          error: 'This removal would drive the balance below zero.',
-          code: 'inventory_below_zero',
-        },
-        { status: 422 },
+        code === 'inventory_over_max'
+          ? {
+              error: 'This restock would exceed the maximum quantity.',
+              code: 'inventory_over_max',
+            }
+          : {
+              error: 'This removal would drive the balance below zero.',
+              code: 'inventory_below_zero',
+            },
+        { status },
       )
     }
+    if (err instanceof ApiError && err.status === 422) {
+      return parsed.type === 'IN'
+        ? NextResponse.json(
+            {
+              error: 'This restock would exceed the maximum quantity.',
+              code: 'inventory_over_max',
+            },
+            { status: 422 },
+          )
+        : NextResponse.json(
+            {
+              error: 'This removal would drive the balance below zero.',
+              code: 'inventory_below_zero',
+            },
+            { status: 422 },
+          )
+    }
     if (err instanceof ApiError && err.status < 500) {
-      return NextResponse.json({ error: describeError(err) }, { status: err.status })
+      return NextResponse.json(
+        { error: describeError(err) },
+        { status: err.status },
+      )
     }
     return NextResponse.json({ error: describeError(err) }, { status: 500 })
   }

@@ -6,6 +6,10 @@ import { useRouter } from '@/i18n/navigation'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { landingPathForRole } from '@/lib/auth/landing'
 import { PasswordInput } from '@/components/PasswordInput'
+import {
+  PASSWORD_LOGIN_MIN_LENGTH,
+  USERNAME_LOGIN_MAX_LENGTH,
+} from '@/lib/validation/constants'
 
 export function LoginForm({ redirectTo }: { redirectTo: string | null }) {
   const router = useRouter()
@@ -23,20 +27,25 @@ export function LoginForm({ redirectTo }: { redirectTo: string | null }) {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        // Trim the username so a stray leading/trailing space never breaks login.
+        body: JSON.stringify({ username: username.trim(), password }),
       })
       if (!res.ok) {
         if (res.status === 401) {
           setError(t('invalidCredentials'))
           return
         }
-        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        const body = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         setError(errorMessage(body?.code, res.status) ?? t('failed'))
         return
       }
       // Honor an explicit redirect (protected route the user came from);
       // otherwise send them to the landing page for their role.
-      const body = (await res.json().catch(() => null)) as { role?: string } | null
+      const body = (await res.json().catch(() => null)) as {
+        role?: string
+      } | null
       router.push(redirectTo ?? landingPathForRole(body?.role))
       router.refresh()
     })
@@ -54,6 +63,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string | null }) {
           autoComplete="username"
           className="input"
           required
+          maxLength={USERNAME_LOGIN_MAX_LENGTH}
           value={username}
           onChange={(e) => setUsername(e.target.value)}
         />
@@ -67,13 +77,16 @@ export function LoginForm({ redirectTo }: { redirectTo: string | null }) {
           name="password"
           autoComplete="current-password"
           required
-          minLength={1}
+          minLength={PASSWORD_LOGIN_MIN_LENGTH}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
       </div>
       {error ? (
-        <p role="alert" className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
+        <p
+          role="alert"
+          className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300"
+        >
           {error}
         </p>
       ) : null}

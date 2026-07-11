@@ -4,8 +4,14 @@ import { useMemo, useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { PasswordInput } from '@/components/PasswordInput'
+import { PasswordStrengthMeter } from '@/components/PasswordStrengthMeter'
 import { Select } from '@/components/ui/Select'
 import { useRouter } from '@/i18n/navigation'
+import { useUsernameError } from '@/lib/validation/useUsernameError'
+import {
+  PASSWORD_MIN_LENGTH,
+  USERNAME_MAX_LENGTH,
+} from '@/lib/validation/constants'
 import type { PublicBusinessUnit, Role, User } from '@/lib/api/types'
 
 type Mode = 'create' | 'edit'
@@ -38,6 +44,7 @@ export function UserForm({
   const router = useRouter()
   const t = useTranslations('admin.form')
   const errorMessage = useErrorMessage()
+  const usernameError = useUsernameError()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
@@ -71,6 +78,10 @@ export function UserForm({
         : [...s.businessUnitIds, id],
     }))
   }
+
+  // Instant, client-side feedback for username validity (create only — the
+  // username is immutable on edit).
+  const usernameHint = mode === 'create' ? usernameError(form.username) : null
 
   const isAdminRole = form.role === 'ADMIN'
   // ADMIN role has no unit; for everyone else at least one is required.
@@ -161,9 +172,20 @@ export function UserForm({
             required={mode === 'create'}
             disabled={mode === 'edit'}
             minLength={3}
+            maxLength={USERNAME_MAX_LENGTH}
+            aria-invalid={usernameHint ? true : undefined}
+            aria-describedby={usernameHint ? 'user-username-error' : undefined}
             value={form.username}
             onChange={(e) => update('username', e.target.value)}
           />
+          {usernameHint ? (
+            <p
+              id="user-username-error"
+              className="mt-1 text-xs text-accent-700 dark:text-accent-300"
+            >
+              {usernameHint}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -202,11 +224,12 @@ export function UserForm({
           <PasswordInput
             id="password"
             required
-            minLength={8}
+            minLength={PASSWORD_MIN_LENGTH}
             autoComplete="new-password"
             value={form.password}
             onChange={(e) => update('password', e.target.value)}
           />
+          <PasswordStrengthMeter password={form.password} />
         </div>
       ) : null}
 

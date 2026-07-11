@@ -5,6 +5,8 @@ import { getMe, isAccountGoneError } from '@/lib/api/users'
 import { listBusinessUnits } from '@/lib/api/business-units'
 import { ApiError } from '@/lib/api/errors'
 import { AccountGoneRedirect } from '@/components/AccountGoneRedirect'
+import { EditProfileForm } from '@/components/EditProfileForm'
+import { ChangePasswordForm } from '@/components/ChangePasswordForm'
 import type { User } from '@/lib/api/types'
 
 export const dynamic = 'force-dynamic'
@@ -87,6 +89,15 @@ export default async function ProfilePage({
             </dd>
           </div>
         </dl>
+      </div>
+
+      <EditProfileForm
+        initialName={user.name}
+        initialPhone={user.phone ?? ''}
+      />
+
+      <div className="card p-6">
+        <ChangePasswordForm />
       </div>
     </div>
   )

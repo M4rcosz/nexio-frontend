@@ -187,7 +187,7 @@
     "nameLabel": "Nome completo",
     "emailLabel": "E-mail",
     "usernameLabel": "Usuário",
-    "passwordLabel": "Senha (mín. 8 caracteres)",
+    "passwordLabel": "Senha (mín. 10 caracteres)",
     "phoneLabel": "Telefone (opcional)",
     "submit": "Criar conta",
     "submitting": "Criando conta...",
@@ -249,7 +249,7 @@
       "username": "Usuário",
       "email": "E-mail",
       "phone": "Telefone (opcional)",
-      "password": "Senha (mín. 8 caracteres)",
+      "password": "Senha (mín. 10 caracteres)",
       "role": "Papel",
       "roleAttendant": "Atendente",
       "roleKitchen": "Cozinha",
@@ -300,7 +300,25 @@
         "failed": "Não foi possível aplicar o ajuste.",
         "notFound": "Não existe saldo de estoque para este produto na unidade.",
         "belowZero": "Esta saída deixaria o saldo abaixo de zero.",
+        "overMax": "Esta entrada excederia a quantidade máxima.",
+        "initCta": "Inicializar estoque deste produto",
         "invalidQuantity": "A quantidade deve ser um número inteiro maior ou igual a 1."
+      },
+      "init": {
+        "title": "Inicializar estoque",
+        "subtitle": "Abra o primeiro saldo de estoque de um produto nesta unidade.",
+        "product": "Produto",
+        "quantity": "Quantidade inicial",
+        "minQuantity": "Quantidade mínima",
+        "reason": "Motivo",
+        "reasonPlaceholder": "Ex: Contagem inicial de estoque.",
+        "submit": "Criar saldo",
+        "submitting": "Criando...",
+        "success": "Saldo de estoque criado.",
+        "failed": "Não foi possível inicializar o estoque.",
+        "exists": "Já existe um saldo de estoque para este produto. Use o formulário de ajuste.",
+        "goToAdjust": "Ir para o ajuste",
+        "invalidQuantity": "As quantidades devem ser números inteiros maiores ou iguais a 0."
       }
     },
     "promotions": {
@@ -545,7 +563,9 @@
       "name_taken": "Nome já em uso.",
       "cnpj_taken": "CNPJ já cadastrado.",
       "phone_taken": "Telefone já cadastrado.",
-      "cnpj_or_phone_taken": "CNPJ ou telefone já cadastrado."
+      "cnpj_or_phone_taken": "CNPJ ou telefone já cadastrado.",
+      "inventory_over_max": "Esta entrada excederia a quantidade máxima.",
+      "inventory_exists": "Já existe um saldo de estoque para este produto na unidade."
     }
   },
   "orderStatus": {
@@ -592,6 +612,46 @@
     "inactive": "Inativo",
     "notProvided": "Não informado",
     "back": "Voltar ao início",
-    "accountGone": "Sua conta não está mais disponível. Encerrando a sessão…"
+    "accountGone": "Sua conta não está mais disponível. Encerrando a sessão…",
+    "edit": {
+      "title": "Editar perfil",
+      "subtitle": "Atualize seu nome ou telefone.",
+      "nameLabel": "Nome",
+      "phoneLabel": "Telefone",
+      "submit": "Salvar alterações",
+      "submitting": "Salvando...",
+      "success": "Perfil atualizado.",
+      "failed": "Não foi possível atualizar seu perfil.",
+      "atLeastOne": "Altere seu nome ou telefone antes de salvar.",
+      "phoneTaken": "Telefone já cadastrado."
+    }
+  },
+  "username": {
+    "tooShort": "Usuário muito curto (mínimo de 3 caracteres).",
+    "tooLong": "Usuário muito longo (máximo de 50 caracteres).",
+    "pattern": "Use letras minúsculas, números, . _ ou - (não no início ou fim).",
+    "reserved": "Este usuário é reservado. Escolha outro."
+  },
+  "password": {
+    "strengthLabel": "Força da senha",
+    "strengthWeak": "Fraca",
+    "strengthFair": "Razoável",
+    "strengthGood": "Boa",
+    "strengthStrong": "Forte",
+    "requirement": "Ao menos 10 caracteres e 3 de: minúsculas, maiúsculas, dígitos, símbolos."
+  },
+  "changePassword": {
+    "title": "Alterar senha",
+    "subtitle": "Você será desconectado de todos os dispositivos após alterar.",
+    "currentLabel": "Senha atual",
+    "newLabel": "Nova senha",
+    "confirmLabel": "Confirmar nova senha",
+    "submit": "Alterar senha",
+    "submitting": "Alterando...",
+    "mismatch": "As novas senhas não coincidem.",
+    "weak": "Escolha uma senha mais forte (veja os requisitos).",
+    "wrongPassword": "A senha atual está incorreta.",
+    "samePassword": "A nova senha deve ser diferente da atual.",
+    "failed": "Não foi possível alterar sua senha."
   }
 }
