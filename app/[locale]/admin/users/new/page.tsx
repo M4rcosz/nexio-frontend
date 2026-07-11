@@ -34,8 +34,8 @@ export default async function NewUserPage({
         <UserForm
           mode="create"
           units={units}
-          scopedBusinessUnitId={
-            ctx.role === 'MANAGER' ? ctx.scopedBusinessUnitId : null
+          scopedBusinessUnitIds={
+            ctx.role === 'MANAGER' ? ctx.scopedBusinessUnitIds : null
           }
           manageableRoles={ctx.manageableRoles}
         />

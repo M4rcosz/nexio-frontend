@@ -46,12 +46,12 @@ resource marked "real backend + mock fallback" honours `NEXT_PUBLIC_USE_MOCKS`.
 | Signup                | Stub (`/api/auth/register` Next route handler)  |
 | Business units (public list + admin CRUD) | Real backend + mock fallback (`GET/POST /api/business-units`, `GET/PATCH /api/business-units/:id`, `POST /api/business-units/:id/active`) |
 | Categories (public list + admin CRUD) | Real backend + mock fallback (`GET/POST /api/categories`, `GET/PATCH /api/categories/:id`) |
-| User profile          | Real backend + mock fallback (`GET /api/users/me`) |
+| User profile          | Real backend + mock fallback (`GET /api/users/me`, `PATCH /api/users/me`, `PATCH /api/users/me/password`) |
 | Orders / Payment      | Real backend + mock fallback (`GET /api/orders/me`, `POST/GET /api/orders`, `/api/payments/...`) |
 | Products (admin CRUD) | Real backend + mock fallback (`POST /api/products`, `PATCH /api/products/:id`) |
 | Menu (business unit — admin) | Real backend + mock fallback (`POST /api/business-units/:id/menu`, `PATCH /api/business-units/:id/menu/:itemId`, `POST /api/business-units/:id/menu/:itemId/available`) |
 | Loyalty               | Mock                                            |
-| Inventory (admin)     | Real backend + mock fallback (`GET/POST /api/inventory/...`)  |
+| Inventory (admin)     | Real backend + mock fallback (`GET /api/inventory/:businessUnitId`, `POST /api/inventory/:businessUnitId/items`, `POST /api/inventory/:businessUnitId/adjust`)  |
 | Promotions (admin)    | Real backend + mock fallback (`/api/promotions/...`)         |
 
 The `NEXT_PUBLIC_USE_MOCKS=true` flag in `.env.local` forces the *menu* and
@@ -124,7 +124,7 @@ app/
 │   ├── payment/[orderId]/       # Payment
 │   ├── orders/                  # History + tracking (cursor pagination, channel/status filters)
 │   ├── loyalty/                 # Points and LGPD consent
-│   ├── profile/                 # Own account (GET /users/me)
+│   ├── profile/                 # Own account (GET/PATCH /users/me + change password)
 │   ├── admin/                   # Admin area: overview, users, products, categories, menu, business-units, inventory, promotions
 │   ├── error.tsx                # Boundary
 │   ├── loading.tsx

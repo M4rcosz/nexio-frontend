@@ -43,8 +43,8 @@ export default async function EditUserPage({
           mode="edit"
           user={user}
           units={unitsPage.data}
-          scopedBusinessUnitId={
-            ctx.role === 'MANAGER' ? ctx.scopedBusinessUnitId : null
+          scopedBusinessUnitIds={
+            ctx.role === 'MANAGER' ? ctx.scopedBusinessUnitIds : null
           }
           manageableRoles={ctx.manageableRoles}
         />

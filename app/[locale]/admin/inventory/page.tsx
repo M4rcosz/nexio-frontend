@@ -7,7 +7,7 @@ import {
 } from '@/lib/api/business-units'
 import { listProducts } from '@/lib/api/products'
 import { InventoryTable } from '@/components/admin/InventoryTable'
-import { AdjustStockForm } from '@/components/admin/AdjustStockForm'
+import { InventoryForms } from '@/components/admin/InventoryForms'
 import { AdminUnitSelector } from '@/components/admin/AdminUnitSelector'
 
 export const dynamic = 'force-dynamic'
@@ -33,7 +33,7 @@ export default async function AdminInventoryPage({
   const selectedUnitId =
     ctx.role === 'MANAGER'
       ? ctx.scopedBusinessUnitId
-      : sp.businessUnitId ?? units[0]?.id ?? null
+      : (sp.businessUnitId ?? units[0]?.id ?? null)
 
   if (!selectedUnitId) {
     return (
@@ -82,21 +82,23 @@ export default async function AdminInventoryPage({
         />
       ) : lockedUnitName ? (
         <p className="text-sm text-fg-muted">
-          {t('unitLabel')}: <span className="font-medium text-fg">{lockedUnitName}</span>{' '}
+          {t('unitLabel')}:{' '}
+          <span className="font-medium text-fg">{lockedUnitName}</span>{' '}
           <span className="text-xs text-fg-subtle">({t('unitLocked')})</span>
         </p>
       ) : null}
 
-      <p className="text-xs text-fg-subtle">{t('count', { count: items.length })}</p>
+      <p className="text-xs text-fg-subtle">
+        {t('count', { count: items.length })}
+      </p>
 
       <InventoryTable items={items} productNames={productNames} />
 
-      <div className="card p-6">
-        <AdjustStockForm
-          businessUnitId={selectedUnitId}
-          products={productsPage.data.map((p) => ({ id: p.id, name: p.name }))}
-        />
-      </div>
+      <InventoryForms
+        key={selectedUnitId}
+        businessUnitId={selectedUnitId}
+        products={productsPage.data.map((p) => ({ id: p.id, name: p.name }))}
+      />
     </div>
   )
 }

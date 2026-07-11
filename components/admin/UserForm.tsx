@@ -4,8 +4,14 @@ import { useMemo, useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { PasswordInput } from '@/components/PasswordInput'
+import { PasswordStrengthMeter } from '@/components/PasswordStrengthMeter'
 import { Select } from '@/components/ui/Select'
 import { useRouter } from '@/i18n/navigation'
+import { useUsernameError } from '@/lib/validation/useUsernameError'
+import {
+  PASSWORD_MIN_LENGTH,
+  USERNAME_MAX_LENGTH,
+} from '@/lib/validation/constants'
 import type { PublicBusinessUnit, Role, User } from '@/lib/api/types'
 
 type Mode = 'create' | 'edit'
@@ -22,19 +28,23 @@ export function UserForm({
   mode,
   user,
   units,
-  scopedBusinessUnitId,
+  scopedBusinessUnitIds,
   manageableRoles,
 }: {
   mode: Mode
   user?: User
   units: PublicBusinessUnit[]
-  /** When set, the form locks the business unit field (MANAGER scope). */
-  scopedBusinessUnitId: string | null
+  /**
+   * MANAGER scope: the unit choices are limited to this set (and seeded from it
+   * on create). `null` means the actor is an ADMIN and may assign any unit.
+   */
+  scopedBusinessUnitIds: string[] | null
   manageableRoles: Role[]
 }) {
   const router = useRouter()
   const t = useTranslations('admin.form')
   const errorMessage = useErrorMessage()
+  const usernameError = useUsernameError()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
 
@@ -51,35 +61,52 @@ export function UserForm({
     phone: user?.phone ?? '',
     password: '',
     role: initialRole,
-    // The form still picks a single unit; the API models a set, so the first
-    // bound unit seeds the field.
-    businessUnitId:
-      user?.businessUnitIds[0] ?? scopedBusinessUnitId ?? units[0]?.id ?? '',
+    // Non-ADMIN staff can be bound to several units. Seed from the edited
+    // user's set, else pre-select the MANAGER's own units on create.
+    businessUnitIds: user?.businessUnitIds ?? scopedBusinessUnitIds ?? [],
   })
 
   function update<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((s) => ({ ...s, [k]: v }))
   }
 
+  function toggleUnit(id: string) {
+    setForm((s) => ({
+      ...s,
+      businessUnitIds: s.businessUnitIds.includes(id)
+        ? s.businessUnitIds.filter((x) => x !== id)
+        : [...s.businessUnitIds, id],
+    }))
+  }
+
+  // Instant, client-side feedback for username validity (create only — the
+  // username is immutable on edit).
+  const usernameHint = mode === 'create' ? usernameError(form.username) : null
+
   const isAdminRole = form.role === 'ADMIN'
-  // ADMIN role has no unit; for everyone else it's required.
+  // ADMIN role has no unit; for everyone else at least one is required.
   const unitFieldVisible = !isAdminRole
-  const unitLocked = scopedBusinessUnitId !== null && !isAdminRole
+  // A MANAGER may only assign units within their own scope; an ADMIN sees all.
+  const selectableUnits = useMemo(
+    () =>
+      scopedBusinessUnitIds === null
+        ? units
+        : units.filter((u) => scopedBusinessUnitIds.includes(u.id)),
+    [units, scopedBusinessUnitIds],
+  )
 
   function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    if (unitFieldVisible && !(scopedBusinessUnitId ?? form.businessUnitId)) {
-      setError(t('unitRequired'))
+    if (unitFieldVisible && form.businessUnitIds.length === 0) {
+      setError(t('unitsRequired'))
       return
     }
     start(async () => {
       const isCreate = mode === 'create'
       const url = isCreate ? '/api/admin/users' : `/api/admin/users/${user!.id}`
       const method = isCreate ? 'POST' : 'PATCH'
-      const businessUnitId = isAdminRole
-        ? null
-        : (scopedBusinessUnitId ?? form.businessUnitId)
+      const businessUnitIds = isAdminRole ? [] : form.businessUnitIds
       const body = isCreate
         ? {
             name: form.name,
@@ -88,14 +115,14 @@ export function UserForm({
             phone: form.phone || undefined,
             password: form.password,
             role: form.role,
-            businessUnitId,
+            businessUnitIds,
           }
         : {
             name: form.name,
             email: form.email,
             phone: form.phone || null,
             role: form.role,
-            businessUnitId,
+            businessUnitIds,
           }
       const res = await fetch(url, {
         method,
@@ -103,9 +130,10 @@ export function UserForm({
         body: JSON.stringify(body),
       })
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as
-          | { error?: string; code?: string }
-          | null
+        const data = (await res.json().catch(() => null)) as {
+          error?: string
+          code?: string
+        } | null
         if (data?.code === 'username_taken') setError(t('usernameTaken'))
         else if (data?.code === 'email_taken') setError(t('emailTaken'))
         else if (data?.code === 'role_forbidden') setError(t('roleForbidden'))
@@ -144,9 +172,20 @@ export function UserForm({
             required={mode === 'create'}
             disabled={mode === 'edit'}
             minLength={3}
+            maxLength={USERNAME_MAX_LENGTH}
+            aria-invalid={usernameHint ? true : undefined}
+            aria-describedby={usernameHint ? 'user-username-error' : undefined}
             value={form.username}
             onChange={(e) => update('username', e.target.value)}
           />
+          {usernameHint ? (
+            <p
+              id="user-username-error"
+              className="mt-1 text-xs text-accent-700 dark:text-accent-300"
+            >
+              {usernameHint}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -185,11 +224,12 @@ export function UserForm({
           <PasswordInput
             id="password"
             required
-            minLength={8}
+            minLength={PASSWORD_MIN_LENGTH}
             autoComplete="new-password"
             value={form.password}
             onChange={(e) => update('password', e.target.value)}
           />
+          <PasswordStrengthMeter password={form.password} />
         </div>
       ) : null}
 
@@ -210,27 +250,33 @@ export function UserForm({
           />
         </div>
         {unitFieldVisible ? (
-          <div>
-            <label className="label" htmlFor="unit">
-              {t('businessUnit')}
-            </label>
-            <Select
-              id="unit"
-              disabled={unitLocked}
-              value={scopedBusinessUnitId ?? form.businessUnitId}
-              onChange={(v) => update('businessUnitId', v)}
-              ariaLabel={t('businessUnit')}
-              options={[
-                { value: '', label: '—' },
-                ...units.map((u) => ({ value: u.id, label: u.name })),
-              ]}
-            />
-            {unitLocked ? (
+          <fieldset>
+            <legend className="label">{t('businessUnits')}</legend>
+            <div className="max-h-56 space-y-2 overflow-auto rounded-xl border border-border bg-surface-2 p-3">
+              {selectableUnits.map((u) => (
+                <label
+                  key={u.id}
+                  className="flex cursor-pointer items-center gap-2 text-sm text-fg"
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-brand-500"
+                    checked={form.businessUnitIds.includes(u.id)}
+                    onChange={() => toggleUnit(u.id)}
+                  />
+                  <span className="truncate">{u.name}</span>
+                </label>
+              ))}
+              {selectableUnits.length === 0 ? (
+                <p className="text-xs text-fg-subtle">—</p>
+              ) : null}
+            </div>
+            {scopedBusinessUnitIds !== null ? (
               <p className="mt-1 text-xs text-fg-subtle">
                 {t('businessUnitLocked')}
               </p>
             ) : null}
-          </div>
+          </fieldset>
         ) : (
           <div className="flex items-end">
             <p className="rounded-xl border border-border bg-surface-2 p-3 text-xs text-fg-muted">
@@ -241,7 +287,10 @@ export function UserForm({
       </div>
 
       {error ? (
-        <p role="alert" className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
+        <p
+          role="alert"
+          className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300"
+        >
           {error}
         </p>
       ) : null}

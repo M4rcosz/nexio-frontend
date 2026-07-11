@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { setBusinessUnitActive } from '@/lib/api/business-units'
 import { describeError } from '@/lib/api/errors'
@@ -44,6 +45,9 @@ export async function POST(
         { status: 404 },
       )
     }
+    revalidateTag('business-units')
+    revalidateTag('business-units:internal')
+    revalidateTag(`business-units:${id}`)
     return NextResponse.json(unit)
   } catch (err) {
     return NextResponse.json({ error: describeError(err) }, { status: 500 })

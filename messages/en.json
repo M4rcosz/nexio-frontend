@@ -187,7 +187,7 @@
     "nameLabel": "Full name",
     "emailLabel": "E-mail",
     "usernameLabel": "Username",
-    "passwordLabel": "Password (min. 8 chars)",
+    "passwordLabel": "Password (min. 10 chars)",
     "phoneLabel": "Phone (optional)",
     "submit": "Create account",
     "submitting": "Creating account...",
@@ -249,14 +249,15 @@
       "username": "Username",
       "email": "E-mail",
       "phone": "Phone (optional)",
-      "password": "Password (min. 8 chars)",
+      "password": "Password (min. 10 chars)",
       "role": "Role",
       "roleAttendant": "Attendant",
       "roleKitchen": "Kitchen",
       "roleManager": "Manager",
       "roleAdmin": "Administrator",
       "businessUnit": "Business unit",
-      "businessUnitLocked": "Scoped to your unit",
+      "businessUnits": "Business units",
+      "businessUnitLocked": "You can only assign your own units.",
       "businessUnitAdminNote": "Administrators are not tied to a unit.",
       "submitCreate": "Create user",
       "submitEdit": "Save changes",
@@ -266,7 +267,8 @@
       "usernameTaken": "Username already taken.",
       "emailTaken": "E-mail already registered.",
       "roleForbidden": "You can't assign this role.",
-      "unitRequired": "Pick a business unit."
+      "unitRequired": "Pick a business unit.",
+      "unitsRequired": "Pick at least one business unit."
     },
     "inventory": {
       "title": "Inventory",
@@ -298,7 +300,25 @@
         "failed": "Could not apply the adjustment.",
         "notFound": "No stock balance exists for this product at the unit.",
         "belowZero": "This removal would drive the balance below zero.",
+        "overMax": "This restock would exceed the maximum quantity.",
+        "initCta": "Initialize stock for this product",
         "invalidQuantity": "Quantity must be a whole number of 1 or more."
+      },
+      "init": {
+        "title": "Initialize stock",
+        "subtitle": "Open the first stock balance for a product at this unit.",
+        "product": "Product",
+        "quantity": "Initial quantity",
+        "minQuantity": "Minimum quantity",
+        "reason": "Reason",
+        "reasonPlaceholder": "Ex: Initial stock count.",
+        "submit": "Create stock row",
+        "submitting": "Creating...",
+        "success": "Stock row created.",
+        "failed": "Could not initialize stock.",
+        "exists": "A stock balance already exists for this product. Use the adjustment form instead.",
+        "goToAdjust": "Go to adjustment",
+        "invalidQuantity": "Quantities must be whole numbers of 0 or more."
       }
     },
     "promotions": {
@@ -543,7 +563,9 @@
       "name_taken": "Name already in use.",
       "cnpj_taken": "CNPJ already registered.",
       "phone_taken": "Phone number already in use.",
-      "cnpj_or_phone_taken": "CNPJ or phone already registered."
+      "cnpj_or_phone_taken": "CNPJ or phone already registered.",
+      "inventory_over_max": "This restock would exceed the maximum quantity.",
+      "inventory_exists": "A stock balance already exists for this product at the unit."
     }
   },
   "orderStatus": {
@@ -590,6 +612,46 @@
     "inactive": "Inactive",
     "notProvided": "Not provided",
     "back": "Back to home",
-    "accountGone": "Your account is no longer available. Signing you out…"
+    "accountGone": "Your account is no longer available. Signing you out…",
+    "edit": {
+      "title": "Edit profile",
+      "subtitle": "Update your name or phone.",
+      "nameLabel": "Name",
+      "phoneLabel": "Phone",
+      "submit": "Save changes",
+      "submitting": "Saving...",
+      "success": "Profile updated.",
+      "failed": "Could not update your profile.",
+      "atLeastOne": "Change your name or phone before saving.",
+      "phoneTaken": "Phone number already in use."
+    }
+  },
+  "username": {
+    "tooShort": "Username is too short (at least 3 characters).",
+    "tooLong": "Username is too long (at most 50 characters).",
+    "pattern": "Use lowercase letters, numbers, . _ or - (not at the start or end).",
+    "reserved": "This username is reserved. Please choose another."
+  },
+  "password": {
+    "strengthLabel": "Password strength",
+    "strengthWeak": "Weak",
+    "strengthFair": "Fair",
+    "strengthGood": "Good",
+    "strengthStrong": "Strong",
+    "requirement": "At least 10 characters and 3 of: lowercase, uppercase, digits, symbols."
+  },
+  "changePassword": {
+    "title": "Change password",
+    "subtitle": "You'll be signed out on all devices after changing it.",
+    "currentLabel": "Current password",
+    "newLabel": "New password",
+    "confirmLabel": "Confirm new password",
+    "submit": "Change password",
+    "submitting": "Changing...",
+    "mismatch": "The new passwords don't match.",
+    "weak": "Choose a stronger password (see the requirements).",
+    "wrongPassword": "Current password is incorrect.",
+    "samePassword": "The new password must differ from the current one.",
+    "failed": "Could not change your password."
   }
 }

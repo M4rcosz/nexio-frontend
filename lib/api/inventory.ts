@@ -1,10 +1,15 @@
 import { serverFetch, USE_MOCKS } from './client'
 import type {
   AdjustInventoryRequest,
+  InitInventoryRequest,
   InventoryItem,
   Paginated,
 } from './types'
-import { adjustInventoryMock, listInventoryMock } from './mocks/inventory'
+import {
+  adjustInventoryMock,
+  initInventoryMock,
+  listInventoryMock,
+} from './mocks/inventory'
 
 export type ListInventoryQuery = {
   limit?: number
@@ -41,6 +46,24 @@ export async function adjustInventory(
     return adjustInventoryMock(businessUnitId, input)
   }
   return serverFetch<InventoryItem>(`/inventory/${businessUnitId}/adjust`, {
+    method: 'POST',
+    body: input,
+  })
+}
+
+/**
+ * `POST /inventory/:businessUnitId/items` — opens the first stock row for a
+ * product at a unit. 409 when a row already exists; 404 when the product does
+ * not belong to the unit's menu.
+ */
+export async function initInventory(
+  businessUnitId: string,
+  input: InitInventoryRequest,
+): Promise<InventoryItem> {
+  if (USE_MOCKS) {
+    return initInventoryMock(businessUnitId, input)
+  }
+  return serverFetch<InventoryItem>(`/inventory/${businessUnitId}/items`, {
     method: 'POST',
     body: input,
   })

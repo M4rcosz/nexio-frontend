@@ -1,47 +1,19 @@
-export type Role =
-  | 'ADMIN'
-  | 'MANAGER'
-  | 'ATTENDANT'
-  | 'KITCHEN'
-  | 'CUSTOMER'
+export type Role = 'ADMIN' | 'MANAGER' | 'ATTENDANT' | 'KITCHEN' | 'CUSTOMER'
 
-export type OrderChannel =
-  | 'APP'
-  | 'WEB'
-  | 'TOTEM'
-  | 'COUNTER'
-  | 'PICKUP'
+export type OrderChannel = 'APP' | 'WEB' | 'TOTEM' | 'COUNTER' | 'PICKUP'
 
 export type OrderStatus =
-  | 'PENDING'
-  | 'CONFIRMED'
-  | 'PREPARING'
-  | 'READY'
-  | 'DELIVERED'
-  | 'CANCELLED'
+  'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY' | 'DELIVERED' | 'CANCELLED'
 
 export type PaymentMethod =
-  | 'CREDIT_CARD'
-  | 'DEBIT_CARD'
-  | 'PIX'
-  | 'CASH'
-  | 'VOUCHER'
+  'CREDIT_CARD' | 'DEBIT_CARD' | 'PIX' | 'CASH' | 'VOUCHER'
 
 export type PaymentStatus =
-  | 'PENDING'
-  | 'PROCESSING'
-  | 'APPROVED'
-  | 'REFUSED'
-  | 'CANCELLED'
-  | 'REFUNDED'
+  'PENDING' | 'PROCESSING' | 'APPROVED' | 'REFUSED' | 'CANCELLED' | 'REFUNDED'
 
 export type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT' | 'FREE_ITEM'
 
-export type LoyaltyTransactionType =
-  | 'EARN'
-  | 'REDEEM'
-  | 'EXPIRE'
-  | 'ADJUSTMENT'
+export type LoyaltyTransactionType = 'EARN' | 'REDEEM' | 'EXPIRE' | 'ADJUSTMENT'
 
 export type Paginated<T> = {
   data: T[]
@@ -404,6 +376,17 @@ export type AdjustInventoryRequest = {
   productId: string
   type: InventoryAdjustmentType
   quantity: number
+  reason: string
+}
+
+/**
+ * `POST /inventory/:businessUnitId/items` — opens the first stock row for a
+ * product at a unit. The 201 body is a plain {@link InventoryItem}.
+ */
+export type InitInventoryRequest = {
+  productId: string
+  quantity: number
+  minQuantity: number
   reason: string
 }
 

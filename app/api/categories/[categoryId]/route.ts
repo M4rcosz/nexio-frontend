@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { getCategory, updateCategory } from '@/lib/api/categories'
 import { ApiError, describeError } from '@/lib/api/errors'
@@ -30,12 +31,18 @@ export async function GET(
   try {
     const category = await getCategory(categoryId)
     if (!category) {
-      return NextResponse.json({ error: 'Category not found.' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Category not found.' },
+        { status: 404 },
+      )
     }
     return NextResponse.json(category)
   } catch (err) {
     if (err instanceof ApiError && err.status < 500) {
-      return NextResponse.json({ error: describeError(err) }, { status: err.status })
+      return NextResponse.json(
+        { error: describeError(err) },
+        { status: err.status },
+      )
     }
     return NextResponse.json({ error: describeError(err) }, { status: 502 })
   }
@@ -83,8 +90,13 @@ export async function PATCH(
   try {
     const category = await updateCategory(categoryId, parsed)
     if (!category) {
-      return NextResponse.json({ error: 'Category not found.' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Category not found.' },
+        { status: 404 },
+      )
     }
+    revalidateTag('categories')
+    revalidateTag(`category:${categoryId}`)
     return NextResponse.json(category)
   } catch (err) {
     const status = err instanceof ApiError ? err.status || 500 : 500

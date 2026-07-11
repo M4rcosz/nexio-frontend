@@ -127,9 +127,11 @@ Request:
 ```json
 {
   "username": "maria.souza",
-  "password": "senha-de-8+-chars"
+  "password": "senha123"
 }
 ```
+
+Login é **leniente** (contas legadas devem autenticar): `username` é aparado e aceita até 256 caracteres, sem validação de padrão/reservados; `password` valida apenas comprimento (8–128), **sem** exigência de complexidade. As regras estritas de username/senha valem só nos caminhos de criação (register/admin-create/troca de senha).
 
 Response `200`:
 
@@ -181,9 +183,9 @@ Request:
 ```jsonc
 {
   "name": "Maria Souza",          // obrigatório, ≤120
-  "username": "maria.souza",      // obrigatório, 3–50, /^[a-z0-9._-]+$/
-  "password": "senha1234",        // obrigatório, ≥8
-  "email": "maria@example.com",   // opcional, e-mail válido
+  "username": "maria.souza",      // obrigatório, 3–50, /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/, não reservado
+  "password": "Senha@1234",       // obrigatório, 10–128, ≥3 de 4 classes (min/mai/dígito/símbolo)
+  "email": "maria@example.com",   // obrigatório, e-mail válido, ≤254
   "phone": "+5581999999999"       // opcional, ≤20
 }
 ```
@@ -198,13 +200,13 @@ Request:
 
 ```jsonc
 {
-  "name": "João Atendente",
-  "username": "joao.atendente",
-  "password": "senha1234",
+  "name": "João Atendente",         // obrigatório, ≤120
+  "username": "joao.atendente",     // 3–50, /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/, não reservado
+  "password": "Joao@Atend2024",     // 10–128, ≥3 de 4 classes (min/mai/dígito/símbolo)
   "role": "ATTENDANT",              // ADMIN|MANAGER|ATTENDANT|KITCHEN|CUSTOMER
-  "email": "joao@example.com",      // opcional
-  "phone": "+5581988888888",        // opcional
-  "businessUnitIds": ["<uuid>"]     // opcional; omitir/[] = usuário sem vínculo
+  "email": "joao@example.com",      // obrigatório, ≤254
+  "phone": "+5581988888888",        // opcional, ≤20
+  "businessUnitIds": ["<uuid>"]     // opcional; uuids únicos; omitir/[] = usuário sem vínculo
 }
 ```
 
@@ -551,7 +553,7 @@ Response `200`: [MenuItem](#menuitem). Erro `404`.
 
 ## Inventory
 
-`/api/inventory` — estoque por unidade. Ambas as rotas são **unit-scoped**; `:businessUnitId` é validado contra o claim.
+`/api/inventory` — estoque por unidade. Todas as rotas são **unit-scoped**; `:businessUnitId` é validado contra o claim. Fluxo: inicialize a linha de estoque uma vez (`/items`), depois ajuste sempre (`/adjust`).
 
 ### GET /api/inventory/:businessUnitId
 
@@ -561,9 +563,26 @@ Query: `limit`, `cursor`.
 
 Response `200`: paginado de [Inventory](#inventory-item).
 
+### POST /api/inventory/:businessUnitId/items
+
+**MANAGER, ADMIN.** Cria a primeira linha de estoque de um produto na unidade (saldo de abertura). `businessUnitId` vem só da URL.
+
+Request:
+
+```jsonc
+{
+  "productId": "<uuid>",
+  "quantity": 0,                      // inteiro ≥0, ≤2147483647 (abertura, pode ser 0)
+  "minQuantity": 5,                   // inteiro ≥0, ≤2147483647 (limiar de alerta)
+  "reason": "Opening stock count"     // obrigatório, ≤150
+}
+```
+
+Response `201`: [Inventory](#inventory-item). Erros: `404` produto/unidade inexistente (ou manager fora do escopo); `409` já existe linha de estoque para este produto na unidade (use `/adjust`).
+
 ### POST /api/inventory/:businessUnitId/adjust
 
-**MANAGER, ADMIN.** Movimento manual IN/OUT.
+**MANAGER, ADMIN.** Movimento manual IN/OUT em uma linha existente.
 
 Request:
 
@@ -571,12 +590,12 @@ Request:
 {
   "productId": "<uuid>",
   "type": "IN",                       // IN (repõe) | OUT (remove)
-  "quantity": 10,                     // inteiro ≥1
+  "quantity": 10,                     // inteiro ≥1, ≤2147483647
   "reason": "Weekly restock delivery" // ≤150
 }
 ```
 
-Response `201`: [Inventory](#inventory-item). Erros: `404` produto sem linha de estoque na unidade (IN); `422` OUT deixaria saldo negativo.
+Response `201`: [Inventory](#inventory-item). Erros: `404` produto sem linha de estoque na unidade (use `/items`); `422` OUT deixaria saldo negativo **ou** IN excederia o máximo (2147483647) — a rota infere qual pelo `type` enviado.
 
 ### Inventory (item)
 

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { updateProduct } from '@/lib/api/products'
 import { ApiError, describeError } from '@/lib/api/errors'
@@ -37,7 +38,10 @@ export async function PATCH(
   const admin = await getAdminContext()
   // ADMIN only: MANAGER may neither create nor edit catalog products.
   if (!admin || admin.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden.', code: 'forbidden' }, { status: 403 })
+    return NextResponse.json(
+      { error: 'Forbidden.', code: 'forbidden' },
+      { status: 403 },
+    )
   }
   const { productId } = await ctx.params
   // Validate the id before it is concatenated into the backend URL — guards
@@ -65,6 +69,9 @@ export async function PATCH(
     if (!product) {
       return NextResponse.json({ error: 'Product not found.' }, { status: 404 })
     }
+    // Bust both the list cache and this product's detail cache.
+    revalidateTag('products')
+    revalidateTag(`product:${productId}`)
     return NextResponse.json(product)
   } catch (err) {
     const status = err instanceof ApiError ? err.status || 500 : 500

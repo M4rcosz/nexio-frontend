@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { addMenuItem } from '@/lib/api/menu'
 import { ApiError, describeError } from '@/lib/api/errors'
@@ -61,6 +62,7 @@ export async function POST(
 
   try {
     const item = await addMenuItem(businessUnitId, parsed)
+    revalidateTag(`menu:${businessUnitId}`)
     return NextResponse.json(item, { status: 201 })
   } catch (err) {
     const status = err instanceof ApiError ? err.status || 500 : 500

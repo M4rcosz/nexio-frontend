@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import {
   getBusinessUnitInternal,
@@ -46,7 +47,10 @@ export async function GET(
     return NextResponse.json(unit)
   } catch (err) {
     if (err instanceof ApiError && err.status < 500) {
-      return NextResponse.json({ error: describeError(err) }, { status: err.status })
+      return NextResponse.json(
+        { error: describeError(err) },
+        { status: err.status },
+      )
     }
     return NextResponse.json({ error: describeError(err) }, { status: 502 })
   }
@@ -102,6 +106,9 @@ export async function PATCH(
         { status: 404 },
       )
     }
+    revalidateTag('business-units')
+    revalidateTag('business-units:internal')
+    revalidateTag(`business-units:${id}`)
     return NextResponse.json(unit)
   } catch (err) {
     const status = err instanceof ApiError ? err.status || 500 : 500

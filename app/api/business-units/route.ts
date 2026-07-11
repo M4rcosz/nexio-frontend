@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import {
   createBusinessUnit,
@@ -53,6 +54,10 @@ export async function POST(req: Request) {
 
   try {
     const unit = await createBusinessUnit(parsed)
+    // Both the public list ('business-units') and the admin internal list
+    // ('business-units:internal') are tag-cached and must be busted.
+    revalidateTag('business-units')
+    revalidateTag('business-units:internal')
     return NextResponse.json(unit, { status: 201 })
   } catch (err) {
     const status = err instanceof ApiError ? err.status || 500 : 500

@@ -16,9 +16,10 @@ const NOW = new Date().toISOString()
 
 export const MOCK_PRODUCTS: ProductResponseDto[] = [
   {
-    id: 'prod_carne_sol',
+    id: '11111111-1111-4111-8111-111111111111',
     name: 'Carne de sol com macaxeira',
-    description: 'Grilled sun-dried beef served with fried cassava, clarified butter and grilled coalho cheese.',
+    description:
+      'Grilled sun-dried beef served with fried cassava, clarified butter and grilled coalho cheese.',
     price: '58.90',
     isActive: true,
     categoryId: 'cat_carnes',
@@ -27,9 +28,10 @@ export const MOCK_PRODUCTS: ProductResponseDto[] = [
     updatedAt: NOW,
   },
   {
-    id: 'prod_baiao',
+    id: '22222222-2222-4222-8222-222222222222',
     name: 'Baião de dois',
-    description: 'Rice with green beans, coalho cheese, shredded dried beef and cilantro.',
+    description:
+      'Rice with green beans, coalho cheese, shredded dried beef and cilantro.',
     price: '42.00',
     isActive: true,
     categoryId: 'cat_acompanhamentos',
@@ -38,7 +40,7 @@ export const MOCK_PRODUCTS: ProductResponseDto[] = [
     updatedAt: NOW,
   },
   {
-    id: 'prod_bode',
+    id: '33333333-3333-4333-8333-333333333333',
     name: 'Bode guisado',
     description: 'Slow-cooked goat stew served with cassava purée and rice.',
     price: '67.50',
@@ -49,9 +51,10 @@ export const MOCK_PRODUCTS: ProductResponseDto[] = [
     updatedAt: NOW,
   },
   {
-    id: 'prod_queijo_coalho',
+    id: '44444444-4444-4444-8444-444444444444',
     name: 'Queijo coalho na brasa',
-    description: 'Coalho cheese skewers grilled over embers, drizzled with cane molasses.',
+    description:
+      'Coalho cheese skewers grilled over embers, drizzled with cane molasses.',
     price: '28.00',
     isActive: true,
     categoryId: 'cat_petiscos',
@@ -60,7 +63,7 @@ export const MOCK_PRODUCTS: ProductResponseDto[] = [
     updatedAt: NOW,
   },
   {
-    id: 'prod_caldo_cana',
+    id: '55555555-5555-4555-8555-555555555555',
     name: 'Caldo de cana 500ml',
     description: 'Fresh sugarcane juice with lime.',
     price: '9.50',
@@ -71,7 +74,7 @@ export const MOCK_PRODUCTS: ProductResponseDto[] = [
     updatedAt: NOW,
   },
   {
-    id: 'prod_bolo_rolo',
+    id: '66666666-6666-4666-8666-666666666666',
     name: 'Bolo de rolo',
     description: 'Generous slice of bolo de rolo with creamy guava paste.',
     price: '16.00',
@@ -103,7 +106,9 @@ export async function listProductsMock(query?: {
   return { data, meta: { limit: 20, nextCursor: null, hasMore: false } }
 }
 
-export async function getProductMock(id: string): Promise<ProductResponseDto | null> {
+export async function getProductMock(
+  id: string,
+): Promise<ProductResponseDto | null> {
   await mockDelay()
   return MOCK_PRODUCTS.find((p) => p.id === id) ?? null
 }
@@ -112,14 +117,16 @@ export async function createProductMock(
   input: CreateProductRequest,
 ): Promise<ProductResponseDto> {
   await mockDelay()
-  if (MOCK_PRODUCTS.some((p) => p.name.toLowerCase() === input.name.toLowerCase())) {
+  if (
+    MOCK_PRODUCTS.some((p) => p.name.toLowerCase() === input.name.toLowerCase())
+  ) {
     throw Object.assign(new Error('Product name already in use.'), {
       code: 'already_exists',
     })
   }
   const now = new Date().toISOString()
   const product: ProductResponseDto = {
-    id: `prod_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`,
+    id: crypto.randomUUID(),
     name: input.name,
     description: input.description ?? null,
     price: input.price,
@@ -146,7 +153,11 @@ export async function updateProductMock(
       (p) => p.id !== id && p.name.toLowerCase() === patch.name!.toLowerCase(),
     )
   ) {
-    throw new ApiError(409, { code: 'name_taken' }, 'Product name already in use.')
+    throw new ApiError(
+      409,
+      { code: 'name_taken' },
+      'Product name already in use.',
+    )
   }
   if (patch.name !== undefined) product.name = patch.name
   if (patch.description !== undefined) product.description = patch.description

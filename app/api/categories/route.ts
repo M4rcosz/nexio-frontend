@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { createCategory } from '@/lib/api/categories'
 import { ApiError, describeError } from '@/lib/api/errors'
@@ -46,6 +47,7 @@ export async function POST(req: Request) {
 
   try {
     const category = await createCategory(parsed)
+    revalidateTag('categories')
     return NextResponse.json(category, { status: 201 })
   } catch (err) {
     const status = err instanceof ApiError ? err.status || 500 : 500

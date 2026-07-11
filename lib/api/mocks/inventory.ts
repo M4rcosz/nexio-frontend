@@ -6,9 +6,11 @@
 // for a product without a stock row 404s, an `OUT` below zero 422s.
 import type {
   AdjustInventoryRequest,
+  InitInventoryRequest,
   InventoryItem,
   Paginated,
 } from '@/lib/api/types'
+import { MAX_INVENTORY_QUANTITY } from '@/lib/validation/constants'
 import { mockDelay } from './_delay'
 import { MOCK_PRODUCTS } from './products'
 import { MOCK_BUSINESS_UNITS } from './business-units'
@@ -82,6 +84,13 @@ export async function adjustInventoryMock(
       { code: 'inventory_below_zero' },
     )
   }
+  // Mirrors the backend int4 ceiling — an IN that overflows the column 422s.
+  if (next > MAX_INVENTORY_QUANTITY) {
+    throw Object.assign(
+      new Error('The adjustment would exceed the maximum quantity.'),
+      { code: 'inventory_over_max' },
+    )
+  }
   const updated: InventoryItem = {
     ...current,
     quantity: next,
@@ -89,4 +98,33 @@ export async function adjustInventoryMock(
   }
   STORE.set(key, updated)
   return { ...updated }
+}
+
+/**
+ * Mirrors `POST /inventory/:businessUnitId/items` — opens the first stock row.
+ * 409 (`inventory_exists`) when a row is already present for the product.
+ */
+export async function initInventoryMock(
+  businessUnitId: string,
+  input: InitInventoryRequest,
+): Promise<InventoryItem> {
+  await mockDelay()
+  seed()
+  const key = keyOf(businessUnitId, input.productId)
+  if (STORE.has(key)) {
+    throw Object.assign(
+      new Error('A stock row already exists for this product at the unit.'),
+      { code: 'inventory_exists' },
+    )
+  }
+  const created: InventoryItem = {
+    id: `inv_${Date.now().toString(36)}`,
+    businessUnitId,
+    productId: input.productId,
+    quantity: input.quantity,
+    minQuantity: input.minQuantity,
+    updatedAt: new Date().toISOString(),
+  }
+  STORE.set(key, created)
+  return { ...created }
 }
