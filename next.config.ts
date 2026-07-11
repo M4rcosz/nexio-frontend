@@ -3,14 +3,20 @@ import createNextIntlPlugin from 'next-intl/plugin'
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts')
 
+const isProd = process.env.NODE_ENV === 'production'
+
 /**
  * Hostnames allowed through the next/image optimizer. Comma-separated globs in
- * NEXT_PUBLIC_IMAGE_HOSTNAMES (e.g. "cdn.acme.com,*.imgix.net"). When unset it
- * falls back to `**` (any HTTPS host) for local/mock development — but that turns
- * the optimizer into an open image proxy, so production deployments MUST set the
- * env var to their real CDN host(s).
+ * NEXT_PUBLIC_IMAGE_HOSTNAMES (e.g. "cdn.acme.com,*.imgix.net"). Resolved here at
+ * config-load (build) time. In development it falls back to `**` (any HTTPS host)
+ * for convenience; in production it fails CLOSED — an unset var yields an empty
+ * allowlist (all remote images blocked) rather than an open image proxy. The env
+ * validation (lib/env.ts) also hard-fails at boot when it's unset in prod, so a
+ * misconfigured deploy is caught at both build and start.
  */
-const imageHostnames = (process.env.NEXT_PUBLIC_IMAGE_HOSTNAMES ?? '**')
+const imageHostnames = (
+  process.env.NEXT_PUBLIC_IMAGE_HOSTNAMES ?? (isProd ? '' : '**')
+)
   .split(',')
   .map((h) => h.trim())
   .filter(Boolean)
@@ -21,6 +27,12 @@ const imageHostnames = (process.env.NEXT_PUBLIC_IMAGE_HOSTNAMES ?? '**')
  * (sources, nonces) and is tracked separately; only frame-ancestors is set here.
  */
 const securityHeaders = [
+  // Force HTTPS for two years incl. subdomains. Harmless over plain HTTP
+  // (browsers ignore it there); prevents protocol-downgrade/cookie-stripping.
+  {
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains',
+  },
   // Disallow framing entirely — this app is never meant to be embedded.
   { key: 'X-Frame-Options', value: 'DENY' },
   { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
@@ -43,7 +55,9 @@ const nextConfig: NextConfig = {
         protocol: 'https' as const,
         hostname,
       })),
-      { protocol: 'http' as const, hostname: 'localhost' },
+      // Loopback is a dev convenience only — allowing it in production would let
+      // /_next/image proxy internal services bound to localhost (SSRF).
+      ...(isProd ? [] : [{ protocol: 'http' as const, hostname: 'localhost' }]),
     ],
   },
   async headers() {

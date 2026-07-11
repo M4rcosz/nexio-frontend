@@ -62,13 +62,25 @@ afterEach(() => {
 
 describe('HomeProductSearch', () => {
   it('does not search for queries shorter than 2 characters', async () => {
-    const fetchFn = mockFetch([])
+    // The length guard is independent of the debounce timer, so assert it
+    // directly rather than sleeping past a real-clock debounce window: type a
+    // 2-char query (which DOES fetch) then a 1-char one, and confirm the second
+    // never reaches the network.
+    const fetchFn = mockFetch([product()])
     const user = userEvent.setup()
     renderWithIntl(<HomeProductSearch defaultUnitId="bu-1" />)
+    const input = screen.getByLabelText(/search the catalog/i)
 
-    await user.type(screen.getByLabelText(/search the catalog/i), 'a')
-    // Give the debounce window a chance to (not) fire.
-    await new Promise((r) => setTimeout(r, 350))
+    await user.type(input, 'ab')
+    await waitFor(() => expect(fetchFn).toHaveBeenCalledTimes(1))
+
+    fetchFn.mockClear()
+    await user.clear(input)
+    await user.type(input, 'a')
+    // A short query resets results synchronously and never schedules a fetch.
+    await waitFor(() =>
+      expect(screen.queryByRole('link')).not.toBeInTheDocument(),
+    )
     expect(fetchFn).not.toHaveBeenCalled()
   })
 

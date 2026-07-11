@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { cleanup, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithIntl } from '@/lib/test/intl'
 import type { Order, OrderItem, OrderStatus } from '@/lib/api/types'
@@ -54,6 +54,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  vi.useRealTimers()
 })
 
 describe('OrderTracker', () => {
@@ -110,5 +111,40 @@ describe('OrderTracker', () => {
     renderWithIntl(<OrderTracker initialOrder={order('DELIVERED')} />)
     // No cancel button, and the polling effect returns early → no fetch.
     expect(fetchFn).not.toHaveBeenCalled()
+  })
+
+  it('polls on an interval and applies the fetched order state', async () => {
+    vi.useFakeTimers()
+    const fetchFn = mockFetch(200, order('CANCELLED'))
+    renderWithIntl(<OrderTracker initialOrder={order('PENDING')} />)
+
+    // The 5s poll fires, resolves, and applies the new status.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000)
+    })
+    expect(fetchFn).toHaveBeenCalledWith('/api/orders/o1', {
+      cache: 'no-store',
+    })
+    expect(screen.getByText(/order cancelled\./i)).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /cancel order/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('stops polling and surfaces a lost session on a 401 poll', async () => {
+    vi.useFakeTimers()
+    const fetchFn = mockFetch(401)
+    renderWithIntl(<OrderTracker initialOrder={order('PENDING')} />)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000)
+    })
+    expect(screen.getByRole('alert')).toHaveTextContent(/session has expired/i)
+    // The interval was cleared — further ticks make no additional calls.
+    const callsAfterFirst = fetchFn.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10000)
+    })
+    expect(fetchFn.mock.calls.length).toBe(callsAfterFirst)
   })
 })

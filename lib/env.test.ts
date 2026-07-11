@@ -63,14 +63,25 @@ describe('validateEnv', () => {
     ).not.toThrow()
   })
 
-  it('warns (without failing) when image hosts are unset in production', () => {
+  it('fails closed when image hosts are unset in production', () => {
+    // Backend URL present so only the image-host rule can trip.
+    expect(() =>
+      validateEnv({
+        NODE_ENV: 'production',
+        BACKEND_INTERNAL_URL: 'https://api.nexio.com',
+      } as NodeJS.ProcessEnv),
+    ).toThrow(/NEXT_PUBLIC_IMAGE_HOSTNAMES/)
+  })
+
+  it('warns (without failing) when mocks are enabled in production', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     validateEnv({
       NODE_ENV: 'production',
       NEXT_PUBLIC_USE_MOCKS: 'true',
+      NEXT_PUBLIC_IMAGE_HOSTNAMES: 'cdn.nexio.com',
     } as NodeJS.ProcessEnv)
     expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining('NEXT_PUBLIC_IMAGE_HOSTNAMES'),
+      expect.stringContaining('NEXT_PUBLIC_USE_MOCKS'),
     )
   })
 

@@ -40,17 +40,31 @@ export const envSchema = z
       .optional(),
   })
   .superRefine((env, ctx) => {
+    if (env.NODE_ENV !== 'production') return
     const useMocks = env.NEXT_PUBLIC_USE_MOCKS === 'true'
     // A real backend is required in production unless the mock layer is on.
-    if (env.NODE_ENV === 'production' && !useMocks) {
-      if (!env.BACKEND_INTERNAL_URL && !env.NEXT_PUBLIC_API_BASE_URL) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ['BACKEND_INTERNAL_URL'],
-          message:
-            'In production without mocks, set BACKEND_INTERNAL_URL (or NEXT_PUBLIC_API_BASE_URL).',
-        })
-      }
+    if (
+      !useMocks &&
+      !env.BACKEND_INTERNAL_URL &&
+      !env.NEXT_PUBLIC_API_BASE_URL
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['BACKEND_INTERNAL_URL'],
+        message:
+          'In production without mocks, set BACKEND_INTERNAL_URL (or NEXT_PUBLIC_API_BASE_URL).',
+      })
+    }
+    // Fail closed on the next/image allowlist. Leaving it unset in production
+    // otherwise falls back to "any HTTPS host" (open image proxy → SSRF/abuse);
+    // this is a hard boot failure so a deploy can never silently ship it open.
+    if (!env.NEXT_PUBLIC_IMAGE_HOSTNAMES) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['NEXT_PUBLIC_IMAGE_HOSTNAMES'],
+        message:
+          'In production, set NEXT_PUBLIC_IMAGE_HOSTNAMES to your CDN host(s) — an unset allowlist would open the next/image optimizer to any host.',
+      })
     }
   })
 
@@ -70,13 +84,15 @@ export function validateEnv(source: NodeJS.ProcessEnv = process.env): Env {
       .join('\n')
     throw new Error(`Invalid environment configuration:\n${details}`)
   }
+  // Non-fatal: the mock layer (incl. simulated auth) is a first-class feature,
+  // so running it in production is allowed (demo builds) but worth flagging.
   if (
     result.data.NODE_ENV === 'production' &&
-    !result.data.NEXT_PUBLIC_IMAGE_HOSTNAMES
+    result.data.NEXT_PUBLIC_USE_MOCKS === 'true'
   ) {
     console.warn(
-      '[env] NEXT_PUBLIC_IMAGE_HOSTNAMES is unset in production — next/image ' +
-        'will accept any HTTPS host (open image proxy). Set it to your CDN host(s).',
+      '[env] NEXT_PUBLIC_USE_MOCKS=true in production — the mock data layer, ' +
+        'including simulated auth, is active. Ensure this is a demo deployment.',
     )
   }
   return result.data
