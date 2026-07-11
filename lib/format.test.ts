@@ -50,4 +50,12 @@ describe('formatDateTime', () => {
     // "Invalid Date" rather than throwing, so the catch branch is never hit.
     expect(formatDateTime('not-a-date', 'en')).toBe('Invalid Date')
   })
+
+  it('falls back to the raw ISO when the locale is invalid (catch branch)', () => {
+    // An invalid BCP47 locale makes toLocaleString throw a RangeError, which the
+    // catch swallows by returning the original input untouched.
+    expect(formatDateTime('2026-07-06T15:30:00Z', '!!invalid')).toBe(
+      '2026-07-06T15:30:00Z',
+    )
+  })
 })
