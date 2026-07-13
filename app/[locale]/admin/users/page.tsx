@@ -33,9 +33,10 @@ export default async function AdminUsersPage({
   const [users, unitsPage] = await Promise.all([
     listInternalUsers(ctx, {
       search: sp.search,
-      role: sp.role && ctx.manageableRoles.includes(sp.role as never)
-        ? (sp.role as never)
-        : undefined,
+      role:
+        sp.role && ctx.manageableRoles.includes(sp.role as never)
+          ? (sp.role as never)
+          : undefined,
       businessUnitId: sp.businessUnitId,
     }),
     listBusinessUnits(),
@@ -63,11 +64,15 @@ export default async function AdminUsersPage({
         manageableRoles={ctx.manageableRoles}
       />
 
-      <p className="text-xs text-fg-subtle">{t('count', { count: users.length })}</p>
+      <p className="text-xs text-fg-subtle">
+        {t('count', { count: users.length })}
+      </p>
 
       {users.length === 0 ? (
         <div className="card flex flex-col items-center gap-3 p-12 text-center">
-          <span className="text-5xl" aria-hidden>👤</span>
+          <span className="text-5xl" aria-hidden>
+            👤
+          </span>
           <p className="text-fg-muted">{t('empty')}</p>
         </div>
       ) : (
@@ -80,7 +85,7 @@ export default async function AdminUsersPage({
                 user={u}
                 unit={
                   u.businessUnitIds[0]
-                    ? unitsById.get(u.businessUnitIds[0]) ?? null
+                    ? (unitsById.get(u.businessUnitIds[0]) ?? null)
                     : null
                 }
               />
@@ -96,7 +101,9 @@ export default async function AdminUsersPage({
                     <th className="px-4 py-3 font-medium">{t('tableName')}</th>
                     <th className="px-4 py-3 font-medium">{t('tableRole')}</th>
                     <th className="px-4 py-3 font-medium">{t('tableUnit')}</th>
-                    <th className="px-4 py-3 font-medium">{t('tableStatus')}</th>
+                    <th className="px-4 py-3 font-medium">
+                      {t('tableStatus')}
+                    </th>
                     <th className="px-4 py-3 text-right font-medium">
                       {t('tableActions')}
                     </th>
@@ -109,7 +116,7 @@ export default async function AdminUsersPage({
                       user={u}
                       unit={
                         u.businessUnitIds[0]
-                          ? unitsById.get(u.businessUnitIds[0]) ?? null
+                          ? (unitsById.get(u.businessUnitIds[0]) ?? null)
                           : null
                       }
                     />

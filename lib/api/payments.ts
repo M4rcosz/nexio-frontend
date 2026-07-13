@@ -27,7 +27,9 @@ export async function createPayment(
  * `GET /orders/:orderId/payment` — the payment of an order (customers only
  * see their own). `null` when there is no payment or it is not visible.
  */
-export async function getOrderPayment(orderId: string): Promise<Payment | null> {
+export async function getOrderPayment(
+  orderId: string,
+): Promise<Payment | null> {
   if (USE_MOCKS) {
     return getPaymentMock(orderId)
   }

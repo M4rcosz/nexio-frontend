@@ -19,7 +19,8 @@ const Body = z.object({
     .max(128)
     .refine(
       (v) =>
-        [/[a-z]/, /[A-Z]/, /\d/, /[^a-zA-Z\d]/].filter((r) => r.test(v)).length >= 3,
+        [/[a-z]/, /[A-Z]/, /\d/, /[^a-zA-Z\d]/].filter((r) => r.test(v))
+          .length >= 3,
       'Use at least 3 of: lowercase, uppercase, digits, symbols.',
     ),
 })
@@ -33,7 +34,10 @@ export async function PATCH(req: Request) {
     parsed = Body.parse(await req.json())
   } catch (err) {
     return NextResponse.json(
-      { error: 'Invalid payload.', details: err instanceof z.ZodError ? err.flatten() : undefined },
+      {
+        error: 'Invalid payload.',
+        details: err instanceof z.ZodError ? err.flatten() : undefined,
+      },
       { status: 400 },
     )
   }
@@ -55,7 +59,10 @@ export async function PATCH(req: Request) {
     }
     if (status === 422) {
       return NextResponse.json(
-        { error: 'New password must differ from the current one.', code: 'same_password' },
+        {
+          error: 'New password must differ from the current one.',
+          code: 'same_password',
+        },
         { status: 422 },
       )
     }

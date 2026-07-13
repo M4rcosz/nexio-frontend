@@ -47,7 +47,9 @@ export function UnitDropdown({
           value: u.id,
           label: `${u.name} · ${u.city}`,
         }))}
-        leading={<PinIcon className="h-[18px] w-[18px] flex-none text-brand-600" />}
+        leading={
+          <PinIcon className="h-[18px] w-[18px] flex-none text-brand-600" />
+        }
         className="rounded-2xl bg-white py-3 pl-4 pr-4 text-sm font-bold text-brand-700 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.45)] ring-1 ring-black/5 transition-transform hover:-translate-y-0.5 focus:outline-none focus:ring-4 focus:ring-brand-500/25 sm:min-w-[280px] sm:text-base"
       />
     </div>

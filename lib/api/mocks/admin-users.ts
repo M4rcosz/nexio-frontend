@@ -32,20 +32,76 @@ function makeUser(
 /** Internal store — mutated by admin CRUD. Seeded with realistic data. */
 const STORE: User[] = [
   // Top-level (ADMIN carries no unit binding)
-  makeUser('usr_admin_demo', 'admin', 'Administradora Geral', 'ADMIN', [], 'admin@nexio.com'),
+  makeUser(
+    'usr_admin_demo',
+    'admin',
+    'Administradora Geral',
+    'ADMIN',
+    [],
+    'admin@nexio.com',
+  ),
 
   // Managers (one per unit)
-  makeUser('usr_manager_recife', 'manager.recife', 'Beatriz Lima', 'MANAGER', [MOCK_BUSINESS_UNITS[0].id], 'beatriz@nexio.com'),
-  makeUser('usr_manager_olinda', 'manager.olinda', 'Rafael Souza', 'MANAGER', [MOCK_BUSINESS_UNITS[1].id], 'rafael@nexio.com'),
+  makeUser(
+    'usr_manager_recife',
+    'manager.recife',
+    'Beatriz Lima',
+    'MANAGER',
+    [MOCK_BUSINESS_UNITS[0].id],
+    'beatriz@nexio.com',
+  ),
+  makeUser(
+    'usr_manager_olinda',
+    'manager.olinda',
+    'Rafael Souza',
+    'MANAGER',
+    [MOCK_BUSINESS_UNITS[1].id],
+    'rafael@nexio.com',
+  ),
 
   // Attendants
-  makeUser('usr_attendant_maria', 'maria.atendente', 'Maria Silva', 'ATTENDANT', [MOCK_BUSINESS_UNITS[0].id], 'maria@nexio.com'),
-  makeUser('usr_attendant_pedro', 'pedro.atendente', 'Pedro Henrique', 'ATTENDANT', [MOCK_BUSINESS_UNITS[0].id], 'pedro@nexio.com'),
-  makeUser('usr_attendant_ana', 'ana.atendente', 'Ana Costa', 'ATTENDANT', [MOCK_BUSINESS_UNITS[1].id], 'ana@nexio.com'),
+  makeUser(
+    'usr_attendant_maria',
+    'maria.atendente',
+    'Maria Silva',
+    'ATTENDANT',
+    [MOCK_BUSINESS_UNITS[0].id],
+    'maria@nexio.com',
+  ),
+  makeUser(
+    'usr_attendant_pedro',
+    'pedro.atendente',
+    'Pedro Henrique',
+    'ATTENDANT',
+    [MOCK_BUSINESS_UNITS[0].id],
+    'pedro@nexio.com',
+  ),
+  makeUser(
+    'usr_attendant_ana',
+    'ana.atendente',
+    'Ana Costa',
+    'ATTENDANT',
+    [MOCK_BUSINESS_UNITS[1].id],
+    'ana@nexio.com',
+  ),
 
   // Kitchen
-  makeUser('usr_kitchen_jose', 'jose.cozinha', 'José Cozinha', 'KITCHEN', [MOCK_BUSINESS_UNITS[0].id], 'jose@nexio.com'),
-  makeUser('usr_kitchen_lucia', 'lucia.cozinha', 'Lúcia Mendes', 'KITCHEN', [MOCK_BUSINESS_UNITS[1].id], 'lucia@nexio.com'),
+  makeUser(
+    'usr_kitchen_jose',
+    'jose.cozinha',
+    'José Cozinha',
+    'KITCHEN',
+    [MOCK_BUSINESS_UNITS[0].id],
+    'jose@nexio.com',
+  ),
+  makeUser(
+    'usr_kitchen_lucia',
+    'lucia.cozinha',
+    'Lúcia Mendes',
+    'KITCHEN',
+    [MOCK_BUSINESS_UNITS[1].id],
+    'lucia@nexio.com',
+  ),
 ]
 
 function newId(prefix = 'usr'): string {
@@ -81,7 +137,9 @@ export async function listInternalUsersMock(
   }
   if (filters.role) users = users.filter((u) => u.role === filters.role)
   if (filters.businessUnitId)
-    users = users.filter((u) => u.businessUnitIds.includes(filters.businessUnitId!))
+    users = users.filter((u) =>
+      u.businessUnitIds.includes(filters.businessUnitId!),
+    )
   if (filters.search) {
     const term = filters.search.toLowerCase()
     users = users.filter(
@@ -129,7 +187,9 @@ export async function createInternalUserMock(
     })
   }
   // Uniqueness checks
-  if (STORE.some((u) => u.username.toLowerCase() === input.username.toLowerCase())) {
+  if (
+    STORE.some((u) => u.username.toLowerCase() === input.username.toLowerCase())
+  ) {
     throw Object.assign(new Error('Username already taken.'), {
       code: 'username_taken',
     })
@@ -182,10 +242,13 @@ export async function updateInternalUserMock(
   if (
     patch.email &&
     STORE.some(
-      (u) => u.id !== id && u.email?.toLowerCase() === patch.email!.toLowerCase(),
+      (u) =>
+        u.id !== id && u.email?.toLowerCase() === patch.email!.toLowerCase(),
     )
   ) {
-    throw Object.assign(new Error('E-mail already registered.'), { code: 'email_taken' })
+    throw Object.assign(new Error('E-mail already registered.'), {
+      code: 'email_taken',
+    })
   }
   STORE[idx] = {
     ...STORE[idx],
@@ -216,5 +279,8 @@ export function findUserBySubMock(sub: string): User | null {
 }
 
 export function findUserByUsernameMock(username: string): User | null {
-  return STORE.find((u) => u.username.toLowerCase() === username.toLowerCase()) ?? null
+  return (
+    STORE.find((u) => u.username.toLowerCase() === username.toLowerCase()) ??
+    null
+  )
 }

@@ -22,7 +22,10 @@ export async function DELETE() {
   try {
     const account = await revokeLoyaltyConsent()
     if (!account) {
-      return NextResponse.json({ error: 'No loyalty account.' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'No loyalty account.' },
+        { status: 404 },
+      )
     }
     return NextResponse.json(account)
   } catch (err) {

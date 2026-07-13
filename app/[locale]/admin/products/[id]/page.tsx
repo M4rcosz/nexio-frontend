@@ -42,7 +42,11 @@ export default async function EditProductPage({
         <p className="mt-1 text-sm text-fg-muted">{t('editSubtitle')}</p>
       </header>
       <div className="card p-6">
-        <ProductForm mode="edit" product={product} categories={categoriesPage.data} />
+        <ProductForm
+          mode="edit"
+          product={product}
+          categories={categoriesPage.data}
+        />
       </div>
     </div>
   )

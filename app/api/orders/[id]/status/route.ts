@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { updateOrderStatus } from '@/lib/api/orders'
-import { ApiError, describeError } from '@/lib/api/errors'
+import { ApiError, backendErrorStatus, describeError } from '@/lib/api/errors'
 import { getSession } from '@/lib/auth/session'
 
 const STAFF_ROLES = ['ADMIN', 'MANAGER', 'ATTENDANT', 'KITCHEN']
@@ -31,7 +31,10 @@ export async function PATCH(
     parsed = Body.parse(await req.json())
   } catch (err) {
     return NextResponse.json(
-      { error: 'Invalid payload.', details: err instanceof z.ZodError ? err.flatten() : undefined },
+      {
+        error: 'Invalid payload.',
+        details: err instanceof z.ZodError ? err.flatten() : undefined,
+      },
       { status: 400 },
     )
   }
@@ -46,12 +49,24 @@ export async function PATCH(
       err && typeof err === 'object' && 'code' in err
         ? String((err as { code: unknown }).code)
         : undefined
-    if (code === 'invalid_transition' || (err instanceof ApiError && err.status === 422)) {
+    if (
+      code === 'invalid_transition' ||
+      (err instanceof ApiError && err.status === 422)
+    ) {
       return NextResponse.json(
-        { error: 'This status transition is not allowed.', code: 'invalid_transition' },
+        {
+          error: 'This status transition is not allowed.',
+          code: 'invalid_transition',
+        },
         { status: 422 },
       )
     }
-    return NextResponse.json({ error: describeError(err) }, { status: 500 })
+    // Propagate a genuine upstream 4xx (e.g. a 403 the actor isn't allowed) and
+    // collapse 5xx/unknown into 502 — matching the sibling order handlers rather
+    // than masking everything as a 500.
+    return NextResponse.json(
+      { error: describeError(err) },
+      { status: backendErrorStatus(err) },
+    )
   }
 }

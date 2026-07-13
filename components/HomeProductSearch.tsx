@@ -67,9 +67,7 @@ export function HomeProductSearch({
   }, [query])
 
   function hrefFor(p: ProductResponseDto): string {
-    return targetUnitId
-      ? `/units/${targetUnitId}/products/${p.id}`
-      : `/units`
+    return targetUnitId ? `/units/${targetUnitId}/products/${p.id}` : `/units`
   }
 
   return (

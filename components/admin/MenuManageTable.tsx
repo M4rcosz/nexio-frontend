@@ -30,9 +30,10 @@ export function MenuManageTable({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draftPrice, setDraftPrice] = useState('')
   const [savingId, setSavingId] = useState<string | null>(null)
-  const [rowError, setRowError] = useState<{ id: string; message: string } | null>(
-    null,
-  )
+  const [rowError, setRowError] = useState<{
+    id: string
+    message: string
+  } | null>(null)
 
   // Reconcile with fresh server data after router.refresh() (e.g. a new item
   // added via the form). Optimistic edits below still apply on top until the
@@ -60,11 +61,11 @@ export function MenuManageTable({
       )
       if (!res.ok) {
         setRows((cur) =>
-          cur.map((r) =>
-            r.id === item.id ? { ...r, isAvailable: !next } : r,
-          ),
+          cur.map((r) => (r.id === item.id ? { ...r, isAvailable: !next } : r)),
         )
-        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        const body = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         setRowError({
           id: item.id,
           message: errorMessage(body?.code, res.status) ?? t('actionFailed'),
@@ -109,7 +110,9 @@ export function MenuManageTable({
         },
       )
       if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        const body = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         setRowError({
           id: item.id,
           message: errorMessage(body?.code, res.status) ?? t('actionFailed'),
@@ -122,7 +125,11 @@ export function MenuManageTable({
       setRows((cur) =>
         cur.map((r) =>
           r.id === item.id
-            ? { ...r, customPrice: updated.customPrice, updatedAt: updated.updatedAt }
+            ? {
+                ...r,
+                customPrice: updated.customPrice,
+                updatedAt: updated.updatedAt,
+              }
             : r,
         ),
       )
@@ -259,7 +266,9 @@ export function MenuManageTable({
               <tr>
                 <th className="px-4 py-3 font-medium">{t('tableProduct')}</th>
                 <th className="px-4 py-3 font-medium">{t('tablePrice')}</th>
-                <th className="px-4 py-3 font-medium">{t('tableAvailability')}</th>
+                <th className="px-4 py-3 font-medium">
+                  {t('tableAvailability')}
+                </th>
                 <th className="px-4 py-3 font-medium">{t('tableUpdated')}</th>
                 <th className="px-4 py-3 text-right font-medium">
                   {t('tableActions')}

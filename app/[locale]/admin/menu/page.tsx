@@ -35,9 +35,9 @@ export default async function AdminMenuPage({
   const selectedUnitId =
     ctx.role === 'MANAGER'
       ? ctx.scopedBusinessUnitId
-      : (sp.businessUnitId && units.some((u) => u.id === sp.businessUnitId)
-          ? sp.businessUnitId
-          : units[0]?.id ?? null)
+      : sp.businessUnitId && units.some((u) => u.id === sp.businessUnitId)
+        ? sp.businessUnitId
+        : (units[0]?.id ?? null)
 
   if (!selectedUnitId) {
     return (
@@ -86,12 +86,15 @@ export default async function AdminMenuPage({
         />
       ) : lockedUnitName ? (
         <p className="text-sm text-fg-muted">
-          {t('unitLabel')}: <span className="font-medium text-fg">{lockedUnitName}</span>{' '}
+          {t('unitLabel')}:{' '}
+          <span className="font-medium text-fg">{lockedUnitName}</span>{' '}
           <span className="text-xs text-fg-subtle">({t('unitLocked')})</span>
         </p>
       ) : null}
 
-      <p className="text-xs text-fg-subtle">{t('count', { count: items.length })}</p>
+      <p className="text-xs text-fg-subtle">
+        {t('count', { count: items.length })}
+      </p>
 
       <MenuManageTable
         businessUnitId={selectedUnitId}

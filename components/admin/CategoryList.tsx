@@ -67,7 +67,9 @@ export function CategoryList({ categories }: { categories: Category[] }) {
             <thead className="bg-surface-2 text-[10px] font-mono uppercase tracking-widest text-fg-subtle">
               <tr>
                 <th className="px-4 py-3 font-medium">{t('tableName')}</th>
-                <th className="px-4 py-3 font-medium">{t('tableDescription')}</th>
+                <th className="px-4 py-3 font-medium">
+                  {t('tableDescription')}
+                </th>
                 <th className="px-4 py-3 font-medium">{t('tableStatus')}</th>
                 <th className="px-4 py-3 font-medium">{t('tableUpdated')}</th>
                 <th className="px-4 py-3 text-right font-medium">

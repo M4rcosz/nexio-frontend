@@ -19,7 +19,12 @@ type CartState = {
   businessUnitName: string | null
   items: CartItem[]
   setBusinessUnit: (id: string, name: string) => void
-  addItem: (item: Omit<CartItem, 'quantity' | 'notes'> & { quantity?: number; notes?: string | null }) => void
+  addItem: (
+    item: Omit<CartItem, 'quantity' | 'notes'> & {
+      quantity?: number
+      notes?: string | null
+    },
+  ) => void
   removeItem: (productId: string) => void
   setQuantity: (productId: string, quantity: number) => void
   setNotes: (productId: string, notes: string) => void
@@ -73,7 +78,9 @@ export const useCartStore = create<CartState>()(
         }),
 
       removeItem: (productId) =>
-        set((s) => ({ items: s.items.filter((i) => i.productId !== productId) })),
+        set((s) => ({
+          items: s.items.filter((i) => i.productId !== productId),
+        })),
 
       setQuantity: (productId, quantity) =>
         set((s) => ({
@@ -92,7 +99,8 @@ export const useCartStore = create<CartState>()(
           ),
         })),
 
-      clear: () => set({ items: [], businessUnitId: null, businessUnitName: null }),
+      clear: () =>
+        set({ items: [], businessUnitId: null, businessUnitName: null }),
     }),
     {
       name: 'nexio-cart',

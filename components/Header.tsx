@@ -11,8 +11,7 @@ import { ThemeToggle } from './ThemeToggle'
 export async function Header({ initialTheme }: { initialTheme: Theme }) {
   const session = await getSession()
   const isLogged = session !== null
-  const showAdminLink =
-    session?.role === 'ADMIN' || session?.role === 'MANAGER'
+  const showAdminLink = session?.role === 'ADMIN' || session?.role === 'MANAGER'
   // Orders, loyalty points and the cart are customer-facing — staff get none.
   const isCustomer = session?.role === 'CUSTOMER'
   // The cart stays available to logged-out guests too (guest checkout).
@@ -118,11 +117,7 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
 
 function BoltIcon({ className = '' }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className={className}
-      aria-hidden
-    >
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
       <defs>
         {/* Same brand ramp as the .text-gradient-brand "N": brand → accent. */}
         <linearGradient id="bolt-gradient" x1="0" y1="0" x2="1" y2="1">

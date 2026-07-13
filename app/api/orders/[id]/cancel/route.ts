@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cancelOrder } from '@/lib/api/orders'
-import { ApiError, describeError } from '@/lib/api/errors'
+import { backendErrorStatus, describeError } from '@/lib/api/errors'
 import { hasActiveOrRefreshableSession } from '@/lib/auth/session'
 
 export async function POST(
@@ -19,10 +19,9 @@ export async function POST(
   } catch (err) {
     // Propagate the backend status (401/403 included) instead of masking it as
     // a 500, so the client can distinguish a dead session from a server error.
-    const status = err instanceof ApiError ? err.status || 500 : 500
     return NextResponse.json(
       { error: describeError(err) },
-      { status: status >= 500 ? 502 : status },
+      { status: backendErrorStatus(err) },
     )
   }
 }

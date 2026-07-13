@@ -47,7 +47,9 @@ export function UserCard({
       })
       if (!res.ok) {
         setOptimisticActive(!next)
-        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        const body = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         setError(errorMessage(body?.code, res.status) ?? t('actionFailed'))
         return
       }
@@ -71,9 +73,7 @@ export function UserCard({
           <dt className="font-mono uppercase tracking-widest text-fg-subtle">
             {t('tableRole')}
           </dt>
-          <dd className="mt-0.5 text-fg">
-            {tForm(ROLE_LABEL_KEY[user.role])}
-          </dd>
+          <dd className="mt-0.5 text-fg">{tForm(ROLE_LABEL_KEY[user.role])}</dd>
         </div>
         <div className="min-w-0">
           <dt className="font-mono uppercase tracking-widest text-fg-subtle">
@@ -88,7 +88,9 @@ export function UserCard({
         </div>
       </dl>
       {error ? (
-        <p role="alert" className="mt-3 text-xs text-accent-600">{error}</p>
+        <p role="alert" className="mt-3 text-xs text-accent-600">
+          {error}
+        </p>
       ) : null}
       <div className="mt-4 flex items-center gap-2">
         <Link

@@ -16,7 +16,10 @@ export default async function RegisterPage({
   return (
     <div className="mx-auto max-w-md py-8">
       <div className="card relative overflow-hidden p-7">
-        <div className="absolute -left-10 -top-10 h-40 w-40 rounded-full bg-accent-500/20 blur-3xl" aria-hidden />
+        <div
+          className="absolute -left-10 -top-10 h-40 w-40 rounded-full bg-accent-500/20 blur-3xl"
+          aria-hidden
+        />
         <div className="relative">
           <div className="flex items-center gap-2">
             <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg sm:text-3xl">

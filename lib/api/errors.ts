@@ -45,3 +45,17 @@ export function describeError(err: unknown): string {
   // wording rely on the ApiError branches above, not on this fallback.
   return GENERIC_SERVER_MESSAGE
 }
+
+/**
+ * The HTTP status a BFF route handler should respond with for an arbitrary
+ * thrown error, once its own known cases (401/403/404, coded 4xx) are handled:
+ * propagate a genuine upstream 4xx as-is so the client can react to it, and
+ * collapse any 5xx — or a non-ApiError / unknown failure — into 502 (Bad
+ * Gateway), so a transient upstream 500 or an internal error is never surfaced
+ * as our own 500. Shared by every order/payment handler to keep the fallback
+ * mapping identical across sibling endpoints.
+ */
+export function backendErrorStatus(err: unknown): number {
+  const status = err instanceof ApiError ? err.status || 500 : 500
+  return status >= 500 ? 502 : status
+}

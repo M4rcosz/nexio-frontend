@@ -35,7 +35,9 @@ export function CheckoutView() {
   if (items.length === 0 || !businessUnitId) {
     return (
       <div className="card flex flex-col items-center gap-3 p-12 text-center">
-        <span className="text-5xl" aria-hidden>🍽️</span>
+        <span className="text-5xl" aria-hidden>
+          🍽️
+        </span>
         <p className="text-fg-muted">{t('emptyCart')}</p>
         <Link href="/" className="btn-primary mt-2">
           {t('browseUnits')}
@@ -74,7 +76,9 @@ export function CheckoutView() {
           router.push('/login?redirect=/checkout')
           return
         }
-        const body = (await res.json().catch(() => null)) as { code?: string } | null
+        const body = (await res.json().catch(() => null)) as {
+          code?: string
+        } | null
         setError(errorMessage(body?.code, res.status) ?? t('submitFailed'))
         return
       }
@@ -91,7 +95,9 @@ export function CheckoutView() {
           <p className="text-[11px] font-mono uppercase tracking-widest text-fg-subtle">
             {t('unitTitle')}
           </p>
-          <p className="mt-2 text-base font-semibold text-fg">{businessUnitName}</p>
+          <p className="mt-2 text-base font-semibold text-fg">
+            {businessUnitName}
+          </p>
         </section>
 
         <section className="card p-5">
@@ -106,7 +112,9 @@ export function CheckoutView() {
               >
                 <div>
                   <p className="font-medium text-fg">
-                    <span className="font-mono text-xs text-fg-subtle">{i.quantity}×</span>{' '}
+                    <span className="font-mono text-xs text-fg-subtle">
+                      {i.quantity}×
+                    </span>{' '}
                     {i.name}
                   </p>
                   {i.notes ? (
@@ -124,7 +132,9 @@ export function CheckoutView() {
         </section>
 
         <section className="card p-5">
-          <label className="label" htmlFor="notes">{t('notesLabel')}</label>
+          <label className="label" htmlFor="notes">
+            {t('notesLabel')}
+          </label>
           <textarea
             id="notes"
             className="input min-h-[88px]"
@@ -135,7 +145,10 @@ export function CheckoutView() {
         </section>
 
         {error ? (
-          <p role="alert" className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300">
+          <p
+            role="alert"
+            className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300"
+          >
             {error}
           </p>
         ) : null}

@@ -19,7 +19,10 @@ export async function listProducts(
   query: PaginationQuery = {},
 ): Promise<Paginated<ProductResponseDto>> {
   if (USE_MOCKS) {
-    return listProductsMock({ search: query.search, categoryId: query.categoryId })
+    return listProductsMock({
+      search: query.search,
+      categoryId: query.categoryId,
+    })
   }
   return serverFetch<Paginated<ProductResponseDto>>('/products', {
     query: {
@@ -53,7 +56,10 @@ export async function listProductsByBusinessUnit(
   query: PaginationQuery = {},
 ): Promise<Paginated<ProductResponseDto>> {
   if (USE_MOCKS) {
-    return listProductsMock({ search: query.search, categoryId: query.categoryId })
+    return listProductsMock({
+      search: query.search,
+      categoryId: query.categoryId,
+    })
   }
   return serverFetch<Paginated<ProductResponseDto>>(
     `/products/by-business-unit/${businessUnitId}`,

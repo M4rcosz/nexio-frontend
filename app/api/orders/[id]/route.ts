@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getOrder } from '@/lib/api/orders'
-import { ApiError, describeError } from '@/lib/api/errors'
+import { backendErrorStatus, describeError } from '@/lib/api/errors'
 import { hasActiveOrRefreshableSession } from '@/lib/auth/session'
 
 export async function GET(
@@ -19,10 +19,9 @@ export async function GET(
   } catch (err) {
     // Propagate the backend status (e.g. a 401 the self-heal couldn't recover)
     // so the polling client can tell an auth failure from a server error.
-    const status = err instanceof ApiError ? err.status || 500 : 500
     return NextResponse.json(
       { error: describeError(err) },
-      { status: status >= 500 ? 502 : status },
+      { status: backendErrorStatus(err) },
     )
   }
 }

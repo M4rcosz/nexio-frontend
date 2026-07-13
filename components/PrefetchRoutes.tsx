@@ -30,13 +30,15 @@ export function PrefetchRoutes({
 
   useEffect(() => {
     const schedule = (cb: () => void) => {
-      if (
-        typeof window !== 'undefined' &&
-        'requestIdleCallback' in window
-      ) {
-        ;(window as Window & {
-          requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number
-        }).requestIdleCallback(cb, { timeout: 2000 })
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        ;(
+          window as Window & {
+            requestIdleCallback: (
+              cb: () => void,
+              opts?: { timeout: number },
+            ) => number
+          }
+        ).requestIdleCallback(cb, { timeout: 2000 })
       } else {
         setTimeout(cb, 600)
       }

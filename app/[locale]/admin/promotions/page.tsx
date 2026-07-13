@@ -31,7 +31,7 @@ export default async function AdminPromotionsPage({
   const selectedUnitId =
     ctx.role === 'MANAGER'
       ? ctx.scopedBusinessUnitId
-      : sp.businessUnitId ?? units[0]?.id ?? null
+      : (sp.businessUnitId ?? units[0]?.id ?? null)
 
   if (!selectedUnitId) {
     return (
@@ -83,7 +83,8 @@ export default async function AdminPromotionsPage({
         />
       ) : lockedUnitName ? (
         <p className="text-sm text-fg-muted">
-          {t('unitLabel')}: <span className="font-medium text-fg">{lockedUnitName}</span>{' '}
+          {t('unitLabel')}:{' '}
+          <span className="font-medium text-fg">{lockedUnitName}</span>{' '}
           <span className="text-xs text-fg-subtle">({t('unitLocked')})</span>
         </p>
       ) : null}
