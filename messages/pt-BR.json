@@ -208,7 +208,9 @@
       "categories": "Categorias",
       "menu": "Cardápio",
       "businessUnits": "Unidades",
-      "ai": "Assistente IA"
+      "ai": "Assistente IA",
+      "openMenu": "Abrir menu de administração",
+      "closeMenu": "Fechar menu de administração"
     },
     "overview": {
       "title": "Painel administrativo",

@@ -208,7 +208,9 @@
       "categories": "Categories",
       "menu": "Menu",
       "businessUnits": "Business Units",
-      "ai": "AI Assistant"
+      "ai": "AI Assistant",
+      "openMenu": "Open admin menu",
+      "closeMenu": "Close admin menu"
     },
     "overview": {
       "title": "Admin overview",
