@@ -1,5 +1,5 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
-import { CartView } from '@/components/CartView'
+import { CartView } from '@/components/cart/CartView'
 
 export default async function CartPage({
   params,

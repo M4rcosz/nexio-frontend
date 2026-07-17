@@ -28,7 +28,8 @@
     "signUp": "Sign up",
     "signOut": "Sign out",
     "signingOut": "Signing out...",
-    "myProfile": "My profile"
+    "myProfile": "My profile",
+    "assistant": "Assistant"
   },
   "languageSwitcher": {
     "label": "Language",
@@ -206,7 +207,8 @@
       "products": "Products",
       "categories": "Categories",
       "menu": "Menu",
-      "businessUnits": "Business Units"
+      "businessUnits": "Business Units",
+      "ai": "AI Assistant"
     },
     "overview": {
       "title": "Admin overview",
@@ -538,6 +540,40 @@
         "submitting": "Saving…",
         "failed": "Could not save the business unit."
       }
+    },
+    "ai": {
+      "title": "AI memberships",
+      "subtitle": "Grant AI assistant access and manage token balances.",
+      "adminOnly": "Only administrators can manage AI memberships.",
+      "targetUser": "Target user",
+      "targetUserPlaceholder": "User ID (UUID)",
+      "targetHint": "Pick a staff member or paste any user ID.",
+      "targetSelected": "Selected: {name} · {username}",
+      "enrollTitle": "Enroll",
+      "enrollHint": "One-time grant of an initial token balance.",
+      "initialBalanceLabel": "Initial balance",
+      "initialBalancePlaceholder": "Initial token balance (e.g. 10000)",
+      "enrollButton": "Grant access",
+      "enrollSuccess": "Enrolled. Balance is now {balance} tokens.",
+      "alreadyEnrolled": "This user is already enrolled — use Adjust to change their balance.",
+      "userNotFound": "No user exists with that ID.",
+      "invalidBalance": "Enter a whole number between 0 and 2,147,483,647.",
+      "adjustTitle": "Adjust balance",
+      "adjustHint": "Add or remove tokens with a signed amount.",
+      "deltaLabel": "Delta",
+      "deltaPlaceholder": "e.g. 5000 or -1000",
+      "adjustButton": "Apply adjustment",
+      "adjustSuccess": "Balance is now {balance} tokens.",
+      "notEnrolled": "This user isn't enrolled yet — grant access first.",
+      "outOfRange": "That change would drive the balance below zero or over the maximum.",
+      "invalidDelta": "Enter a non-zero whole number.",
+      "increment": "Increase",
+      "decrement": "Decrease",
+      "working": "Working…",
+      "forbidden": "You don't have permission to do that.",
+      "genericError": "Something went wrong. Please try again.",
+      "networkError": "Network error. Please try again.",
+      "pickUserFirst": "Choose a target user first."
     }
   },
   "errors": {
@@ -653,5 +689,26 @@
     "wrongPassword": "Current password is incorrect.",
     "samePassword": "The new password must differ from the current one.",
     "failed": "Could not change your password."
+  },
+  "ai": {
+    "title": "AI assistant",
+    "subtitle": "Ask about your orders and loyalty points. Each reply spends tokens from your balance.",
+    "balance": "Token balance",
+    "tokens": "tokens",
+    "balanceHint": "Tokens are spent per message. Your balance updates after each reply.",
+    "notEnrolledTitle": "No AI access yet",
+    "notEnrolledBody": "Ask an admin to grant you AI assistant access.",
+    "outOfTokensTitle": "Out of tokens",
+    "outOfTokensBody": "Ask an admin to top up your balance to keep chatting.",
+    "chatTitle": "Conversation",
+    "emptyState": "Ask me about the status of an order or your loyalty points.",
+    "inputPlaceholder": "Type your message…",
+    "inputDisabledPlaceholder": "Chat unavailable",
+    "send": "Send",
+    "thinking": "Assistant is typing",
+    "tokensSpent": "{count, number} tokens spent",
+    "unavailable": "The assistant is temporarily unavailable. No tokens were charged.",
+    "retry": "Try again",
+    "sendFailed": "Couldn't send your message. Please try again."
   }
 }

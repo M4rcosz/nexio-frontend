@@ -5,9 +5,9 @@ import { getBusinessUnit } from '@/lib/api/business-units'
 import { listProductsByBusinessUnit } from '@/lib/api/products'
 import { listMenu } from '@/lib/api/menu'
 import { listCategories } from '@/lib/api/categories'
-import { ProductCard } from '@/components/ProductCard'
+import { ProductCard } from '@/components/catalog/ProductCard'
 import { BackendBadge } from '@/components/StubBadge'
-import { CategoryFilter } from '@/components/CategoryFilter'
+import { CategoryFilter } from '@/components/catalog/CategoryFilter'
 
 type SearchParams = { search?: string; categoryId?: string }
 
@@ -69,12 +69,6 @@ export default async function MenuPage({
             <p className="mt-1 text-sm text-fg-muted">
               {unit.address} · {unit.city}
             </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="chip-success">
-              <span className="h-1.5 w-1.5 rounded-full bg-forest-500 animate-pulse" />
-              open now
-            </span>
           </div>
         </div>
       </section>

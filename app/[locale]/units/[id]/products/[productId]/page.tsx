@@ -5,7 +5,7 @@ import { getBusinessUnit } from '@/lib/api/business-units'
 import { getProduct } from '@/lib/api/products'
 import { listMenu } from '@/lib/api/menu'
 import { formatMoney } from '@/lib/money'
-import { AddToCartButton } from '@/components/AddToCartButton'
+import { AddToCartButton } from '@/components/cart/AddToCartButton'
 
 export default async function ProductPage({
   params,

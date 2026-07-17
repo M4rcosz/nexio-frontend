@@ -3,7 +3,7 @@ import { Link, redirect } from '@/i18n/navigation'
 import { getSession } from '@/lib/auth/session'
 import { safeRedirect } from '@/lib/auth/redirect'
 import { landingPathForRole } from '@/lib/auth/landing'
-import { LoginForm } from '@/components/LoginForm'
+import { LoginForm } from '@/components/auth/LoginForm'
 
 export default async function LoginPage({
   params,

@@ -1,7 +1,7 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link, redirect } from '@/i18n/navigation'
 import { isAuthenticated } from '@/lib/auth/session'
-import { RegisterForm } from '@/components/RegisterForm'
+import { RegisterForm } from '@/components/auth/RegisterForm'
 
 export default async function RegisterPage({
   params,

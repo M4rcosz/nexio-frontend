@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { getOrder } from '@/lib/api/orders'
-import { OrderTracker } from '@/components/OrderTracker'
+import { OrderTracker } from '@/components/orders/OrderTracker'
 import { formatDateTime } from '@/lib/format'
 
 export const dynamic = 'force-dynamic'

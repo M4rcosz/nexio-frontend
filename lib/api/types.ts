@@ -359,6 +359,57 @@ export type LoyaltyAccount = {
   transactions?: LoyaltyTransaction[]
 }
 
+// --- AI assistant ---
+
+/**
+ * A per-user token wallet an ADMIN grants and tops up. `tokenBalance` is a plain
+ * integer token count (not money) — format it with a thousands separator.
+ */
+export type AiMembership = {
+  id: string
+  userId: string
+  tokenBalance: number
+  createdAt: string
+}
+
+/** `POST /ai/memberships/:userId` body — the initial grant. */
+export type EnrollAiMembershipRequest = {
+  /** Integer in [0, 2_147_483_647]. */
+  initialBalance: number
+}
+
+/** `PATCH /ai/memberships/:userId/balance` body — signed, non-zero delta. */
+export type AdjustAiMembershipBalanceRequest = {
+  /** Non-zero integer in [-2_147_483_647, 2_147_483_647]. Positive credits. */
+  delta: number
+}
+
+/** Only plain user/model turns are accepted — the server strips tool turns. */
+export type ChatRole = 'user' | 'model'
+
+export type ChatTurn = {
+  role: ChatRole
+  /** Non-empty, max 4000 chars. */
+  text: string
+}
+
+/** `POST /ai/chat` body. `history` is replayed context (server is stateless). */
+export type SendChatMessageRequest = {
+  /** Required, non-empty, max 4000. */
+  message: string
+  /** Optional prior turns, max 50. */
+  history?: ChatTurn[]
+}
+
+export type ChatResponse = {
+  /** The assistant's answer — render as the next `model` turn. */
+  reply: string
+  /** Tokens metered for this exchange (may span several internal model calls). */
+  tokensSpent: number
+  /** Caller's balance after this exchange — drive the balance display from it. */
+  balanceRemaining: number
+}
+
 // --- Inventory ---
 
 export type InventoryAdjustmentType = 'IN' | 'OUT'

@@ -50,6 +50,17 @@ export const PASSWORD_LOGIN_MIN_LENGTH = 8
 export const MAX_INVENTORY_QUANTITY = 2147483647
 export const REASON_MAX_LENGTH = 150
 
+// --- AI assistant (memberships + chat) ---
+
+/** Postgres int4 bounds — the backend stores the token balance as a signed int. */
+export const AI_TOKEN_MAX = 2147483647
+/** Enroll grant floor / balance floor. */
+export const AI_TOKEN_MIN = 0
+/** A single chat message / history turn is capped at this many characters. */
+export const CHAT_MESSAGE_MAX_LENGTH = 4000
+/** The server keeps at most this many prior turns; cap what we replay. */
+export const CHAT_HISTORY_MAX_TURNS = 50
+
 export const EMAIL_MAX_LENGTH = 254
 export const NAME_MAX_LENGTH = 120
 export const PHONE_MAX_LENGTH = 20

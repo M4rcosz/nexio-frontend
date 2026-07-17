@@ -28,7 +28,8 @@
     "signUp": "Cadastrar",
     "signOut": "Sair",
     "signingOut": "Saindo...",
-    "myProfile": "Meu perfil"
+    "myProfile": "Meu perfil",
+    "assistant": "Assistente"
   },
   "languageSwitcher": {
     "label": "Idioma",
@@ -206,7 +207,8 @@
       "products": "Produtos",
       "categories": "Categorias",
       "menu": "Cardápio",
-      "businessUnits": "Unidades"
+      "businessUnits": "Unidades",
+      "ai": "Assistente IA"
     },
     "overview": {
       "title": "Painel administrativo",
@@ -538,6 +540,40 @@
         "submitting": "Salvando…",
         "failed": "Não foi possível salvar a unidade."
       }
+    },
+    "ai": {
+      "title": "Assinaturas de IA",
+      "subtitle": "Libere o acesso ao assistente de IA e gerencie os saldos de tokens.",
+      "adminOnly": "Apenas administradores podem gerenciar assinaturas de IA.",
+      "targetUser": "Usuário alvo",
+      "targetUserPlaceholder": "ID do usuário (UUID)",
+      "targetHint": "Escolha um membro da equipe ou cole qualquer ID de usuário.",
+      "targetSelected": "Selecionado: {name} · {username}",
+      "enrollTitle": "Conceder acesso",
+      "enrollHint": "Concessão única de um saldo inicial de tokens.",
+      "initialBalanceLabel": "Saldo inicial",
+      "initialBalancePlaceholder": "Saldo inicial de tokens (ex.: 10000)",
+      "enrollButton": "Conceder",
+      "enrollSuccess": "Acesso concedido. O saldo agora é de {balance} tokens.",
+      "alreadyEnrolled": "Este usuário já possui acesso — use Ajustar para alterar o saldo.",
+      "userNotFound": "Nenhum usuário existe com esse ID.",
+      "invalidBalance": "Informe um número inteiro entre 0 e 2.147.483.647.",
+      "adjustTitle": "Ajustar saldo",
+      "adjustHint": "Adicione ou remova tokens com um valor com sinal.",
+      "deltaLabel": "Ajuste",
+      "deltaPlaceholder": "ex.: 5000 ou -1000",
+      "adjustButton": "Aplicar ajuste",
+      "adjustSuccess": "O saldo agora é de {balance} tokens.",
+      "notEnrolled": "Este usuário ainda não tem acesso — conceda o acesso primeiro.",
+      "outOfRange": "Essa alteração deixaria o saldo abaixo de zero ou acima do máximo.",
+      "invalidDelta": "Informe um número inteiro diferente de zero.",
+      "increment": "Aumentar",
+      "decrement": "Diminuir",
+      "working": "Processando…",
+      "forbidden": "Você não tem permissão para isso.",
+      "genericError": "Algo deu errado. Tente novamente.",
+      "networkError": "Erro de rede. Tente novamente.",
+      "pickUserFirst": "Escolha um usuário alvo primeiro."
     }
   },
   "errors": {
@@ -653,5 +689,26 @@
     "wrongPassword": "A senha atual está incorreta.",
     "samePassword": "A nova senha deve ser diferente da atual.",
     "failed": "Não foi possível alterar sua senha."
+  },
+  "ai": {
+    "title": "Assistente de IA",
+    "subtitle": "Pergunte sobre seus pedidos e pontos de fidelidade. Cada resposta consome tokens do seu saldo.",
+    "balance": "Saldo de tokens",
+    "tokens": "tokens",
+    "balanceHint": "Os tokens são consumidos por mensagem. Seu saldo é atualizado a cada resposta.",
+    "notEnrolledTitle": "Sem acesso à IA ainda",
+    "notEnrolledBody": "Peça a um administrador para liberar seu acesso ao assistente de IA.",
+    "outOfTokensTitle": "Tokens esgotados",
+    "outOfTokensBody": "Peça a um administrador para recarregar seu saldo e continuar a conversa.",
+    "chatTitle": "Conversa",
+    "emptyState": "Pergunte sobre o status de um pedido ou seus pontos de fidelidade.",
+    "inputPlaceholder": "Digite sua mensagem…",
+    "inputDisabledPlaceholder": "Chat indisponível",
+    "send": "Enviar",
+    "thinking": "O assistente está digitando",
+    "tokensSpent": "{count, number} tokens usados",
+    "unavailable": "O assistente está temporariamente indisponível. Nenhum token foi cobrado.",
+    "retry": "Tentar novamente",
+    "sendFailed": "Não foi possível enviar sua mensagem. Tente novamente."
   }
 }

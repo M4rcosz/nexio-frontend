@@ -3,8 +3,8 @@ import { Link } from '@/i18n/navigation'
 import { getSession } from '@/lib/auth/session'
 import type { Theme } from '@/lib/theme'
 import { getTenant } from '@/lib/tenant/resolve'
-import { CartBadge } from './CartBadge'
-import { LogoutButton } from './LogoutButton'
+import { CartBadge } from '@/components/cart/CartBadge'
+import { LogoutButton } from '@/components/auth/LogoutButton'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { ThemeToggle } from './ThemeToggle'
 
@@ -67,6 +67,14 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
                   </Link>
                 </>
               ) : null}
+              {/* AI assistant is open to any authenticated user (customer or
+                  staff) — access is gated by the membership, not by role. */}
+              <Link
+                href="/ai"
+                className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:inline-flex"
+              >
+                {t('assistant')}
+              </Link>
               {showAdminLink ? (
                 <Link
                   href="/admin"

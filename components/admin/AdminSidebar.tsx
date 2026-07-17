@@ -15,6 +15,7 @@ const NAV: Array<{
     | 'businessUnits'
     | 'inventory'
     | 'promotions'
+    | 'ai'
   icon: React.FC<{ className?: string }>
   /** When true, the entry is only shown to ADMIN. */
   adminOnly?: boolean
@@ -37,6 +38,7 @@ const NAV: Array<{
   },
   { href: '/admin/inventory', key: 'inventory', icon: BoxIcon },
   { href: '/admin/promotions', key: 'promotions', icon: TagIcon },
+  { href: '/admin/ai', key: 'ai', icon: SparkIcon, adminOnly: true },
 ]
 
 export function AdminSidebar({ role }: { role: AdminRole }) {
@@ -213,6 +215,24 @@ function MenuIcon({ className = '' }: { className?: string }) {
       <path d="M3 12h18" />
       <path d="M3 6h18" />
       <path d="M3 18h18" />
+    </svg>
+  )
+}
+
+function SparkIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4" />
+      <path d="M12 8a4 4 0 0 0 4 4 4 4 0 0 0-4 4 4 4 0 0 0-4-4 4 4 0 0 0 4-4z" />
     </svg>
   )
 }

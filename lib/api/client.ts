@@ -20,6 +20,12 @@ type FetchInit = Omit<RequestInit, 'body'> & {
   query?: Record<string, string | number | undefined>
   // Next-specific fetch options
   next?: { revalidate?: number | false; tags?: string[] }
+  /**
+   * Override the default abort timeout for this call. Use a longer value for
+   * endpoints that legitimately take a beat (e.g. the AI chat, which may run
+   * several bounded internal model round-trips server-side).
+   */
+  timeoutMs?: number
 }
 
 function buildUrl(path: string, query?: FetchInit['query']): string {
@@ -62,9 +68,11 @@ async function rawFetch<T>(
   if (token) headers.set('authorization', `Bearer ${token}`)
 
   // Bound every call with a timeout so a hung backend surfaces as a network
-  // ApiError rather than blocking a render/refresh indefinitely.
+  // ApiError rather than blocking a render/refresh indefinitely. Callers may
+  // widen it per-request for slow-but-legitimate endpoints.
+  const timeoutMs = init.timeoutMs ?? REQUEST_TIMEOUT_MS
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
   const fetchInit: RequestInit = {
     method: init.method ?? 'GET',
@@ -84,7 +92,7 @@ async function rawFetch<T>(
       0,
       null,
       aborted
-        ? `Network failure: request timed out after ${REQUEST_TIMEOUT_MS}ms`
+        ? `Network failure: request timed out after ${timeoutMs}ms`
         : err instanceof Error
           ? `Network failure: ${err.message}`
           : 'Network failure while calling the backend.',

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import dynamic from 'next/dynamic'
 import { Inter, Space_Grotesk } from 'next/font/google'
 import { notFound } from 'next/navigation'
 import { hasLocale, NextIntlClientProvider } from 'next-intl'
@@ -8,10 +9,26 @@ import { Header } from '@/components/Header'
 import { PrefetchRoutes } from '@/components/PrefetchRoutes'
 import { RouteTransition } from '@/components/RouteTransition'
 import { TenantProvider } from '@/components/TenantProvider'
+import { getSession } from '@/lib/auth/session'
 import { getTheme } from '@/lib/theme'
 import { getTenant } from '@/lib/tenant/resolve'
 import { localized, tenantThemeVars, toBranding } from '@/lib/tenant/config'
 import '../globals.css'
+
+// DEV-ONLY quick account switcher. The ternary collapses to `() => null` in a
+// production build, so the bundler dead-code-eliminates the import() and the
+// component never ships. (Vercel preview builds run with NODE_ENV=production
+// too, so it won't appear there either — switch to VERCEL_ENV if you want it.)
+const DevAccountSwitcher: React.ComponentType<{
+  currentUsername?: string | null
+}> =
+  process.env.NODE_ENV === 'production'
+    ? () => null
+    : dynamic(() =>
+        import('@/components/dev/DevAccountSwitcher').then(
+          (m) => m.DevAccountSwitcher,
+        ),
+      )
 
 const inter = Inter({
   subsets: ['latin'],
@@ -61,6 +78,12 @@ export default async function LocaleLayout({
   const tenant = await getTenant()
   const themeVars = tenantThemeVars(tenant) as React.CSSProperties
 
+  // Only resolved in dev — the switcher and this cookie read are gone in prod.
+  const devUsername =
+    process.env.NODE_ENV !== 'production'
+      ? ((await getSession())?.username ?? null)
+      : null
+
   return (
     <html
       lang={locale}
@@ -88,6 +111,7 @@ export default async function LocaleLayout({
                 </div>
               </footer>
             </div>
+            <DevAccountSwitcher currentUsername={devUsername} />
           </TenantProvider>
         </NextIntlClientProvider>
       </body>

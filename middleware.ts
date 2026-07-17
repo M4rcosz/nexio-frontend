@@ -18,6 +18,7 @@ const intlMiddleware = createIntlMiddleware(routing)
 const PROTECTED_PATTERNS: RegExp[] = [
   /^\/(?:cart|checkout|loyalty)(?:\/|$)/,
   /^\/(?:payment|orders|profile)(?:\/|$)/,
+  /^\/(?:ai)(?:\/|$)/,
   /^\/admin(?:\/|$)/,
 ]
 
