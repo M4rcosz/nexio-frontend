@@ -62,7 +62,7 @@ export function PromotionCard({ promotion }: { promotion: Promotion }) {
       <div className="mt-4 flex items-center">
         <Link
           href={`/admin/promotions/${promotion.id}`}
-          className="btn-secondary flex-1 !py-2 text-center text-xs"
+          className="btn-secondary flex-1 min-h-[44px] !py-2 text-center text-xs"
         >
           {t('actionEdit')}
         </Link>

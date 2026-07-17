@@ -52,7 +52,7 @@ export function CategoryList({ categories }: { categories: Category[] }) {
             </p>
             <Link
               href={`/admin/categories/${c.id}`}
-              className="btn-ghost w-full justify-center text-xs"
+              className="btn-ghost min-h-[44px] w-full justify-center text-xs"
             >
               {t('actionEdit')}
             </Link>

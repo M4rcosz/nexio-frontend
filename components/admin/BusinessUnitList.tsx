@@ -172,7 +172,7 @@ export function BusinessUnitList({
             <div className="flex items-center gap-1.5">
               <Link
                 href={`/admin/business-units/${u.id}`}
-                className="btn-ghost flex-1 justify-center text-xs"
+                className="btn-ghost flex-1 min-h-[44px] justify-center text-xs"
               >
                 {t('actionEdit')}
               </Link>
@@ -180,7 +180,7 @@ export function BusinessUnitList({
                 type="button"
                 onClick={() => toggleActive(u)}
                 disabled={togglingId === u.id}
-                className={`rounded-lg px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                className={`inline-flex min-h-[44px] items-center justify-center rounded-lg px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
                   u.isActive
                     ? 'text-accent-600 hover:bg-accent-500/10'
                     : 'text-forest-600 hover:bg-forest-500/10'
