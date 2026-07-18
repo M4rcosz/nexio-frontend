@@ -210,7 +210,7 @@ export function AiAssistantView({
 
         <div
           ref={listRef}
-          className="flex-1 space-y-4 overflow-y-auto px-5 py-5"
+          className="scrollbar-thin flex-1 space-y-4 overflow-y-auto px-5 py-5"
           aria-live="polite"
         >
           {messages.length === 0 && !pending ? (

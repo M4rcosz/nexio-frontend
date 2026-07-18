@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from '@/i18n/navigation'
 import { landingPathForRole } from '@/lib/auth/landing'
 import type { Role } from '@/lib/api/types'
+import { DEV_SEED_ACCOUNTS, type DevSeedAccount } from '@/lib/dev/seedAccounts'
 
 /**
  * DEV-ONLY quick account switcher. A floating button that expands into a list of
@@ -21,24 +22,11 @@ import type { Role } from '@/lib/api/types'
  * accounts that guard nothing sensitive — it is inlined into the dev bundle.
  */
 
-type DevAccount = {
-  username: string
-  name: string
-  role: Role
-}
+type DevAccount = DevSeedAccount
 
-// Mirrors the seed users in lib/api/mocks/admin-users.ts (+ the demo customer).
-const ACCOUNTS: DevAccount[] = [
-  { username: 'admin', name: 'Administradora Geral', role: 'ADMIN' },
-  { username: 'manager.recife', name: 'Beatriz Lima', role: 'MANAGER' },
-  { username: 'manager.olinda', name: 'Rafael Souza', role: 'MANAGER' },
-  { username: 'maria.atendente', name: 'Maria Silva', role: 'ATTENDANT' },
-  { username: 'pedro.atendente', name: 'Pedro Henrique', role: 'ATTENDANT' },
-  { username: 'ana.atendente', name: 'Ana Costa', role: 'ATTENDANT' },
-  { username: 'jose.cozinha', name: 'José Cozinha', role: 'KITCHEN' },
-  { username: 'lucia.cozinha', name: 'Lúcia Mendes', role: 'KITCHEN' },
-  { username: 'demo.customer', name: 'Cliente Demo', role: 'CUSTOMER' },
-]
+// Single source of truth shared with the mock login's role derivation — see
+// lib/dev/seedAccounts.ts for why that matters.
+const ACCOUNTS: DevAccount[] = DEV_SEED_ACCOUNTS
 
 // The mock accepts any 4+ char password; override for a real backend seed.
 const DEV_PASSWORD = process.env.NEXT_PUBLIC_DEV_SEED_PASSWORD || 'devpass1'
@@ -129,7 +117,7 @@ export function DevAccountSwitcher({
               ✕
             </button>
           </div>
-          <ul className="max-h-80 overflow-y-auto p-1.5">
+          <ul className="scrollbar-thin max-h-80 overflow-y-auto p-1.5">
             {ACCOUNTS.map((acc) => {
               const isCurrent =
                 !!currentUsername &&
@@ -162,7 +150,12 @@ export function DevAccountSwitcher({
               )
             })}
           </ul>
-          <div className="flex items-center justify-between border-t border-border px-4 py-2">
+          {error ? (
+            <p className="border-t border-border px-4 py-2 text-[11px] leading-snug text-accent-600 dark:text-accent-400">
+              {error}
+            </p>
+          ) : null}
+          <div className="border-t border-border px-4 py-2">
             <button
               type="button"
               onClick={signOut}
@@ -171,11 +164,6 @@ export function DevAccountSwitcher({
             >
               Sign out
             </button>
-            {error ? (
-              <span className="truncate pl-2 text-[11px] text-accent-600 dark:text-accent-400">
-                {error}
-              </span>
-            ) : null}
           </div>
         </div>
       ) : null}

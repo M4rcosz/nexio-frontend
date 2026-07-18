@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { Select } from '@/components/ui/Select'
 import { clientFetch } from '@/lib/api/client'
@@ -310,82 +310,15 @@ export function OrderBoard({
             />
           </Field>
         ) : null}
-        <Field label={t('filters.attendant')}>
-          <input
-            className="input w-36"
-            placeholder={t('filters.attendantPlaceholder')}
-            value={filters.attendantId}
-            onChange={(e) => setFilter('attendantId', e.target.value)}
-          />
-        </Field>
-        <Field label={t('filters.customer')}>
-          <input
-            className="input w-36"
-            placeholder={t('filters.customerPlaceholder')}
-            value={filters.customerId}
-            onChange={(e) => setFilter('customerId', e.target.value)}
-          />
-        </Field>
-        <Field label={t('filters.from')}>
-          <input
-            type="date"
-            className="input"
-            value={filters.createdAtFrom}
-            onChange={(e) => setFilter('createdAtFrom', e.target.value)}
-          />
-        </Field>
-        <Field label={t('filters.to')}>
-          <input
-            type="date"
-            className="input"
-            value={filters.createdAtTo}
-            onChange={(e) => setFilter('createdAtTo', e.target.value)}
-          />
-        </Field>
-        <Field label={t('filters.minTotal')}>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            className="input w-24"
-            value={filters.minTotal}
-            onChange={(e) => setFilter('minTotal', e.target.value)}
-          />
-        </Field>
-        <Field label={t('filters.maxTotal')}>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            className="input w-24"
-            value={filters.maxTotal}
-            onChange={(e) => setFilter('maxTotal', e.target.value)}
-          />
-        </Field>
-        <Field label={t('filters.sortBy')}>
-          <Select
-            fullWidth={false}
-            ariaLabel={t('filters.sortBy')}
-            value={sortBy}
-            onChange={(v) => setSortBy(v as OrderSortField)}
-            options={[
-              { value: 'createdAt', label: t('filters.sortCreatedAt') },
-              { value: 'totalAmount', label: t('filters.sortTotal') },
-            ]}
-          />
-        </Field>
-        <Field label={t('filters.sortDir')}>
-          <Select
-            fullWidth={false}
-            ariaLabel={t('filters.sortDir')}
-            value={sortDir}
-            onChange={(v) => setSortDir(v as SortDirection)}
-            options={[
-              { value: 'desc', label: t('filters.sortDesc') },
-              { value: 'asc', label: t('filters.sortAsc') },
-            ]}
-          />
-        </Field>
+
+        <MoreFiltersPopover
+          filters={filters}
+          setFilter={setFilter}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          sortDir={sortDir}
+          setSortDir={setSortDir}
+        />
 
         <div className="ml-auto flex gap-2">
           <button
@@ -430,7 +363,7 @@ export function OrderBoard({
           className={`card overflow-hidden p-0 ${loading ? 'opacity-50' : ''}`}
           aria-busy={loading}
         >
-          <div className="overflow-x-auto">
+          <div className="scrollbar-thin overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-surface-2 text-[10px] font-mono uppercase tracking-widest text-fg-subtle">
                 <tr>
@@ -562,5 +495,210 @@ function Field({
       </span>
       {children}
     </div>
+  )
+}
+
+/** Secondary filters (attendant/customer/date range/totals/sort), tucked
+ * behind a popover so the primary bar (channel, status, unit) stays scannable. */
+function MoreFiltersPopover({
+  filters,
+  setFilter,
+  sortBy,
+  setSortBy,
+  sortDir,
+  setSortDir,
+}: {
+  filters: Filters
+  setFilter: <K extends keyof Filters>(key: K, value: Filters[K]) => void
+  sortBy: OrderSortField
+  setSortBy: (v: OrderSortField) => void
+  sortDir: SortDirection
+  setSortDir: (v: SortDirection) => void
+}) {
+  const t = useTranslations('admin.orders')
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const panelId = useId()
+
+  const activeCount = [
+    filters.attendantId.trim(),
+    filters.customerId.trim(),
+    filters.createdAtFrom,
+    filters.createdAtTo,
+    filters.minTotal.trim(),
+    filters.maxTotal.trim(),
+  ].filter(Boolean).length
+
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: MouseEvent) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
+        className="btn-secondary"
+      >
+        {activeCount > 0
+          ? t('filters.moreFiltersCount', { count: activeCount })
+          : t('filters.moreFilters')}
+        <ChevronDown
+          className={`h-4 w-4 opacity-60 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {open ? (
+        <div
+          id={panelId}
+          role="dialog"
+          aria-label={t('filters.moreFiltersPanelLabel')}
+          className="absolute right-0 z-50 mt-2 w-72 rounded-2xl border border-border bg-bg-elevated p-4 shadow-soft-lg sm:w-[min(90vw,420px)]"
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-fg-subtle">
+              {t('filters.moreFiltersPanelLabel')}
+            </p>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label={t('filters.closeFilters')}
+              className="-mr-1.5 rounded-lg p-1.5 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+            >
+              <CloseIcon className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Field label={t('filters.attendant')}>
+              <input
+                className="input"
+                placeholder={t('filters.attendantPlaceholder')}
+                value={filters.attendantId}
+                onChange={(e) => setFilter('attendantId', e.target.value)}
+              />
+            </Field>
+            <Field label={t('filters.customer')}>
+              <input
+                className="input"
+                placeholder={t('filters.customerPlaceholder')}
+                value={filters.customerId}
+                onChange={(e) => setFilter('customerId', e.target.value)}
+              />
+            </Field>
+            <Field label={t('filters.from')}>
+              <input
+                type="date"
+                className="input"
+                value={filters.createdAtFrom}
+                onChange={(e) => setFilter('createdAtFrom', e.target.value)}
+              />
+            </Field>
+            <Field label={t('filters.to')}>
+              <input
+                type="date"
+                className="input"
+                value={filters.createdAtTo}
+                onChange={(e) => setFilter('createdAtTo', e.target.value)}
+              />
+            </Field>
+            <Field label={t('filters.minTotal')}>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="input"
+                value={filters.minTotal}
+                onChange={(e) => setFilter('minTotal', e.target.value)}
+              />
+            </Field>
+            <Field label={t('filters.maxTotal')}>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className="input"
+                value={filters.maxTotal}
+                onChange={(e) => setFilter('maxTotal', e.target.value)}
+              />
+            </Field>
+            <Field label={t('filters.sortBy')}>
+              <Select
+                ariaLabel={t('filters.sortBy')}
+                value={sortBy}
+                onChange={(v) => setSortBy(v as OrderSortField)}
+                options={[
+                  { value: 'createdAt', label: t('filters.sortCreatedAt') },
+                  { value: 'totalAmount', label: t('filters.sortTotal') },
+                ]}
+              />
+            </Field>
+            <Field label={t('filters.sortDir')}>
+              <Select
+                ariaLabel={t('filters.sortDir')}
+                value={sortDir}
+                onChange={(v) => setSortDir(v as SortDirection)}
+                options={[
+                  { value: 'desc', label: t('filters.sortDesc') },
+                  { value: 'asc', label: t('filters.sortAsc') },
+                ]}
+              />
+            </Field>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function ChevronDown({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  )
+}
+
+function CloseIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
   )
 }

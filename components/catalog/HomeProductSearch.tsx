@@ -94,7 +94,7 @@ export function HomeProductSearch({
               {loading ? t('searching') : t('empty')}
             </p>
           ) : (
-            <ul className="max-h-[60vh] divide-y divide-border overflow-y-auto">
+            <ul className="scrollbar-thin max-h-[60vh] divide-y divide-border overflow-y-auto">
               {results.map((p) => (
                 <li key={p.id}>
                   <Link

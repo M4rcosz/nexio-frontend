@@ -260,7 +260,7 @@ export function MenuManageTable({
 
       {/* Tablet/desktop: data table */}
       <div className="card hidden overflow-hidden p-0 md:block">
-        <div className="overflow-x-auto">
+        <div className="scrollbar-thin overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-surface-2 text-[10px] font-mono uppercase tracking-widest text-fg-subtle">
               <tr>

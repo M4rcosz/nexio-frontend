@@ -46,7 +46,7 @@ export function CartBadge() {
             </div>
           ) : (
             <>
-              <div className="max-h-64 divide-y divide-border overflow-y-auto">
+              <div className="scrollbar-thin max-h-64 divide-y divide-border overflow-y-auto">
                 {items.map((item) => (
                   <div
                     key={item.productId}

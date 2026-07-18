@@ -42,6 +42,9 @@ export function AdminUnitSelector({
         onChange={onChange}
         ariaLabel={t(labelKey)}
         options={units.map((u) => ({ value: u.id, label: u.name }))}
+        searchable
+        searchPlaceholder={t('common.search')}
+        noResultsLabel={t('common.noResults')}
       />
     </div>
   )

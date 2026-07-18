@@ -148,12 +148,22 @@ lib/
 middleware.ts                    # i18n + protected-route guard
 ```
 
-## Auth flow (60s expiration warning)
+## Auth flow
 
-The backend JWT expires after **60 seconds** (PoC; this will change).
-On a 401 response the user is sent back to `/login` with `?redirect=...`.
-There is no refresh: `/api/auth/refresh` answers 501 on purpose. Do not
-implement client-side refresh until the backend exposes the endpoint.
+The access token (session cookie) expires after **30 minutes**; the refresh
+token cookie lasts **7 days**. `middleware.ts` proactively renews the access
+token on protected routes when it's expired but a refresh token is still
+valid, rotating both cookies before the page renders. Only when the refresh
+token is also invalid/missing does a protected route redirect to `/login`
+with `?redirect=...`.
+
+Next.js's client Router Cache reuses the root layout's last render (where
+`Header` reads the session cookie) across soft `<Link>` navigations, so an
+expired session can keep showing the logged-in header/nav until something
+forces a fresh server render. `SessionWatcher` (mounted in `Header` only
+when logged in) calls `router.refresh()` on tab focus/visibility change and
+on a 5-minute fallback interval to catch that case — it does not implement
+token refresh, it just busts the stale render.
 
 ## Next steps when the backend ships more endpoints
 

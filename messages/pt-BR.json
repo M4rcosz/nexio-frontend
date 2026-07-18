@@ -14,7 +14,9 @@
     "stub": "mock",
     "stubTitle": "Endpoint ainda não existe no backend — usando dados de mock.",
     "backendBadge": "backend",
-    "backendBadgeTitle": "Endpoint real do backend."
+    "backendBadgeTitle": "Endpoint real do backend.",
+    "search": "Buscar...",
+    "noResults": "Nenhum resultado encontrado."
   },
   "header": {
     "brand": "Nexio",
@@ -214,7 +216,7 @@
     "failed": "Falha ao cadastrar."
   },
   "admin": {
-    "headerLink": "Admin",
+    "headerLink": "ERP",
     "nav": {
       "overview": "Visão geral",
       "orders": "Pedidos",
@@ -269,7 +271,11 @@
         "sortDesc": "Mais recentes primeiro",
         "sortAsc": "Mais antigos primeiro",
         "kitchenQueue": "Fila da cozinha",
-        "clear": "Limpar filtros"
+        "clear": "Limpar filtros",
+        "moreFilters": "Filtros",
+        "moreFiltersCount": "Filtros ({count})",
+        "moreFiltersPanelLabel": "Mais filtros",
+        "closeFilters": "Fechar filtros"
       },
       "table": {
         "order": "Pedido",

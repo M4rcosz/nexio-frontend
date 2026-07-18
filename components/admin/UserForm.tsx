@@ -252,7 +252,7 @@ export function UserForm({
         {unitFieldVisible ? (
           <fieldset>
             <legend className="label">{t('businessUnits')}</legend>
-            <div className="max-h-56 space-y-2 overflow-auto rounded-xl border border-border bg-surface-2 p-3">
+            <div className="scrollbar-thin max-h-56 space-y-2 overflow-auto rounded-xl border border-border bg-surface-2 p-3">
               {selectableUnits.map((u) => (
                 <label
                   key={u.id}

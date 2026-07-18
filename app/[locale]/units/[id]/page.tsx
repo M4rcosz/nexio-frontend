@@ -112,7 +112,7 @@ export default async function MenuPage({
           </button>
         </form>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <div className="scrollbar-thin flex items-center gap-2 overflow-x-auto pb-1">
           <CategoryFilter
             categories={categories}
             selected={sp.categoryId}

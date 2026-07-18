@@ -8,6 +8,7 @@ import type {
 import { ApiError } from '../errors'
 import { mockDelay } from './_delay'
 import { findUserByUsernameMock } from './admin-users'
+import { DEV_SEED_ACCOUNTS } from '@/lib/dev/seedAccounts'
 
 /**
  * Mock implementations of the auth backend, kept in their own module so the real
@@ -47,7 +48,24 @@ function deriveMockUserFromUsername(username: string): {
     }
   }
 
-  // 2. Fallback heuristic on the username prefix
+  // 2. DevAccountSwitcher's seed accounts — same list it renders, so a
+  // username typed there always resolves to the role shown on its chip
+  // instead of silently falling through to the CUSTOMER default below.
+  const devAccount = DEV_SEED_ACCOUNTS.find(
+    (a) => a.username.toLowerCase() === username.toLowerCase(),
+  )
+  if (devAccount) {
+    return {
+      sub: `usr_dev_${devAccount.username.replace(/\./g, '_')}`,
+      role: devAccount.role,
+      businessUnitIds:
+        devAccount.role === 'CUSTOMER' || devAccount.role === 'ADMIN'
+          ? []
+          : ['bu_recife_boavista'],
+    }
+  }
+
+  // 3. Fallback heuristic on the username prefix
   const lower = username.toLowerCase()
   if (lower.startsWith('admin')) {
     return { sub: 'usr_admin_demo', role: 'ADMIN', businessUnitIds: [] }

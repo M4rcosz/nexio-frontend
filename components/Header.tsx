@@ -1,10 +1,12 @@
 import { getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { getSession } from '@/lib/auth/session'
+import { getMyAiMembership } from '@/lib/api/ai'
 import type { Theme } from '@/lib/theme'
 import { getTenant } from '@/lib/tenant/resolve'
 import { CartBadge } from '@/components/cart/CartBadge'
-import { LogoutButton } from '@/components/auth/LogoutButton'
+import { SessionWatcher } from '@/components/auth/SessionWatcher'
+import { UserMenu } from './UserMenu'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { ThemeToggle } from './ThemeToggle'
 
@@ -16,6 +18,10 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
   const isCustomer = session?.role === 'CUSTOMER'
   // The cart stays available to logged-out guests too (guest checkout).
   const showCart = !isLogged || isCustomer
+  // Assistant nav: customers never see it, and staff only see it once they
+  // actually hold an AI membership (no dead link to a locked-out page).
+  const membership = isLogged && !isCustomer ? await getMyAiMembership() : null
+  const showAssistantLink = isLogged && !isCustomer && membership !== null
   const t = await getTranslations('header')
   const tAdmin = await getTranslations('admin')
   const tenant = await getTenant()
@@ -52,29 +58,21 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
           {isLogged ? (
             <>
               {isCustomer ? (
-                <>
-                  <Link
-                    href="/orders"
-                    className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:inline-flex"
-                  >
-                    {t('myOrders')}
-                  </Link>
-                  <Link
-                    href="/loyalty"
-                    className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:inline-flex"
-                  >
-                    {t('points')}
-                  </Link>
-                </>
+                <Link
+                  href="/orders"
+                  className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:inline-flex"
+                >
+                  {t('myOrders')}
+                </Link>
               ) : null}
-              {/* AI assistant is open to any authenticated user (customer or
-                  staff) — access is gated by the membership, not by role. */}
-              <Link
-                href="/ai"
-                className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:inline-flex"
-              >
-                {t('assistant')}
-              </Link>
+              {showAssistantLink ? (
+                <Link
+                  href="/ai"
+                  className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:inline-flex"
+                >
+                  {t('assistant')}
+                </Link>
+              ) : null}
               {showAdminLink ? (
                 <Link
                   href="/admin"
@@ -88,14 +86,11 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
                 </Link>
               ) : null}
               <div className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
-              <Link
-                href="/profile"
-                aria-label={t('myProfile')}
-                className="hidden rounded-xl px-3 py-2 text-xs font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg xl:inline-flex"
-              >
-                {t('greeting', { name: session?.username ?? '' })}
-              </Link>
-              <LogoutButton />
+              <UserMenu
+                username={session?.username ?? ''}
+                showPoints={isCustomer}
+              />
+              <SessionWatcher />
             </>
           ) : (
             <>
