@@ -72,7 +72,16 @@
     "available": "available at {unit}",
     "noDescription": "No description.",
     "addToCart": "Add to cart",
-    "added": "Added!"
+    "added": "Added!",
+    "promotions": {
+      "title": "Promotions running",
+      "percentOverMin": "{value}% off orders over {min}",
+      "percentAll": "{value}% off your order",
+      "fixedOverMin": "{value} off orders over {min}",
+      "fixedAll": "{value} off your order",
+      "until": "until {date}",
+      "appliedNote": "The discount is applied automatically to eligible orders."
+    }
   },
   "cart": {
     "title": "Your cart",
@@ -104,7 +113,12 @@
     "submitting": "Creating order...",
     "submitFailed": "Failed to create order.",
     "paymentNext": "You'll pay on the next step.",
-    "noteWith": "note: {value}"
+    "noteWith": "note: {value}",
+    "subtotal": "Subtotal",
+    "promoDiscount": "Promotion — {name}",
+    "estimatedTotal": "Estimated total",
+    "promoEstimateNote": "The discount is applied automatically when your order is created.",
+    "promoNudge": "Add {missing} in items to unlock {name} ({label})."
   },
   "payment": {
     "title": "Payment",
@@ -149,7 +163,10 @@
     "cancelling": "Cancelling...",
     "cancelFailed": "Could not cancel.",
     "cancelled": "Order cancelled.",
-    "cancelledMessage": "Order cancelled at some step before delivery."
+    "cancelledMessage": "Order cancelled at some step before delivery.",
+    "subtotal": "Subtotal",
+    "pointsDiscount": "Loyalty points ({points} pts)",
+    "promotionDiscount": "Promotion discount"
   },
   "loyalty": {
     "title": "Loyalty program",
@@ -341,9 +358,15 @@
       "tableActions": "Actions",
       "statusActive": "Active",
       "statusInactive": "Inactive",
+      "statusScheduled": "Scheduled",
+      "statusExpired": "Expired",
       "discountPercentage": "{value}% off",
       "discountFixed": "{value} off",
       "actionEdit": "Edit",
+      "actionActivate": "Activate",
+      "actionDeactivate": "Deactivate",
+      "toggling": "Saving...",
+      "toggleFailed": "Could not update the promotion.",
       "loadFailed": "Could not load promotions.",
       "form": {
         "createTitle": "New promotion",

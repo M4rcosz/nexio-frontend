@@ -16,15 +16,36 @@ vi.mock('@/i18n/navigation', () => ({
 
 import { CheckoutView } from '@/components/checkout/CheckoutView'
 
-function mockFetch(status: number, body: unknown = {}) {
-  const res = {
+function res(status: number, body: unknown = {}): Response {
+  return {
     ok: status >= 200 && status < 300,
     status,
     json: async () => body,
   } as Response
-  const fn = vi.fn().mockResolvedValue(res)
+}
+
+/**
+ * Stubs fetch for both calls the view makes: the promotions lookup on mount
+ * (answered with `promotions`, empty by default) and the order submission
+ * (answered with `status`/`body`).
+ */
+function mockFetch(
+  status: number,
+  body: unknown = {},
+  promotions: unknown[] = [],
+) {
+  const fn = vi.fn().mockImplementation(async (url: string) => {
+    if (url.startsWith('/api/promotions/active/')) {
+      return res(200, { data: promotions })
+    }
+    return res(status, body)
+  })
   vi.stubGlobal('fetch', fn)
   return fn
+}
+
+function orderCalls(fn: ReturnType<typeof vi.fn>) {
+  return fn.mock.calls.filter(([url]) => url === '/api/orders')
 }
 
 function seed() {
@@ -64,9 +85,8 @@ describe('CheckoutView', () => {
     await user.type(screen.getByLabelText(/order notes/i), 'ring the bell')
     await user.click(screen.getByRole('button', { name: /confirm and pay/i }))
 
-    await waitFor(() => expect(fetchFn).toHaveBeenCalled())
-    const [url, init] = fetchFn.mock.calls[0]
-    expect(url).toBe('/api/orders')
+    await waitFor(() => expect(orderCalls(fetchFn)).toHaveLength(1))
+    const [, init] = orderCalls(fetchFn)[0]
     expect(init.headers['idempotency-key']).toEqual(expect.any(String))
     const body = JSON.parse(init.body)
     expect(body).toMatchObject({
@@ -108,5 +128,48 @@ describe('CheckoutView', () => {
     )
     expect(push).not.toHaveBeenCalled()
     expect(useCartStore.getState().items).toHaveLength(1)
+  })
+
+  // Cart subtotal in these tests: 2 × 25.90 = 51.80.
+  const livePromo = {
+    id: 'promo1',
+    businessUnitId: 'bu-1',
+    name: 'Lunch deal',
+    discountType: 'PERCENTAGE',
+    discountValue: '10.00',
+    minOrderValue: '30.00',
+    startDate: '2000-01-01T00:00:00.000Z',
+    endDate: '2999-01-01T00:00:00.000Z',
+    isActive: true,
+    createdAt: '',
+    updatedAt: '',
+  }
+
+  it('shows the estimated discount when a live promotion applies', async () => {
+    mockFetch(201, { id: 'order-9' }, [livePromo])
+    seed()
+    renderWithIntl(<CheckoutView />)
+
+    // 10% of 51.80 → −5.18, estimated total 46.62.
+    expect(await screen.findByText(/estimated total/i)).toBeInTheDocument()
+    expect(screen.getByText(/promotion — lunch deal/i)).toBeInTheDocument()
+    expect(screen.getByText('−R$5.18')).toBeInTheDocument()
+    expect(screen.getByText('R$46.62')).toBeInTheDocument()
+  })
+
+  it('nudges toward the nearest unlockable promotion minimum', async () => {
+    mockFetch(201, { id: 'order-9' }, [
+      { ...livePromo, minOrderValue: '100.00' },
+    ])
+    seed()
+    renderWithIntl(<CheckoutView />)
+
+    // 100.00 − 51.80 = 48.20 still missing; the plain total is kept
+    // (51.80 shows twice: the item line and the total).
+    expect(
+      await screen.findByText(/add r\$48\.20 in items/i),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText('R$51.80')).toHaveLength(2)
+    expect(screen.queryByText(/estimated total/i)).not.toBeInTheDocument()
   })
 })

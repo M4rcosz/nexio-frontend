@@ -6,7 +6,9 @@ import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { Link, useRouter } from '@/i18n/navigation'
 import { cartTotal, useCartStore } from '@/lib/cart/store'
 import { formatMoney, multiplyMoney } from '@/lib/money'
-import type { Order } from '@/lib/api/types'
+import { bestPromotion, nextPromotionNudge } from '@/lib/promotions'
+import { useDiscountLabel } from '@/lib/hooks/usePromotionLabel'
+import type { Order, Promotion } from '@/lib/api/types'
 
 export function CheckoutView() {
   const router = useRouter()
@@ -19,6 +21,26 @@ export function CheckoutView() {
   const [pending, start] = useTransition()
   const [hydrated, setHydrated] = useState(false)
   useEffect(() => setHydrated(true), [])
+  const [promotions, setPromotions] = useState<Promotion[]>([])
+  const discountLabel = useDiscountLabel()
+
+  // Live promotions inform the estimate only — the backend owns the actual
+  // discount (applied into the order's totalAmount). Any failure here just
+  // means no promotional copy.
+  useEffect(() => {
+    if (!businessUnitId) return
+    let cancelled = false
+    fetch(`/api/promotions/active/${businessUnitId}`, { cache: 'no-store' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { data?: unknown } | null) => {
+        if (cancelled || !Array.isArray(body?.data)) return
+        setPromotions(body.data as Promotion[])
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [businessUnitId])
   const t = useTranslations('checkout')
   const errorMessage = useErrorMessage()
   const tCommon = useTranslations('common')
@@ -46,7 +68,10 @@ export function CheckoutView() {
     )
   }
 
-  const total = cartTotal(items)
+  const subtotal = cartTotal(items)
+  const applied = bestPromotion(promotions, subtotal)
+  const nudge = applied ? null : nextPromotionNudge(promotions, subtotal)
+  const total = applied ? subtotal.minus(applied.discount) : subtotal
 
   function submit() {
     setError(null)
@@ -155,13 +180,44 @@ export function CheckoutView() {
       </div>
 
       <aside className="card sticky top-24 h-max overflow-hidden p-0">
-        <div className="border-b border-border p-5">
+        <div className="border-b border-border p-5" aria-live="polite">
+          {applied ? (
+            <dl className="mb-3 space-y-1 text-sm">
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-fg-muted">{t('subtotal')}</dt>
+                <dd className="text-fg">{formatMoney(subtotal, locale)}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="min-w-0 truncate text-forest-700 dark:text-forest-300">
+                  {t('promoDiscount', { name: applied.promotion.name })}
+                </dt>
+                <dd className="text-forest-700 dark:text-forest-300">
+                  −{formatMoney(applied.discount, locale)}
+                </dd>
+              </div>
+            </dl>
+          ) : null}
           <p className="text-[11px] font-mono uppercase tracking-widest text-fg-subtle">
-            {t('total')}
+            {applied ? t('estimatedTotal') : t('total')}
           </p>
           <p className="mt-2 font-display text-3xl font-bold text-gradient-brand">
             {formatMoney(total, locale)}
           </p>
+          {applied ? (
+            <p className="mt-2 text-xs text-fg-subtle">
+              {t('promoEstimateNote')}
+            </p>
+          ) : null}
+          {nudge ? (
+            <p className="mt-2 rounded-xl border border-brand-500/30 bg-brand-500/5 p-2.5 text-xs text-fg-muted">
+              <span aria-hidden="true">🏷️</span>{' '}
+              {t('promoNudge', {
+                missing: formatMoney(nudge.missing, locale),
+                name: nudge.promotion.name,
+                label: discountLabel(nudge.promotion),
+              })}
+            </p>
+          ) : null}
         </div>
         <div className="space-y-3 p-5">
           <button

@@ -72,7 +72,16 @@
     "available": "disponível em {unit}",
     "noDescription": "Sem descrição.",
     "addToCart": "Adicionar",
-    "added": "Adicionado!"
+    "added": "Adicionado!",
+    "promotions": {
+      "title": "Promoções ativas",
+      "percentOverMin": "{value}% de desconto em pedidos acima de {min}",
+      "percentAll": "{value}% de desconto no pedido",
+      "fixedOverMin": "{value} de desconto em pedidos acima de {min}",
+      "fixedAll": "{value} de desconto no pedido",
+      "until": "até {date}",
+      "appliedNote": "O desconto é aplicado automaticamente aos pedidos elegíveis."
+    }
   },
   "cart": {
     "title": "Seu carrinho",
@@ -104,7 +113,12 @@
     "submitting": "Criando pedido...",
     "submitFailed": "Falha ao criar pedido.",
     "paymentNext": "O pagamento será feito na próxima etapa.",
-    "noteWith": "obs: {value}"
+    "noteWith": "obs: {value}",
+    "subtotal": "Subtotal",
+    "promoDiscount": "Promoção — {name}",
+    "estimatedTotal": "Total estimado",
+    "promoEstimateNote": "O desconto é aplicado automaticamente na criação do pedido.",
+    "promoNudge": "Adicione {missing} em itens para desbloquear {name} ({label})."
   },
   "payment": {
     "title": "Pagamento",
@@ -149,7 +163,10 @@
     "cancelling": "Cancelando...",
     "cancelFailed": "Falha ao cancelar.",
     "cancelled": "Pedido cancelado.",
-    "cancelledMessage": "Pedido cancelado em alguma etapa antes da entrega."
+    "cancelledMessage": "Pedido cancelado em alguma etapa antes da entrega.",
+    "subtotal": "Subtotal",
+    "pointsDiscount": "Pontos de fidelidade ({points} pts)",
+    "promotionDiscount": "Desconto de promoção"
   },
   "loyalty": {
     "title": "Programa de fidelidade",
@@ -341,9 +358,15 @@
       "tableActions": "Ações",
       "statusActive": "Ativa",
       "statusInactive": "Inativa",
+      "statusScheduled": "Agendada",
+      "statusExpired": "Expirada",
       "discountPercentage": "{value}% off",
       "discountFixed": "{value} off",
       "actionEdit": "Editar",
+      "actionActivate": "Ativar",
+      "actionDeactivate": "Desativar",
+      "toggling": "Salvando...",
+      "toggleFailed": "Não foi possível atualizar a promoção.",
       "loadFailed": "Não foi possível carregar as promoções.",
       "form": {
         "createTitle": "Nova promoção",

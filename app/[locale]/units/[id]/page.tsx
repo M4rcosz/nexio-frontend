@@ -5,7 +5,9 @@ import { getBusinessUnit } from '@/lib/api/business-units'
 import { listProductsByBusinessUnit } from '@/lib/api/products'
 import { listMenu } from '@/lib/api/menu'
 import { listCategories } from '@/lib/api/categories'
+import { listActivePromotions } from '@/lib/api/promotions'
 import { ProductCard } from '@/components/catalog/ProductCard'
+import { PromotionBanner } from '@/components/catalog/PromotionBanner'
 import { BackendBadge } from '@/components/StubBadge'
 import { CategoryFilter } from '@/components/catalog/CategoryFilter'
 
@@ -23,15 +25,17 @@ export default async function MenuPage({
   const sp = await searchParams
   const t = await getTranslations('menu')
 
-  const [unit, productsPage, menuPage, categoriesPage] = await Promise.all([
-    getBusinessUnit(id),
-    listProductsByBusinessUnit(id, {
-      search: sp.search,
-      categoryId: sp.categoryId,
-    }),
-    listMenu(id, { limit: 100 }),
-    listCategories(),
-  ])
+  const [unit, productsPage, menuPage, categoriesPage, promotions] =
+    await Promise.all([
+      getBusinessUnit(id),
+      listProductsByBusinessUnit(id, {
+        search: sp.search,
+        categoryId: sp.categoryId,
+      }),
+      listMenu(id, { limit: 100 }),
+      listCategories(),
+      listActivePromotions(id),
+    ])
 
   if (!unit) notFound()
 
@@ -72,6 +76,9 @@ export default async function MenuPage({
           </div>
         </div>
       </section>
+
+      {/* Live promotions -------------------------------------------------- */}
+      <PromotionBanner promotions={promotions} />
 
       {/* Menu ------------------------------------------------------------ */}
       <section className="space-y-5">

@@ -69,6 +69,31 @@ describe('OrderTracker', () => {
     ).toBeInTheDocument()
   })
 
+  it('itemizes points and promotion discounts when the total is below the item sum', () => {
+    // Items sum 51.80; 20 pts redeemed → −2.00; remaining gap → promotion −5.18.
+    const discounted = {
+      ...order('DELIVERED'),
+      pointsRedeemed: 20,
+      totalAmount: '44.62',
+    }
+    mockFetch(200, discounted)
+    renderWithIntl(<OrderTracker initialOrder={discounted} />)
+
+    expect(screen.getByText(/subtotal/i)).toBeInTheDocument()
+    expect(screen.getByText(/loyalty points \(20 pts\)/i)).toBeInTheDocument()
+    expect(screen.getByText('−R$2.00')).toBeInTheDocument()
+    expect(screen.getByText(/promotion discount/i)).toBeInTheDocument()
+    expect(screen.getByText('−R$5.18')).toBeInTheDocument()
+    expect(screen.getByText('R$44.62')).toBeInTheDocument()
+  })
+
+  it('hides the breakdown when nothing was discounted', () => {
+    mockFetch(200, order('PENDING'))
+    renderWithIntl(<OrderTracker initialOrder={order('PENDING')} />)
+    expect(screen.queryByText(/subtotal/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/promotion discount/i)).not.toBeInTheDocument()
+  })
+
   it('hides the cancel button once the order is READY', () => {
     mockFetch(200, order('READY'))
     renderWithIntl(<OrderTracker initialOrder={order('READY')} />)

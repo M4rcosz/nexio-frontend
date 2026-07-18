@@ -12,6 +12,7 @@ import {
   listPromotionsByBusinessUnitMock,
   updatePromotionMock,
 } from './mocks/promotions'
+import { isPromotionLive } from '@/lib/promotions'
 
 export async function listPromotionsByBusinessUnit(
   businessUnitId: string,
@@ -24,9 +25,42 @@ export async function listPromotionsByBusinessUnit(
     `/promotions/by-business-unit/${businessUnitId}`,
     {
       query: { limit: query.limit, cursor: query.cursor },
-      next: { revalidate: 0, tags: [`promotions:${businessUnitId}`] },
+      // Mirrors menu.ts/products.ts: cheap staleness is fine since every
+      // mutation (create/update/activate/deactivate) already calls
+      // revalidateTag on this exact tag for immediate invalidation.
+      next: { revalidate: 30, tags: [`promotions:${businessUnitId}`] },
     },
   )
+}
+
+/**
+ * Promotions of a unit that are running right now — customer-facing surfaces
+ * (menu banner, checkout estimate). The backend currently restricts the
+ * promotions endpoints to ADMIN/MANAGER, so for a customer or anonymous
+ * session this fails with 401/403: promotional copy is decorative, so that
+ * specific failure degrades to "no promotions" instead of breaking the page.
+ * In mock mode (and once the backend exposes a public read) the data flows
+ * through. Any other failure (5xx, timeout, malformed response) is logged
+ * instead of swallowed — those are real bugs, not the known role gap.
+ */
+export async function listActivePromotions(
+  businessUnitId: string,
+): Promise<Promotion[]> {
+  try {
+    const page = await listPromotionsByBusinessUnit(businessUnitId, {
+      limit: 50,
+    })
+    return page.data.filter((p) => isPromotionLive(p))
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+      return []
+    }
+    console.error('listActivePromotions: unexpected failure', {
+      businessUnitId,
+      err,
+    })
+    return []
+  }
 }
 
 export async function getPromotion(

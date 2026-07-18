@@ -6,6 +6,8 @@ import type { Promotion } from '@/lib/api/types'
 import { formatMoney } from '@/lib/money'
 import { formatDateTime } from '@/lib/format'
 import { PromotionCard } from './PromotionCard'
+import { PromotionStatusBadge } from './PromotionStatusBadge'
+import { PromotionToggle } from './PromotionToggle'
 
 export function PromotionList({ promotions }: { promotions: Promotion[] }) {
   const t = useTranslations('admin.promotions')
@@ -68,17 +70,13 @@ export function PromotionList({ promotions }: { promotions: Promotion[] }) {
                     {formatDateTime(p.endDate, locale)}
                   </td>
                   <td className="px-4 py-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
-                        p.isActive
-                          ? 'bg-forest-500/10 text-forest-700 dark:text-forest-300'
-                          : 'bg-surface-2 text-fg-subtle'
-                      }`}
-                    >
-                      {p.isActive ? t('statusActive') : t('statusInactive')}
-                    </span>
+                    <PromotionStatusBadge promotion={p} />
                   </td>
                   <td className="px-4 py-3 text-right">
+                    <PromotionToggle
+                      promotion={p}
+                      className="btn-ghost !px-2 !py-1 text-xs"
+                    />
                     <Link
                       href={`/admin/promotions/${p.id}`}
                       className="btn-ghost !px-2 !py-1 text-xs"

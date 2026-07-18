@@ -4,7 +4,12 @@ import { useEffect, useState, useTransition } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { ORDER_STATUS_TIMELINE } from '@/lib/format'
-import { formatMoney } from '@/lib/money'
+import {
+  asMoney,
+  formatMoney,
+  LOYALTY_POINT_VALUE,
+  sumMoney,
+} from '@/lib/money'
 import type { Order, OrderStatus } from '@/lib/api/types'
 
 const POLL_INTERVAL_MS = 5000
@@ -67,6 +72,23 @@ export function OrderTracker({ initialOrder }: { initialOrder: Order }) {
     order.orderStatus !== 'CANCELLED' &&
     order.orderStatus !== 'READY'
 
+  // The backend applies promotion + loyalty discounts inside totalAmount
+  // without itemizing them, so derive the breakdown: points are worth a
+  // documented rate each (LOYALTY_POINT_VALUE); whatever remains of the gap
+  // is promotion.
+  const itemsSubtotal = sumMoney(order.orderItems.map((i) => i.subtotal))
+  const totalDiscount = itemsSubtotal.minus(order.totalAmount)
+  const hasDiscount = totalDiscount.gt(0)
+  const pointsValue = asMoney(order.pointsRedeemed).times(LOYALTY_POINT_VALUE)
+  const pointsDiscount = hasDiscount
+    ? pointsValue.gt(totalDiscount)
+      ? totalDiscount
+      : pointsValue
+    : asMoney(0)
+  const promoDiscount = hasDiscount
+    ? totalDiscount.minus(pointsDiscount)
+    : asMoney(0)
+
   return (
     <div className="space-y-4">
       <div className="card p-5">
@@ -115,6 +137,34 @@ export function OrderTracker({ initialOrder }: { initialOrder: Order }) {
             </li>
           ))}
         </ul>
+        {hasDiscount ? (
+          <dl className="space-y-1 border-t border-border px-5 py-3 text-sm">
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-fg-muted">{t('subtotal')}</dt>
+              <dd className="text-fg">{formatMoney(itemsSubtotal, locale)}</dd>
+            </div>
+            {pointsDiscount.gt(0) ? (
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-forest-700 dark:text-forest-300">
+                  {t('pointsDiscount', { points: order.pointsRedeemed })}
+                </dt>
+                <dd className="text-forest-700 dark:text-forest-300">
+                  −{formatMoney(pointsDiscount, locale)}
+                </dd>
+              </div>
+            ) : null}
+            {promoDiscount.gt(0) ? (
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-forest-700 dark:text-forest-300">
+                  {t('promotionDiscount')}
+                </dt>
+                <dd className="text-forest-700 dark:text-forest-300">
+                  −{formatMoney(promoDiscount, locale)}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+        ) : null}
         <div className="flex items-baseline justify-between border-t border-border bg-surface-2 px-5 py-4">
           <span className="text-[11px] font-mono uppercase tracking-widest text-fg-subtle">
             {t('total')}

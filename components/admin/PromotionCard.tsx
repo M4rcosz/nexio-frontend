@@ -5,6 +5,8 @@ import { Link } from '@/i18n/navigation'
 import type { Promotion } from '@/lib/api/types'
 import { formatMoney } from '@/lib/money'
 import { formatDateTime } from '@/lib/format'
+import { PromotionStatusBadge } from './PromotionStatusBadge'
+import { PromotionToggle } from './PromotionToggle'
 
 /** Mobile-friendly variant of a PromotionList row — used below `md` screens. */
 export function PromotionCard({ promotion }: { promotion: Promotion }) {
@@ -24,15 +26,7 @@ export function PromotionCard({ promotion }: { promotion: Promotion }) {
         <p className="min-w-0 flex-1 truncate font-semibold text-fg">
           {promotion.name}
         </p>
-        <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
-            promotion.isActive
-              ? 'bg-forest-500/10 text-forest-700 dark:text-forest-300'
-              : 'bg-surface-2 text-fg-subtle'
-          }`}
-        >
-          {promotion.isActive ? t('statusActive') : t('statusInactive')}
-        </span>
+        <PromotionStatusBadge promotion={promotion} />
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-3 text-xs">
         <div>
@@ -59,10 +53,14 @@ export function PromotionCard({ promotion }: { promotion: Promotion }) {
           </dd>
         </div>
       </dl>
-      <div className="mt-4 flex items-center">
+      <div className="mt-4 grid grid-cols-2 items-start gap-2">
+        <PromotionToggle
+          promotion={promotion}
+          className="btn-ghost min-h-[44px] w-full !py-2 text-center text-xs"
+        />
         <Link
           href={`/admin/promotions/${promotion.id}`}
-          className="btn-secondary flex-1 min-h-[44px] !py-2 text-center text-xs"
+          className="btn-secondary min-h-[44px] !py-2 text-center text-xs"
         >
           {t('actionEdit')}
         </Link>

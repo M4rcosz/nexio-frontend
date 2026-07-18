@@ -9,7 +9,14 @@ import type {
   Paginated,
 } from '@/lib/api/types'
 import { MOCK_PRODUCTS } from './products'
-import { asMoney, multiplyMoney, sumMoney } from '@/lib/money'
+import { promotionsForUnitMockSync } from './promotions'
+import {
+  asMoney,
+  LOYALTY_POINT_VALUE,
+  multiplyMoney,
+  sumMoney,
+} from '@/lib/money'
+import { bestPromotion } from '@/lib/promotions'
 import { mockDelay } from './_delay'
 
 const STORE: Order[] = []
@@ -78,10 +85,15 @@ export async function createOrderMock(
   })
 
   const pointsRedeemed = body.pointsRedeemed ?? 0
-  // Redeeming: 1pt = R$0.10 discount, mirroring the loyalty rule.
-  const total = sumMoney(orderItems.map((i) => i.subtotal)).minus(
-    asMoney(pointsRedeemed).times('0.10'),
+  const itemsSubtotal = sumMoney(orderItems.map((i) => i.subtotal))
+  // One promotion per order, applied before loyalty (backend contract).
+  const applied = bestPromotion(
+    promotionsForUnitMockSync(body.businessUnitId),
+    itemsSubtotal,
   )
+  const total = itemsSubtotal
+    .minus(applied?.discount ?? asMoney(0))
+    .minus(asMoney(pointsRedeemed).times(LOYALTY_POINT_VALUE))
   const clampedTotal = total.lt(0) ? asMoney(0) : total
   const now = new Date().toISOString()
 
