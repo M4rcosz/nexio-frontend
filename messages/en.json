@@ -217,6 +217,7 @@
     "headerLink": "Admin",
     "nav": {
       "overview": "Overview",
+      "orders": "Orders",
       "users": "Users",
       "inventory": "Inventory",
       "promotions": "Promotions",
@@ -237,6 +238,56 @@
       "yourRole": "Your role",
       "manageUsers": "Manage staff users",
       "manageUsersHint": "Create attendants and kitchen accounts, toggle access."
+    },
+    "orders": {
+      "title": "Order board",
+      "subtitle": "Filter, sort and move orders through the kitchen flow.",
+      "noResults": "No orders match these filters.",
+      "loadFailed": "Could not load orders.",
+      "actionFailed": "Could not complete this action.",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…",
+      "filters": {
+        "channel": "Channel",
+        "allChannels": "All channels",
+        "status": "Status",
+        "allStatuses": "All statuses",
+        "unit": "Unit",
+        "allUnits": "All units",
+        "attendant": "Attendant",
+        "attendantPlaceholder": "Attendant ID",
+        "customer": "Customer",
+        "customerPlaceholder": "Customer ID",
+        "from": "From",
+        "to": "To",
+        "minTotal": "Min total",
+        "maxTotal": "Max total",
+        "sortBy": "Sort by",
+        "sortCreatedAt": "Date",
+        "sortTotal": "Total",
+        "sortDir": "Direction",
+        "sortDesc": "Newest first",
+        "sortAsc": "Oldest first",
+        "kitchenQueue": "Kitchen queue",
+        "clear": "Clear filters"
+      },
+      "table": {
+        "order": "Order",
+        "status": "Status",
+        "unit": "Unit",
+        "who": "Attendant / Customer",
+        "total": "Total",
+        "actions": "Actions",
+        "attendantOf": "Attendant {id}",
+        "customerOf": "Customer {id}"
+      },
+      "actions": {
+        "CONFIRMED": "Confirm",
+        "PREPARING": "Start preparing",
+        "READY": "Mark ready",
+        "DELIVERED": "Deliver",
+        "cancel": "Cancel"
+      }
     },
     "users": {
       "title": "Staff users",
@@ -626,7 +677,10 @@
       "phone_taken": "Phone number already in use.",
       "cnpj_or_phone_taken": "CNPJ or phone already registered.",
       "inventory_over_max": "This restock would exceed the maximum quantity.",
-      "inventory_exists": "A stock balance already exists for this product at the unit."
+      "inventory_exists": "A stock balance already exists for this product at the unit.",
+      "cancel_window_closed": "This order is past the cancellation window.",
+      "invalid_transition": "This status change is not allowed from the order's current state.",
+      "invalid_cursor": "The list changed. Reset to the first page and try again."
     }
   },
   "orderStatus": {

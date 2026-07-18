@@ -67,10 +67,10 @@ export function OrderTracker({ initialOrder }: { initialOrder: Order }) {
     })
   }
 
-  const canCancel =
-    order.orderStatus !== 'DELIVERED' &&
-    order.orderStatus !== 'CANCELLED' &&
-    order.orderStatus !== 'READY'
+  // Customer-facing tracker: the backend only allows a customer to cancel
+  // their own order while it is still PENDING (staff get a wider window via
+  // POST /:id/cancel, but that flow lives in the admin order board instead).
+  const canCancel = order.orderStatus === 'PENDING'
 
   // The backend applies promotion + loyalty discounts inside totalAmount
   // without itemizing them, so derive the breakdown: points are worth a

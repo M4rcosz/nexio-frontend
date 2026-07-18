@@ -79,8 +79,10 @@ export async function listMyOrders(
 }
 
 /**
- * `GET /orders` (staff: ADMIN/MANAGER/ATTENDANT/KITCHEN). Cursor-paginated;
- * results are limited to the actor's unit scope server-side.
+ * `GET /orders` (staff: ADMIN/MANAGER/ATTENDANT/KITCHEN). Cursor-paginated,
+ * filterable and sortable; results are limited to the actor's unit scope
+ * server-side. The cursor is opaque and bound to `sortBy`/`sortDir` — never
+ * reuse one after changing either (the backend answers 422).
  */
 export async function listOrders(
   query: ListOrdersQuery = {},
@@ -95,6 +97,14 @@ export async function listOrders(
       businessUnitId: query.businessUnitId,
       orderChannel: query.orderChannel,
       orderStatus: query.orderStatus,
+      attendantId: query.attendantId,
+      customerId: query.customerId,
+      createdAtFrom: query.createdAtFrom,
+      createdAtTo: query.createdAtTo,
+      minTotal: query.minTotal,
+      maxTotal: query.maxTotal,
+      sortBy: query.sortBy,
+      sortDir: query.sortDir,
     },
     cache: 'no-store',
   })
@@ -102,8 +112,9 @@ export async function listOrders(
 
 /**
  * `PATCH /orders/:id/status` (staff). Invalid transitions answer 422 — the
- * valid machine is PENDING→CONFIRMED→PREPARING→READY→DELIVERED, with
- * CANCELLED reachable from any non-terminal state except READY.
+ * valid machine is PENDING→CONFIRMED→PREPARING→READY→DELIVERED. `CANCELLED`
+ * is technically a listed transition but this endpoint rejects it with 422;
+ * use `cancelOrder` instead, which also runs the compensation saga.
  */
 export async function updateOrderStatus(
   id: string,
@@ -130,7 +141,11 @@ export async function updateOrderStatus(
  */
 export async function cancelOrder(id: string): Promise<Order | null> {
   if (USE_MOCKS) {
-    return cancelOrderMock(id)
+    const session = await getSession()
+    return cancelOrderMock(id, {
+      role: session?.role ?? 'CUSTOMER',
+      userId: session?.sub ?? MOCK_CUSTOMER.id,
+    })
   }
   try {
     return await serverFetch<Order>(`/orders/${id}/cancel`, { method: 'POST' })

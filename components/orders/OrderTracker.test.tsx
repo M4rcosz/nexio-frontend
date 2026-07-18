@@ -102,6 +102,17 @@ describe('OrderTracker', () => {
     ).not.toBeInTheDocument()
   })
 
+  it.each(['CONFIRMED', 'PREPARING'] as const)(
+    'hides the cancel button once the order is %s (customer window is PENDING-only)',
+    (status) => {
+      mockFetch(200, order(status))
+      renderWithIntl(<OrderTracker initialOrder={order(status)} />)
+      expect(
+        screen.queryByRole('button', { name: /cancel order/i }),
+      ).not.toBeInTheDocument()
+    },
+  )
+
   it('cancels the order and reflects the CANCELLED state', async () => {
     const fetchFn = mockFetch(200, order('CANCELLED'))
     const user = userEvent.setup()

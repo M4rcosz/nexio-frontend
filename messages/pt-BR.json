@@ -217,6 +217,7 @@
     "headerLink": "Admin",
     "nav": {
       "overview": "Visão geral",
+      "orders": "Pedidos",
       "users": "Usuários",
       "inventory": "Estoque",
       "promotions": "Promoções",
@@ -237,6 +238,56 @@
       "yourRole": "Seu papel",
       "manageUsers": "Gerenciar equipe",
       "manageUsersHint": "Cadastre atendentes e cozinheiros, ative ou desative acessos."
+    },
+    "orders": {
+      "title": "Painel de pedidos",
+      "subtitle": "Filtre, ordene e avance pedidos pelo fluxo da cozinha.",
+      "noResults": "Nenhum pedido corresponde a estes filtros.",
+      "loadFailed": "Não foi possível carregar os pedidos.",
+      "actionFailed": "Não foi possível concluir esta ação.",
+      "loadMore": "Carregar mais",
+      "loadingMore": "Carregando…",
+      "filters": {
+        "channel": "Canal",
+        "allChannels": "Todos os canais",
+        "status": "Status",
+        "allStatuses": "Todos os status",
+        "unit": "Unidade",
+        "allUnits": "Todas as unidades",
+        "attendant": "Atendente",
+        "attendantPlaceholder": "ID do atendente",
+        "customer": "Cliente",
+        "customerPlaceholder": "ID do cliente",
+        "from": "De",
+        "to": "Até",
+        "minTotal": "Total mínimo",
+        "maxTotal": "Total máximo",
+        "sortBy": "Ordenar por",
+        "sortCreatedAt": "Data",
+        "sortTotal": "Total",
+        "sortDir": "Direção",
+        "sortDesc": "Mais recentes primeiro",
+        "sortAsc": "Mais antigos primeiro",
+        "kitchenQueue": "Fila da cozinha",
+        "clear": "Limpar filtros"
+      },
+      "table": {
+        "order": "Pedido",
+        "status": "Status",
+        "unit": "Unidade",
+        "who": "Atendente / Cliente",
+        "total": "Total",
+        "actions": "Ações",
+        "attendantOf": "Atendente {id}",
+        "customerOf": "Cliente {id}"
+      },
+      "actions": {
+        "CONFIRMED": "Confirmar",
+        "PREPARING": "Iniciar preparo",
+        "READY": "Marcar como pronto",
+        "DELIVERED": "Entregar",
+        "cancel": "Cancelar"
+      }
     },
     "users": {
       "title": "Usuários da equipe",
@@ -626,7 +677,10 @@
       "phone_taken": "Telefone já cadastrado.",
       "cnpj_or_phone_taken": "CNPJ ou telefone já cadastrado.",
       "inventory_over_max": "Esta entrada excederia a quantidade máxima.",
-      "inventory_exists": "Já existe um saldo de estoque para este produto na unidade."
+      "inventory_exists": "Já existe um saldo de estoque para este produto na unidade.",
+      "cancel_window_closed": "Este pedido está fora da janela de cancelamento.",
+      "invalid_transition": "Esta mudança de status não é permitida a partir do estado atual do pedido.",
+      "invalid_cursor": "A lista mudou. Volte para a primeira página e tente novamente."
     }
   },
   "orderStatus": {

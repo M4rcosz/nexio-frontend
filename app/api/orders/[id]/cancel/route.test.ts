@@ -65,4 +65,24 @@ describe('POST /api/orders/[id]/cancel', () => {
     const res = await POST(req(), ctx('o1'))
     expect(res.status).toBe(502)
   })
+
+  it('maps a mock cancel_window_closed error to 422', async () => {
+    mockedGate.mockResolvedValue(true)
+    mockedCancel.mockRejectedValue(
+      Object.assign(new Error('past window'), {
+        code: 'cancel_window_closed',
+      }),
+    )
+    const res = await POST(req(), ctx('o1'))
+    expect(res.status).toBe(422)
+    expect(await res.json()).toMatchObject({ code: 'cancel_window_closed' })
+  })
+
+  it('maps a backend 422 to the cancel_window_closed code', async () => {
+    mockedGate.mockResolvedValue(true)
+    mockedCancel.mockRejectedValue(new ApiError(422, null, 'past window'))
+    const res = await POST(req(), ctx('o1'))
+    expect(res.status).toBe(422)
+    expect(await res.json()).toMatchObject({ code: 'cancel_window_closed' })
+  })
 })

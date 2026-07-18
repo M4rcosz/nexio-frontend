@@ -299,6 +299,9 @@ export type CreateOrderRequest = {
 
 export type UpdateOrderStatusRequest = { orderStatus: OrderStatus }
 
+export type OrderSortField = 'createdAt' | 'totalAmount'
+export type SortDirection = 'asc' | 'desc'
+
 /** `GET /orders` (staff) filters. */
 export type ListOrdersQuery = {
   limit?: number
@@ -306,6 +309,18 @@ export type ListOrdersQuery = {
   businessUnitId?: string
   orderChannel?: OrderChannel
   orderStatus?: OrderStatus
+  attendantId?: string
+  customerId?: string
+  /** ISO instant, inclusive. */
+  createdAtFrom?: string
+  /** ISO instant, inclusive. */
+  createdAtTo?: string
+  /** Decimal string, inclusive. */
+  minTotal?: string
+  /** Decimal string, inclusive. */
+  maxTotal?: string
+  sortBy?: OrderSortField
+  sortDir?: SortDirection
 }
 
 /** `GET /orders/me` (customer) filters — cursor-paginated. */

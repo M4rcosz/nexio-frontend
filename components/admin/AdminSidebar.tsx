@@ -9,6 +9,7 @@ const NAV: Array<{
   href: string
   key:
     | 'overview'
+    | 'orders'
     | 'users'
     | 'products'
     | 'categories'
@@ -22,6 +23,7 @@ const NAV: Array<{
   adminOnly?: boolean
 }> = [
   { href: '/admin', key: 'overview', icon: GridIcon },
+  { href: '/admin/orders', key: 'orders', icon: OrdersIcon },
   { href: '/admin/users', key: 'users', icon: UsersIcon },
   { href: '/admin/products', key: 'products', icon: DishIcon },
   {
@@ -261,6 +263,25 @@ function GridIcon({ className = '' }: { className?: string }) {
       <rect x="14" y="3" width="7" height="7" rx="1.5" />
       <rect x="3" y="14" width="7" height="7" rx="1.5" />
       <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  )
+}
+
+function OrdersIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+      <path d="M3 6h18" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
     </svg>
   )
 }

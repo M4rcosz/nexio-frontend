@@ -155,10 +155,47 @@ export async function listMyOrdersMock(
   return { data: page, meta: { limit, nextCursor, hasMore } }
 }
 
+type OrderCursor = {
+  sortBy: NonNullable<ListOrdersQuery['sortBy']>
+  sortDir: NonNullable<ListOrdersQuery['sortDir']>
+  id: string
+}
+
+/**
+ * The staff cursor is opaque and bound to the sort it was minted under
+ * (mirrors the backend). Encoding it (instead of a bare id, like `/orders/me`
+ * uses) is what lets us detect a sort change and answer 422 rather than
+ * silently restarting the sort.
+ */
+function encodeOrdersCursor(cursor: OrderCursor): string {
+  return Buffer.from(JSON.stringify(cursor), 'utf-8').toString('base64')
+}
+
+function decodeOrdersCursor(raw: string): OrderCursor | null {
+  try {
+    const parsed = JSON.parse(Buffer.from(raw, 'base64').toString('utf-8'))
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      typeof parsed.id === 'string' &&
+      typeof parsed.sortBy === 'string' &&
+      typeof parsed.sortDir === 'string'
+    ) {
+      return parsed as OrderCursor
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 export async function listOrdersMock(
   query: ListOrdersQuery = {},
 ): Promise<Paginated<Order>> {
   await mockDelay()
+  const sortBy = query.sortBy ?? 'createdAt'
+  const sortDir = query.sortDir ?? 'desc'
+
   let data = STORE.map((o) => {
     tickStatus(o)
     return { ...o }
@@ -172,7 +209,58 @@ export async function listOrdersMock(
   if (query.orderStatus) {
     data = data.filter((o) => o.orderStatus === query.orderStatus)
   }
-  return { data, meta: { limit: 20, nextCursor: null, hasMore: false } }
+  if (query.attendantId) {
+    data = data.filter((o) => o.attendantId === query.attendantId)
+  }
+  if (query.customerId) {
+    data = data.filter((o) => o.customerId === query.customerId)
+  }
+  if (query.createdAtFrom) {
+    data = data.filter((o) => o.createdAt >= query.createdAtFrom!)
+  }
+  if (query.createdAtTo) {
+    data = data.filter((o) => o.createdAt <= query.createdAtTo!)
+  }
+  if (query.minTotal) {
+    const min = asMoney(query.minTotal)
+    data = data.filter((o) => asMoney(o.totalAmount).gte(min))
+  }
+  if (query.maxTotal) {
+    const max = asMoney(query.maxTotal)
+    data = data.filter((o) => asMoney(o.totalAmount).lte(max))
+  }
+
+  data.sort((a, b) => {
+    const cmp =
+      sortBy === 'totalAmount'
+        ? asMoney(a.totalAmount).cmp(asMoney(b.totalAmount))
+        : a.createdAt.localeCompare(b.createdAt)
+    return sortDir === 'asc' ? cmp : -cmp
+  })
+
+  if (query.cursor) {
+    const decoded = decodeOrdersCursor(query.cursor)
+    // Sort-mismatched or malformed cursor → the real endpoint's 422, not a
+    // silent restart (it would look like the new sort worked when it hadn't).
+    if (!decoded || decoded.sortBy !== sortBy || decoded.sortDir !== sortDir) {
+      throw Object.assign(new Error('Invalid or sort-mismatched cursor.'), {
+        code: 'invalid_cursor',
+      })
+    }
+    const idx = data.findIndex((o) => o.id === decoded.id)
+    data = idx >= 0 ? data.slice(idx + 1) : []
+  }
+
+  const limit =
+    query.limit && query.limit > 0 ? Math.min(Math.trunc(query.limit), 100) : 20
+  const page = data.slice(0, limit)
+  const hasMore = data.length > limit
+  const last = page[page.length - 1]
+  const nextCursor =
+    hasMore && last
+      ? encodeOrdersCursor({ sortBy, sortDir, id: last.id })
+      : null
+  return { data: page, meta: { limit, nextCursor, hasMore } }
 }
 
 export async function updateOrderStatusMock(
@@ -182,7 +270,12 @@ export async function updateOrderStatusMock(
   await mockDelay()
   const found = STORE.find((o) => o.id === id)
   if (!found) return null
-  if (!VALID_TRANSITIONS[found.orderStatus].includes(orderStatus)) {
+  // CANCELLED is a listed transition, but this endpoint always rejects it —
+  // cancelling must go through `cancelOrderMock` (it runs compensations).
+  if (
+    orderStatus === 'CANCELLED' ||
+    !VALID_TRANSITIONS[found.orderStatus].includes(orderStatus)
+  ) {
     throw Object.assign(
       new Error(`Invalid transition ${found.orderStatus} → ${orderStatus}.`),
       { code: 'invalid_transition' },
@@ -193,11 +286,27 @@ export async function updateOrderStatusMock(
   return { ...found }
 }
 
-export async function cancelOrderMock(id: string): Promise<Order | null> {
+const STAFF_ROLES = ['ADMIN', 'MANAGER', 'ATTENDANT', 'KITCHEN']
+
+export async function cancelOrderMock(
+  id: string,
+  actor: { role: string; userId: string },
+): Promise<Order | null> {
   await mockDelay()
   const found = STORE.find((o) => o.id === id)
   if (!found) return null
-  if (found.orderStatus === 'DELIVERED') return { ...found }
+
+  // Staff may cancel while PENDING or CONFIRMED; a customer only their own
+  // order, and only while PENDING (mirrors the backend's cancellation window).
+  const windowOpen = STAFF_ROLES.includes(actor.role)
+    ? found.orderStatus === 'PENDING' || found.orderStatus === 'CONFIRMED'
+    : found.customerId === actor.userId && found.orderStatus === 'PENDING'
+  if (!windowOpen) {
+    throw Object.assign(new Error('Past the cancellation window.'), {
+      code: 'cancel_window_closed',
+    })
+  }
+
   found.orderStatus = 'CANCELLED'
   found.updatedAt = new Date().toISOString()
   return { ...found }

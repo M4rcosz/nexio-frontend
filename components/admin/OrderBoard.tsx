@@ -1,0 +1,566 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocale, useTranslations } from 'next-intl'
+import { Select } from '@/components/ui/Select'
+import { clientFetch } from '@/lib/api/client'
+import { useErrorMessage } from '@/lib/errors/useErrorMessage'
+import { formatMoney } from '@/lib/money'
+import { formatDateTime } from '@/lib/format'
+import type {
+  Order,
+  OrderChannel,
+  OrderSortField,
+  OrderStatus,
+  Paginated,
+  PublicBusinessUnit,
+  SortDirection,
+} from '@/lib/api/types'
+
+const CHANNELS: OrderChannel[] = ['APP', 'WEB', 'TOTEM', 'COUNTER', 'PICKUP']
+const STATUSES: OrderStatus[] = [
+  'PENDING',
+  'CONFIRMED',
+  'PREPARING',
+  'READY',
+  'DELIVERED',
+  'CANCELLED',
+]
+
+/** The status a row's primary action button moves it to. CANCELLED is
+ * deliberately absent — it only ever happens through the separate Cancel
+ * action, which runs compensations the plain status PATCH does not. */
+const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
+  PENDING: 'CONFIRMED',
+  CONFIRMED: 'PREPARING',
+  PREPARING: 'READY',
+  READY: 'DELIVERED',
+}
+
+function canCancel(status: OrderStatus): boolean {
+  return status === 'PENDING' || status === 'CONFIRMED'
+}
+
+type Filters = {
+  channel: OrderChannel | ''
+  status: OrderStatus | ''
+  businessUnitId: string
+  attendantId: string
+  customerId: string
+  createdAtFrom: string // yyyy-mm-dd, local date input value
+  createdAtTo: string // yyyy-mm-dd
+  minTotal: string
+  maxTotal: string
+}
+
+const EMPTY_FILTERS: Filters = {
+  channel: '',
+  status: '',
+  businessUnitId: '',
+  attendantId: '',
+  customerId: '',
+  createdAtFrom: '',
+  createdAtTo: '',
+  minTotal: '',
+  maxTotal: '',
+}
+
+type Meta = Paginated<Order>['meta']
+
+/** Merge a new page into the current list, dropping ids already present. */
+function mergeUnique(current: Order[], incoming: Order[]): Order[] {
+  const seen = new Set(current.map((o) => o.id))
+  const next = [...current]
+  for (const o of incoming) {
+    if (!seen.has(o.id)) {
+      seen.add(o.id)
+      next.push(o)
+    }
+  }
+  return next
+}
+
+function toQuery(
+  filters: Filters,
+  sortBy: OrderSortField,
+  sortDir: SortDirection,
+) {
+  return {
+    orderChannel: filters.channel || undefined,
+    orderStatus: filters.status || undefined,
+    businessUnitId: filters.businessUnitId || undefined,
+    attendantId: filters.attendantId.trim() || undefined,
+    customerId: filters.customerId.trim() || undefined,
+    // A day picker is instants-unaware; the API treats createdAtTo as an
+    // instant, so "through <date>" means end-of-day, not midnight.
+    createdAtFrom: filters.createdAtFrom
+      ? `${filters.createdAtFrom}T00:00:00.000Z`
+      : undefined,
+    createdAtTo: filters.createdAtTo
+      ? `${filters.createdAtTo}T23:59:59.999Z`
+      : undefined,
+    minTotal: filters.minTotal.trim() || undefined,
+    maxTotal: filters.maxTotal.trim() || undefined,
+    sortBy,
+    sortDir,
+  }
+}
+
+export function OrderBoard({
+  initial,
+  units,
+  showUnitFilter,
+}: {
+  initial: Paginated<Order>
+  units: PublicBusinessUnit[]
+  showUnitFilter: boolean
+}) {
+  const t = useTranslations('admin.orders')
+  const tStatus = useTranslations('orderStatus')
+  const tChannel = useTranslations('orderChannel')
+  const locale = useLocale()
+  const errorMessage = useErrorMessage()
+
+  const [orders, setOrders] = useState<Order[]>(initial.data)
+  const [meta, setMeta] = useState<Meta>(initial.meta)
+  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS)
+  const [sortBy, setSortBy] = useState<OrderSortField>('createdAt')
+  const [sortDir, setSortDir] = useState<SortDirection>('desc')
+  const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [listError, setListError] = useState<string | null>(null)
+  const [rowPending, setRowPending] = useState<Record<string, boolean>>({})
+  const [rowError, setRowError] = useState<Record<string, string>>({})
+  // Guards against a stale response overwriting a newer filter/sort selection.
+  const requestId = useRef(0)
+
+  const unitsById = useMemo(() => new Map(units.map((u) => [u.id, u])), [units])
+
+  const fetchPage = useCallback(
+    async (
+      f: Filters,
+      by: OrderSortField,
+      dir: SortDirection,
+      cursor?: string,
+    ) => {
+      return clientFetch<Paginated<Order>>('/api/admin/orders', {
+        query: { limit: 20, cursor, ...toQuery(f, by, dir) },
+      })
+    },
+    [],
+  )
+
+  // Reload page 1 whenever a filter or the sort changes — the cursor is
+  // sort-bound, so it must never survive a filter/sort change (backend 422s).
+  const mounted = useRef(false)
+  const depsKey = JSON.stringify({ filters, sortBy, sortDir })
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true
+      return
+    }
+    const id = ++requestId.current
+    setLoading(true)
+    setListError(null)
+    fetchPage(filters, sortBy, sortDir)
+      .then((page) => {
+        if (id !== requestId.current) return
+        setOrders(page.data)
+        setMeta(page.meta)
+      })
+      .catch((err) => {
+        if (id !== requestId.current) return
+        setOrders([])
+        setMeta({ limit: 20, nextCursor: null, hasMore: false })
+        setListError(
+          errorMessage(err?.body?.code, err?.status) ?? t('loadFailed'),
+        )
+      })
+      .finally(() => {
+        if (id === requestId.current) setLoading(false)
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [depsKey])
+
+  async function loadMore() {
+    if (!meta.hasMore || !meta.nextCursor || loadingMore) return
+    const id = requestId.current
+    setLoadingMore(true)
+    try {
+      const page = await fetchPage(filters, sortBy, sortDir, meta.nextCursor)
+      if (id !== requestId.current) return
+      setOrders((cur) => mergeUnique(cur, page.data))
+      setMeta(page.meta)
+    } catch {
+      // keep current list; the button stays available for a retry
+    } finally {
+      setLoadingMore(false)
+    }
+  }
+
+  function setFilter<K extends keyof Filters>(key: K, value: Filters[K]) {
+    setFilters((f) => ({ ...f, [key]: value }))
+  }
+
+  function applyKitchenQueue() {
+    setFilters({ ...EMPTY_FILTERS, status: 'PREPARING' })
+    setSortBy('createdAt')
+    setSortDir('asc')
+  }
+
+  async function refetchOrder(id: string) {
+    try {
+      const res = await fetch(`/api/orders/${id}`, { cache: 'no-store' })
+      if (!res.ok) return
+      const fresh = (await res.json()) as Order
+      setOrders((cur) => cur.map((o) => (o.id === id ? fresh : o)))
+    } catch {
+      // leave the stale row in place; the next mutation attempt will retry
+    }
+  }
+
+  async function withRow(id: string, action: () => Promise<Response>) {
+    setRowPending((p) => ({ ...p, [id]: true }))
+    setRowError((e) => {
+      if (!(id in e)) return e
+      const rest = { ...e }
+      delete rest[id]
+      return rest
+    })
+    try {
+      const res = await action()
+      if (res.ok) {
+        const updated = (await res.json()) as Order
+        setOrders((cur) => cur.map((o) => (o.id === id ? updated : o)))
+        return
+      }
+      const body = (await res.json().catch(() => null)) as {
+        code?: string
+      } | null
+      if (res.status === 409) {
+        await refetchOrder(id)
+      }
+      setRowError((e) => ({
+        ...e,
+        [id]: errorMessage(body?.code, res.status) ?? t('actionFailed'),
+      }))
+    } catch {
+      setRowError((e) => ({ ...e, [id]: t('actionFailed') }))
+    } finally {
+      setRowPending((p) => ({ ...p, [id]: false }))
+    }
+  }
+
+  function advance(order: Order) {
+    const next = NEXT_STATUS[order.orderStatus]
+    if (!next) return
+    void withRow(order.id, () =>
+      fetch(`/api/orders/${order.id}/status`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ orderStatus: next }),
+      }),
+    )
+  }
+
+  function cancel(order: Order) {
+    void withRow(order.id, () =>
+      fetch(`/api/orders/${order.id}/cancel`, { method: 'POST' }),
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <Field label={t('filters.channel')}>
+          <Select
+            fullWidth={false}
+            ariaLabel={t('filters.channel')}
+            value={filters.channel}
+            onChange={(v) => setFilter('channel', v as OrderChannel | '')}
+            options={[
+              { value: '', label: t('filters.allChannels') },
+              ...CHANNELS.map((c) => ({ value: c, label: tChannel(c) })),
+            ]}
+          />
+        </Field>
+        <Field label={t('filters.status')}>
+          <Select
+            fullWidth={false}
+            ariaLabel={t('filters.status')}
+            value={filters.status}
+            onChange={(v) => setFilter('status', v as OrderStatus | '')}
+            options={[
+              { value: '', label: t('filters.allStatuses') },
+              ...STATUSES.map((s) => ({ value: s, label: tStatus(s) })),
+            ]}
+          />
+        </Field>
+        {showUnitFilter ? (
+          <Field label={t('filters.unit')}>
+            <Select
+              fullWidth={false}
+              ariaLabel={t('filters.unit')}
+              value={filters.businessUnitId}
+              onChange={(v) => setFilter('businessUnitId', v)}
+              options={[
+                { value: '', label: t('filters.allUnits') },
+                ...units.map((u) => ({ value: u.id, label: u.name })),
+              ]}
+            />
+          </Field>
+        ) : null}
+        <Field label={t('filters.attendant')}>
+          <input
+            className="input w-36"
+            placeholder={t('filters.attendantPlaceholder')}
+            value={filters.attendantId}
+            onChange={(e) => setFilter('attendantId', e.target.value)}
+          />
+        </Field>
+        <Field label={t('filters.customer')}>
+          <input
+            className="input w-36"
+            placeholder={t('filters.customerPlaceholder')}
+            value={filters.customerId}
+            onChange={(e) => setFilter('customerId', e.target.value)}
+          />
+        </Field>
+        <Field label={t('filters.from')}>
+          <input
+            type="date"
+            className="input"
+            value={filters.createdAtFrom}
+            onChange={(e) => setFilter('createdAtFrom', e.target.value)}
+          />
+        </Field>
+        <Field label={t('filters.to')}>
+          <input
+            type="date"
+            className="input"
+            value={filters.createdAtTo}
+            onChange={(e) => setFilter('createdAtTo', e.target.value)}
+          />
+        </Field>
+        <Field label={t('filters.minTotal')}>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            className="input w-24"
+            value={filters.minTotal}
+            onChange={(e) => setFilter('minTotal', e.target.value)}
+          />
+        </Field>
+        <Field label={t('filters.maxTotal')}>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            className="input w-24"
+            value={filters.maxTotal}
+            onChange={(e) => setFilter('maxTotal', e.target.value)}
+          />
+        </Field>
+        <Field label={t('filters.sortBy')}>
+          <Select
+            fullWidth={false}
+            ariaLabel={t('filters.sortBy')}
+            value={sortBy}
+            onChange={(v) => setSortBy(v as OrderSortField)}
+            options={[
+              { value: 'createdAt', label: t('filters.sortCreatedAt') },
+              { value: 'totalAmount', label: t('filters.sortTotal') },
+            ]}
+          />
+        </Field>
+        <Field label={t('filters.sortDir')}>
+          <Select
+            fullWidth={false}
+            ariaLabel={t('filters.sortDir')}
+            value={sortDir}
+            onChange={(v) => setSortDir(v as SortDirection)}
+            options={[
+              { value: 'desc', label: t('filters.sortDesc') },
+              { value: 'asc', label: t('filters.sortAsc') },
+            ]}
+          />
+        </Field>
+
+        <div className="ml-auto flex gap-2">
+          <button
+            type="button"
+            onClick={applyKitchenQueue}
+            className="btn-ghost"
+          >
+            {t('filters.kitchenQueue')}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setFilters(EMPTY_FILTERS)
+              setSortBy('createdAt')
+              setSortDir('desc')
+            }}
+            className="btn-ghost"
+          >
+            {t('filters.clear')}
+          </button>
+        </div>
+      </div>
+
+      {listError ? (
+        <p
+          role="alert"
+          className="rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm text-accent-700 dark:text-accent-300"
+        >
+          {listError}
+        </p>
+      ) : null}
+
+      {orders.length === 0 && !loading ? (
+        <div className="card flex flex-col items-center gap-3 p-12 text-center">
+          <span className="text-5xl" aria-hidden>
+            🧾
+          </span>
+          <p className="text-fg-muted">{t('noResults')}</p>
+        </div>
+      ) : (
+        <div
+          className={`card overflow-hidden p-0 ${loading ? 'opacity-50' : ''}`}
+          aria-busy={loading}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-surface-2 text-[10px] font-mono uppercase tracking-widest text-fg-subtle">
+                <tr>
+                  <th className="px-4 py-3 font-medium">{t('table.order')}</th>
+                  <th className="px-4 py-3 font-medium">{t('table.status')}</th>
+                  {showUnitFilter ? (
+                    <th className="px-4 py-3 font-medium">{t('table.unit')}</th>
+                  ) : null}
+                  <th className="px-4 py-3 font-medium">{t('table.who')}</th>
+                  <th className="px-4 py-3 font-medium">{t('table.total')}</th>
+                  <th className="px-4 py-3 text-right font-medium">
+                    {t('table.actions')}
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((order) => {
+                  const next = NEXT_STATUS[order.orderStatus]
+                  const pending = !!rowPending[order.id]
+                  const unit = unitsById.get(order.businessUnitId)
+                  return (
+                    <tr
+                      key={order.id}
+                      className="border-t border-border align-top"
+                    >
+                      <td className="px-4 py-3">
+                        <p className="font-mono text-xs text-fg-subtle">
+                          {order.id}
+                        </p>
+                        <p className="mt-0.5 text-xs text-fg-muted">
+                          {formatDateTime(order.createdAt, locale)} ·{' '}
+                          {tChannel(order.orderChannel)}
+                        </p>
+                        {rowError[order.id] ? (
+                          <p
+                            role="alert"
+                            className="mt-1 text-xs text-accent-600 dark:text-accent-400"
+                          >
+                            {rowError[order.id]}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="chip">
+                          {tStatus(order.orderStatus)}
+                        </span>
+                      </td>
+                      {showUnitFilter ? (
+                        <td className="px-4 py-3 text-xs text-fg-muted">
+                          {unit?.name ?? order.businessUnitId}
+                        </td>
+                      ) : null}
+                      <td className="px-4 py-3 text-xs text-fg-muted">
+                        {order.attendantId ? (
+                          <p>
+                            {t('table.attendantOf', { id: order.attendantId })}
+                          </p>
+                        ) : null}
+                        {order.customerId ? (
+                          <p>
+                            {t('table.customerOf', { id: order.customerId })}
+                          </p>
+                        ) : null}
+                        {!order.attendantId && !order.customerId ? '—' : null}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-fg">
+                        {formatMoney(order.totalAmount, locale)}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1.5">
+                          {next ? (
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() => advance(order)}
+                              className="btn-secondary px-2.5 py-1 text-xs"
+                            >
+                              {t(`actions.${next}`)}
+                            </button>
+                          ) : null}
+                          {canCancel(order.orderStatus) ? (
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() => cancel(order)}
+                              className="btn-danger px-2.5 py-1 text-xs"
+                            >
+                              {t('actions.cancel')}
+                            </button>
+                          ) : null}
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {meta.hasMore && meta.nextCursor ? (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={loadingMore}
+            className="btn-ghost"
+          >
+            {loadingMore ? t('loadingMore') : t('loadMore')}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-xs font-mono uppercase tracking-widest text-fg-subtle">
+        {label}
+      </span>
+      {children}
+    </div>
+  )
+}
