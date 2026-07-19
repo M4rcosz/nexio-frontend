@@ -87,14 +87,36 @@ describe('CartView', () => {
     expect(screen.getByText('Fries')).toBeInTheDocument()
   })
 
-  it('empties the cart via the clear button', async () => {
+  it('empties the cart via the clear button, after confirming', async () => {
     seed([{ productId: 'p1', name: 'Burger', quantity: 1 }])
     const user = userEvent.setup()
     renderWithIntl(<CartView />)
     await waitFor(() => expect(screen.getByText('Burger')).toBeInTheDocument())
 
     await user.click(screen.getByRole('button', { name: /empty cart/i }))
+    // The dialog gates the destructive action: nothing is dropped yet.
+    expect(useCartStore.getState().items).toHaveLength(1)
+
+    const dialog = await screen.findByRole('alertdialog')
+    await user.click(
+      within(dialog).getByRole('button', { name: /empty cart/i }),
+    )
     expect(useCartStore.getState().items).toHaveLength(0)
     expect(await screen.findByText(/your cart is empty/i)).toBeInTheDocument()
+  })
+
+  it('keeps the items when the clear confirmation is cancelled', async () => {
+    seed([{ productId: 'p1', name: 'Burger', quantity: 1 }])
+    const user = userEvent.setup()
+    renderWithIntl(<CartView />)
+    await waitFor(() => expect(screen.getByText('Burger')).toBeInTheDocument())
+
+    await user.click(screen.getByRole('button', { name: /empty cart/i }))
+    const dialog = await screen.findByRole('alertdialog')
+    await user.click(within(dialog).getByRole('button', { name: /cancel/i }))
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(useCartStore.getState().items).toHaveLength(1)
+    expect(screen.getByText('Burger')).toBeInTheDocument()
   })
 })

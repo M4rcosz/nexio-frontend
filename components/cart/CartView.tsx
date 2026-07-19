@@ -5,6 +5,8 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { cartTotal, useCartStore } from '@/lib/cart/store'
 import { formatMoney, multiplyMoney } from '@/lib/money'
+import { ProductImage } from '@/components/ui/ProductImage'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
 export function CartView() {
   const items = useCartStore((s) => s.items)
@@ -18,6 +20,7 @@ export function CartView() {
   const tCommon = useTranslations('common')
   const locale = useLocale()
 
+  const [confirmingClear, setConfirmingClear] = useState(false)
   const [hydrated, setHydrated] = useState(false)
   useEffect(() => setHydrated(true), [])
 
@@ -68,16 +71,12 @@ export function CartView() {
           {items.map((item) => (
             <li key={item.productId} className="card card-hover flex gap-4 p-4">
               <div className="flex h-24 w-24 flex-none items-center justify-center overflow-hidden rounded-xl bg-brand-soft text-3xl">
-                {item.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    className="h-full w-full rounded-xl object-cover"
-                  />
-                ) : (
-                  '🍲'
-                )}
+                <ProductImage
+                  src={item.imageUrl}
+                  alt={item.name}
+                  className="h-full w-full rounded-xl object-cover"
+                  fallbackClassName=""
+                />
               </div>
               <div className="flex flex-1 flex-col">
                 <div className="flex items-start justify-between gap-2">
@@ -141,14 +140,6 @@ export function CartView() {
             </li>
           ))}
         </ul>
-
-        <button
-          type="button"
-          onClick={clear}
-          className="btn-ghost w-full !justify-start text-xs"
-        >
-          {t('clear')}
-        </button>
       </div>
 
       <aside className="card sticky top-24 h-max overflow-hidden p-0">
@@ -169,12 +160,34 @@ export function CartView() {
             {t('total')}
           </p>
         </div>
-        <div className="p-5">
+        <div className="space-y-3 p-5">
           <Link href="/checkout" className="btn-primary w-full">
             {t('checkout')}
           </Link>
+          {/* Lives in the sticky summary rather than after the item list, so it
+              stays reachable with a long cart — and reads as secondary to the
+              checkout CTA instead of competing with it. */}
+          <button
+            type="button"
+            onClick={() => setConfirmingClear(true)}
+            className="w-full rounded-lg px-3 py-2 text-xs font-medium text-fg-subtle transition-colors hover:bg-accent-500/10 hover:text-accent-600"
+          >
+            {t('clear')}
+          </button>
         </div>
       </aside>
+
+      <ConfirmDialog
+        open={confirmingClear}
+        message={t('confirmClear')}
+        confirmLabel={t('clear')}
+        danger
+        onConfirm={() => {
+          clear()
+          setConfirmingClear(false)
+        }}
+        onCancel={() => setConfirmingClear(false)}
+      />
     </div>
   )
 }
