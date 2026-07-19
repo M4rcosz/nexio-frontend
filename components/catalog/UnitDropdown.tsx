@@ -22,6 +22,7 @@ export function UnitDropdown({
   const router = useRouter()
   const pathname = usePathname()
   const t = useTranslations('home')
+  const tCommon = useTranslations('common')
   const [pending, start] = useTransition()
 
   function onChange(id: string) {
@@ -47,6 +48,9 @@ export function UnitDropdown({
           value: u.id,
           label: `${u.name} · ${u.city}`,
         }))}
+        searchable
+        searchPlaceholder={tCommon('search')}
+        noResultsLabel={tCommon('noResults')}
         leading={
           <PinIcon className="h-[18px] w-[18px] flex-none text-brand-600" />
         }
