@@ -3,6 +3,7 @@ import { Link } from '@/i18n/navigation'
 import type { ProductResponseDto } from '@/lib/api/types'
 import { formatMoney } from '@/lib/money'
 import { AddToCartButton } from '@/components/cart/AddToCartButton'
+import { ProductImage } from '@/components/ui/ProductImage'
 
 export function ProductCard({
   product,
@@ -17,21 +18,12 @@ export function ProductCard({
   return (
     <article className="card card-hover group flex h-full flex-col overflow-hidden">
       <div className="relative flex aspect-[16/10] items-center justify-center overflow-hidden bg-brand-soft">
-        {product.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <span
-            className="text-6xl opacity-80 transition-transform duration-500 group-hover:scale-110"
-            aria-hidden
-          >
-            🍲
-          </span>
-        )}
+        <ProductImage
+          src={product.imageUrl}
+          alt={product.name}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          fallbackClassName="text-6xl opacity-80 transition-transform duration-500 group-hover:scale-110"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
       </div>
       <div className="flex flex-1 flex-col p-5">

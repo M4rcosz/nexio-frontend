@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 import { cartCount, cartTotal, useCartStore } from '@/lib/cart/store'
 import { formatMoney, multiplyMoney } from '@/lib/money'
+import { ProductImage } from '@/components/ui/ProductImage'
 
 export function CartBadge() {
   const items = useCartStore((s) => s.items)
@@ -52,18 +53,13 @@ export function CartBadge() {
                     key={item.productId}
                     className="flex items-center gap-3 p-3"
                   >
-                    {item.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.imageUrl}
-                        alt=""
-                        className="h-10 w-10 flex-none rounded-lg object-cover"
-                      />
-                    ) : (
-                      <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-surface-2 text-base">
-                        🍽️
-                      </span>
-                    )}
+                    <ProductImage
+                      src={item.imageUrl}
+                      alt=""
+                      className="h-10 w-10 flex-none rounded-lg object-cover"
+                      fallbackClassName="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-surface-2 text-base"
+                      fallbackEmoji="🍽️"
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-fg">
                         {item.name}
