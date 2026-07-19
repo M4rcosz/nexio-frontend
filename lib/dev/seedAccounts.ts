@@ -14,12 +14,12 @@ export type DevSeedAccount = {
  * copies, and when the switcher's usernames changed to mirror the real
  * backend's seed data, the mock's copy was never updated: every non-customer
  * account silently logged in as CUSTOMER (no admin link, "My orders" showing
- * for staff). Mirrors the seed users in the backend's prisma/seed.ts — there
- * is no ATTENDANT seed there, so none is offered here either.
+ * for staff). Mirrors the seed users in the backend's prisma/seed.ts.
  */
 export const DEV_SEED_ACCOUNTS: DevSeedAccount[] = [
   { username: 'nexio.admin', name: 'Nexio Administrator', role: 'ADMIN' },
   { username: 'gustavo.linhares', name: 'Gustavo Linhares', role: 'MANAGER' },
+  { username: 'nexio.attendant', name: 'Nexio Attendant', role: 'ATTENDANT' },
   { username: 'pedro.panic', name: 'Pedro Panic', role: 'KITCHEN' },
-  { username: 'gregor.customer', name: 'Gregor Customer', role: 'CUSTOMER' },
+  { username: 'nexio.customer', name: 'Nexio Customer', role: 'CUSTOMER' },
 ]
