@@ -13,9 +13,15 @@ import type {
 vi.mock('@/lib/api/client', () => ({ clientFetch: vi.fn() }))
 
 import { clientFetch } from '@/lib/api/client'
+import { shortOrderRef } from '@/lib/orders/orderRef'
 import { OrderBoard } from './OrderBoard'
 
 const mockedClientFetch = vi.mocked(clientFetch)
+
+/** The board shows the short reference, not the raw id. */
+function orderRef(id: string): string {
+  return `#${shortOrderRef(id)}`
+}
 
 function makeOrder(id: string, status: OrderStatus = 'PENDING'): Order {
   return {
@@ -80,8 +86,8 @@ describe('OrderBoard', () => {
         showUnitFilter={true}
       />,
     )
-    expect(screen.getByText('o1')).toBeInTheDocument()
-    expect(screen.getByText('o2')).toBeInTheDocument()
+    expect(screen.getByText(orderRef('o1'))).toBeInTheDocument()
+    expect(screen.getByText(orderRef('o2'))).toBeInTheDocument()
   })
 
   it('shows the empty state when there are no orders', () => {
@@ -116,7 +122,9 @@ describe('OrderBoard', () => {
         cursor: undefined,
       }),
     })
-    await waitFor(() => expect(screen.getByText('o9')).toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.getByText(orderRef('o9'))).toBeInTheDocument(),
+    )
   })
 
   it('applies the kitchen queue preset (PREPARING, oldest first)', async () => {
@@ -156,7 +164,9 @@ describe('OrderBoard', () => {
     )
 
     await user.click(screen.getByRole('button', { name: /load more/i }))
-    await waitFor(() => expect(screen.getByText('o3')).toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.getByText(orderRef('o3'))).toBeInTheDocument(),
+    )
 
     const rows = screen.getAllByRole('row')
     // header + 3 data rows

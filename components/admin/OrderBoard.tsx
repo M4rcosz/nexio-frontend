@@ -8,6 +8,7 @@ import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { formatMoney } from '@/lib/money'
 import { formatDateTime } from '@/lib/format'
 import { canCancel, forwardStatuses } from '@/lib/orders/statusMachine'
+import { shortOrderRef } from '@/lib/orders/orderRef'
 import type {
   Order,
   OrderChannel,
@@ -352,14 +353,24 @@ export function OrderBoard({
             <table className="w-full text-left text-sm">
               <thead className="bg-surface-2 text-[10px] font-mono uppercase tracking-widest text-fg-subtle">
                 <tr>
-                  <th className="px-4 py-3 font-medium">{t('table.order')}</th>
-                  <th className="px-4 py-3 font-medium">{t('table.status')}</th>
+                  <th className="whitespace-nowrap px-3 py-3 font-medium">
+                    {t('table.order')}
+                  </th>
+                  <th className="whitespace-nowrap px-3 py-3 font-medium">
+                    {t('table.status')}
+                  </th>
                   {showUnitFilter ? (
-                    <th className="px-4 py-3 font-medium">{t('table.unit')}</th>
+                    <th className="whitespace-nowrap px-3 py-3 font-medium">
+                      {t('table.unit')}
+                    </th>
                   ) : null}
-                  <th className="px-4 py-3 font-medium">{t('table.who')}</th>
-                  <th className="px-4 py-3 font-medium">{t('table.total')}</th>
-                  <th className="px-4 py-3 text-right font-medium">
+                  <th className="whitespace-nowrap px-3 py-3 font-medium">
+                    {t('table.who')}
+                  </th>
+                  <th className="whitespace-nowrap px-3 py-3 text-right font-medium">
+                    {t('table.total')}
+                  </th>
+                  <th className="px-3 py-3 text-right font-medium">
                     {t('table.actions')}
                   </th>
                 </tr>
@@ -372,14 +383,25 @@ export function OrderBoard({
                   return (
                     <tr
                       key={order.id}
-                      className="border-t border-border align-top"
+                      className="border-t border-border align-middle"
                     >
-                      <td className="px-4 py-3">
-                        <p className="font-mono text-xs text-fg-subtle">
-                          {order.id}
+                      <td className="px-3 py-3">
+                        {/* The raw uuid wrapped over three lines and told the
+                            operator nothing; the short ref is the scannable
+                            handle, full id on hover for support lookups. */}
+                        <p
+                          title={order.id}
+                          className="whitespace-nowrap font-mono text-xs font-medium text-fg"
+                        >
+                          #{shortOrderRef(order.id)}
                         </p>
-                        <p className="mt-0.5 text-xs text-fg-muted">
-                          {formatDateTime(order.createdAt, locale)} ·{' '}
+                        {/* Date and channel on their own lines: as one nowrap
+                            run this was the widest cell in the table and forced
+                            the whole board to scroll sideways. */}
+                        <p className="mt-0.5 whitespace-nowrap text-xs text-fg-muted">
+                          {formatDateTime(order.createdAt, locale)}
+                        </p>
+                        <p className="whitespace-nowrap text-[11px] text-fg-subtle">
                           {tChannel(order.orderChannel)}
                         </p>
                         {rowError[order.id] ? (
@@ -391,30 +413,40 @@ export function OrderBoard({
                           </p>
                         ) : null}
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="chip">
+                      <td className="px-3 py-3">
+                        <span className="chip whitespace-nowrap">
                           {tStatus(order.orderStatus)}
                         </span>
                       </td>
                       {showUnitFilter ? (
-                        <td className="px-4 py-3 text-xs text-fg-muted">
+                        <td className="whitespace-nowrap px-3 py-3 text-xs text-fg-muted">
                           {unit?.name ?? order.businessUnitId}
                         </td>
                       ) : null}
-                      <td className="px-4 py-3 text-xs text-fg-muted">
+                      <td className="max-w-[220px] px-3 py-3 text-xs text-fg-muted">
                         {order.customerName ? (
-                          <p className="font-medium text-fg">
+                          <p className="truncate font-medium text-fg">
                             {order.customerName}
                           </p>
                         ) : null}
                         {order.attendantId ? (
-                          <p>
-                            {t('table.attendantOf', { id: order.attendantId })}
+                          <p
+                            title={order.attendantId}
+                            className="whitespace-nowrap"
+                          >
+                            {t('table.attendantOf', {
+                              id: shortOrderRef(order.attendantId),
+                            })}
                           </p>
                         ) : null}
                         {order.customerId ? (
-                          <p>
-                            {t('table.customerOf', { id: order.customerId })}
+                          <p
+                            title={order.customerId}
+                            className="whitespace-nowrap"
+                          >
+                            {t('table.customerOf', {
+                              id: shortOrderRef(order.customerId),
+                            })}
                           </p>
                         ) : null}
                         {!order.customerName &&
@@ -423,18 +455,18 @@ export function OrderBoard({
                           ? '—'
                           : null}
                       </td>
-                      <td className="px-4 py-3 font-semibold text-fg">
+                      <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums text-fg">
                         {formatMoney(order.totalAmount, locale)}
                       </td>
-                      <td className="px-4 py-3">
-                        <div className="flex justify-end gap-1.5">
+                      <td className="px-3 py-3">
+                        <div className="flex flex-nowrap justify-end gap-1.5">
                           {forwards.map((next) => (
                             <button
                               key={next}
                               type="button"
                               disabled={pending}
                               onClick={() => advance(order, next)}
-                              className="btn-secondary px-2.5 py-1 text-xs"
+                              className="btn-secondary whitespace-nowrap px-2.5 py-1 text-xs"
                             >
                               {t(`actions.${next}`)}
                             </button>
