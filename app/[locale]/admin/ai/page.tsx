@@ -33,7 +33,10 @@ export default async function AdminAiPage({
 
   // Staff users are the convenient targets we can enumerate (there is no
   // customer-listing endpoint); an admin can also paste any userId directly.
-  const users = await listInternalUsers(ctx)
+  // Membership picker needs the whole roster, not a page of it — ask for the
+  // server's maximum. Unchanged from the pre-pagination behaviour, which also
+  // topped out at 100.
+  const { data: users } = await listInternalUsers(ctx, { limit: 100 })
 
   return (
     <div className="space-y-6">

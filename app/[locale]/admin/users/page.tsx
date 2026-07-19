@@ -3,8 +3,7 @@ import { Link } from '@/i18n/navigation'
 import { getAdminContext } from '@/lib/auth/access'
 import { listInternalUsers } from '@/lib/api/admin-users'
 import { listBusinessUnits } from '@/lib/api/business-units'
-import { UserRow } from '@/components/admin/UserRow'
-import { UserCard } from '@/components/admin/UserCard'
+import { UserList } from '@/components/admin/UserList'
 import { UserFilters } from '@/components/admin/UserFilters'
 
 export const dynamic = 'force-dynamic'
@@ -30,18 +29,19 @@ export default async function AdminUsersPage({
   const sp = await searchParams
   const t = await getTranslations('admin.users')
 
-  const [users, unitsPage] = await Promise.all([
+  const role =
+    sp.role && ctx.manageableRoles.includes(sp.role as never)
+      ? (sp.role as never)
+      : undefined
+
+  const [firstPage, unitsPage] = await Promise.all([
     listInternalUsers(ctx, {
       search: sp.search,
-      role:
-        sp.role && ctx.manageableRoles.includes(sp.role as never)
-          ? (sp.role as never)
-          : undefined,
+      role,
       businessUnitId: sp.businessUnitId,
     }),
     listBusinessUnits(),
   ])
-  const unitsById = new Map(unitsPage.data.map((u) => [u.id, u]))
 
   return (
     <div className="space-y-6">
@@ -64,69 +64,15 @@ export default async function AdminUsersPage({
         manageableRoles={ctx.manageableRoles}
       />
 
-      <p className="text-xs text-fg-subtle">
-        {t('count', { count: users.length })}
-      </p>
-
-      {users.length === 0 ? (
-        <div className="card flex flex-col items-center gap-3 p-12 text-center">
-          <span className="text-5xl" aria-hidden>
-            👤
-          </span>
-          <p className="text-fg-muted">{t('empty')}</p>
-        </div>
-      ) : (
-        <>
-          {/* Mobile: card list */}
-          <div className="grid gap-3 md:hidden">
-            {users.map((u) => (
-              <UserCard
-                key={u.id}
-                user={u}
-                unit={
-                  u.businessUnitIds[0]
-                    ? (unitsById.get(u.businessUnitIds[0]) ?? null)
-                    : null
-                }
-              />
-            ))}
-          </div>
-
-          {/* Tablet/desktop: data table */}
-          <div className="card hidden overflow-hidden p-0 md:block">
-            <div className="scrollbar-thin overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-surface-2 text-[10px] font-mono uppercase tracking-widest text-fg-subtle">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">{t('tableName')}</th>
-                    <th className="px-4 py-3 font-medium">{t('tableRole')}</th>
-                    <th className="px-4 py-3 font-medium">{t('tableUnit')}</th>
-                    <th className="px-4 py-3 font-medium">
-                      {t('tableStatus')}
-                    </th>
-                    <th className="px-4 py-3 text-right font-medium">
-                      {t('tableActions')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <UserRow
-                      key={u.id}
-                      user={u}
-                      unit={
-                        u.businessUnitIds[0]
-                          ? (unitsById.get(u.businessUnitIds[0]) ?? null)
-                          : null
-                      }
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      )}
+      <UserList
+        initialPage={firstPage}
+        query={{
+          search: sp.search,
+          role,
+          businessUnitId: sp.businessUnitId,
+        }}
+        units={unitsPage.data}
+      />
     </div>
   )
 }

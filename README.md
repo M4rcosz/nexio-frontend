@@ -52,6 +52,8 @@ resource marked "real backend + mock fallback" honours `NEXT_PUBLIC_USE_MOCKS`.
 | Menu (business unit)  | Real backend + mock fallback (`GET /api/business-units/:id/menu` — public, used by POS/kiosk; `POST /api/business-units/:id/menu`, `PATCH /api/business-units/:id/menu/:itemId`, `POST /api/business-units/:id/menu/:itemId/available` — admin) |
 | Loyalty               | Mock                                            |
 | Inventory (admin)     | Real backend + mock fallback (`GET /api/inventory/:businessUnitId`, `POST /api/inventory/:businessUnitId/items`, `POST /api/inventory/:businessUnitId/adjust`)  |
+| Staff users (admin)   | Real backend + mock fallback (`GET/POST /api/admin/users`, cursor-paginated; filters `role`, `businessUnitId`, `search`, `email`) |
+| Customers (admin)     | Real backend + mock fallback (`GET /api/admin/customers` — ADMIN only; `GET /api/users?role=CUSTOMER` upstream) |
 | Promotions (admin)    | Real backend + mock fallback (`/api/promotions/...`)         |
 
 The `NEXT_PUBLIC_USE_MOCKS=true` flag in `.env.local` forces the *menu* and
@@ -129,7 +131,7 @@ app/
 │   ├── orders/                  # History + tracking (cursor pagination, channel/status filters)
 │   ├── loyalty/                 # Points and LGPD consent
 │   ├── profile/                 # Own account (GET/PATCH /users/me + change password)
-│   ├── admin/                   # Admin area: overview, users, products, categories, menu, business-units, inventory, promotions
+│   ├── admin/                   # Admin area: overview, users, customers, products, categories, menu, business-units, inventory, promotions
 │   ├── pos/                     # Attendant order entry (COUNTER/PICKUP; ADMIN/MANAGER/ATTENDANT)
 │   ├── totem/                   # Kiosk order entry (TOTEM; "attended kiosk" — see auth note in page.tsx)
 │   ├── error.tsx                # Boundary

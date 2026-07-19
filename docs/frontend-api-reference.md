@@ -216,9 +216,11 @@ Response `201`: [UserResponse](#userresponse). Erros: `403` papel não permitido
 
 **ADMIN, MANAGER** (MANAGER limitado às próprias unidades). Lista paginada.
 
-Query: `limit`, `cursor`, e filtros opcionais `businessUnitId` (uuid), `username` (substring, ≤50), `email` (substring, ≤120).
+Query: `limit`, `cursor`, e filtros opcionais `businessUnitId` (uuid), `username` (substring, ≤50), `email` (substring, ≤120), `role` (`ADMIN` | `MANAGER` | `ATTENDANT` | `KITCHEN` | `CUSTOMER`). Todos combinados com AND; um `role` desconhecido é `400`.
 
-Response `200`: paginado de [UserResponse](#userresponse). Erros: `404` MANAGER pediu unidade fora do escopo.
+`role` é filtro comum, **não** amplia escopo. CUSTOMERs não têm vínculo com unidade, então só um ADMIN **sem** `businessUnitId` alcança a base de clientes; ADMIN com `businessUnitId`, ou qualquer MANAGER (sempre preso às próprias unidades), recebe página vazia.
+
+Response `200`: paginado de [UserResponse](#userresponse). Erros: `404` MANAGER pediu unidade fora do escopo — mascaramento anti-IDOR deliberado, nunca renderize como "sem permissão para a unidade X".
 
 ### GET /api/users/me
 

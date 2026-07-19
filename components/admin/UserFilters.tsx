@@ -15,7 +15,7 @@ const ROLE_LABEL_KEY: Record<Role, string> = {
   KITCHEN: 'roleKitchen',
   MANAGER: 'roleManager',
   ADMIN: 'roleAdmin',
-  CUSTOMER: 'roleAttendant',
+  CUSTOMER: 'roleCustomer',
 }
 
 export function UserFilters({

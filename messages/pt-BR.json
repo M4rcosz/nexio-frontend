@@ -223,6 +223,7 @@
       "overview": "Visão geral",
       "orders": "Pedidos",
       "users": "Usuários",
+      "customers": "Clientes",
       "inventory": "Estoque",
       "promotions": "Promoções",
       "title": "Administração",
@@ -302,7 +303,7 @@
       "subtitle": "Contas de atendentes e cozinha das unidades que você gerencia.",
       "newUser": "Novo usuário",
       "count": "{count} usuário(s)",
-      "searchPlaceholder": "Buscar por nome, e-mail ou usuário...",
+      "searchPlaceholder": "Buscar por usuário...",
       "filterRoleAll": "Todos os papéis",
       "filterUnitAll": "Todas as unidades",
       "empty": "Ainda não há usuários cadastrados.",
@@ -348,7 +349,8 @@
       "emailTaken": "E-mail já cadastrado.",
       "roleForbidden": "Você não pode atribuir este papel.",
       "unitRequired": "Selecione uma unidade.",
-      "unitsRequired": "Selecione ao menos uma unidade."
+      "unitsRequired": "Selecione ao menos uma unidade.",
+      "roleCustomer": "Cliente"
     },
     "inventory": {
       "title": "Estoque",
@@ -658,6 +660,23 @@
       "genericError": "Algo deu errado. Tente novamente.",
       "networkError": "Erro de rede. Tente novamente.",
       "pickUserFirst": "Escolha um usuário alvo primeiro."
+    },
+    "pagination": {
+      "loadMore": "Carregar mais",
+      "loading": "Carregando...",
+      "loaded": "{count} exibido(s)",
+      "loadMoreFailed": "Não foi possível carregar mais resultados."
+    },
+    "customers": {
+      "title": "Clientes",
+      "subtitle": "Todos os cadastrados para fazer pedidos. Somente leitura.",
+      "searchPlaceholder": "Filtrar por usuário...",
+      "emailPlaceholder": "Filtrar por e-mail...",
+      "empty": "Nenhum cliente para exibir.",
+      "tableName": "Nome",
+      "tableEmail": "E-mail",
+      "tablePhone": "Telefone",
+      "tableStatus": "Status"
     }
   },
   "errors": {

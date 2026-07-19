@@ -12,6 +12,7 @@ const NAV: Array<{
     | 'overview'
     | 'orders'
     | 'users'
+    | 'customers'
     | 'products'
     | 'categories'
     | 'menu'
@@ -26,6 +27,14 @@ const NAV: Array<{
   { href: '/admin', key: 'overview', icon: GridIcon },
   { href: '/admin/orders', key: 'orders', icon: OrdersIcon },
   { href: '/admin/users', key: 'users', icon: UsersIcon },
+  // Customers are unreachable for a MANAGER (no unit links to scope by), so
+  // the entry would only ever open an empty screen for them.
+  {
+    href: '/admin/customers',
+    key: 'customers',
+    icon: UsersIcon,
+    adminOnly: true,
+  },
   { href: '/admin/products', key: 'products', icon: DishIcon },
   {
     href: '/admin/categories',

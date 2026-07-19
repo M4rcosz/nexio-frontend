@@ -223,6 +223,7 @@
       "overview": "Overview",
       "orders": "Orders",
       "users": "Users",
+      "customers": "Customers",
       "inventory": "Inventory",
       "promotions": "Promotions",
       "title": "Admin",
@@ -302,7 +303,7 @@
       "subtitle": "Attendants and kitchen accounts for the units you manage.",
       "newUser": "New user",
       "count": "{count} user(s)",
-      "searchPlaceholder": "Search by name, e-mail or username...",
+      "searchPlaceholder": "Search by username...",
       "filterRoleAll": "All roles",
       "filterUnitAll": "All units",
       "empty": "No staff users yet.",
@@ -348,7 +349,8 @@
       "emailTaken": "E-mail already registered.",
       "roleForbidden": "You can't assign this role.",
       "unitRequired": "Pick a business unit.",
-      "unitsRequired": "Pick at least one business unit."
+      "unitsRequired": "Pick at least one business unit.",
+      "roleCustomer": "Customer"
     },
     "inventory": {
       "title": "Inventory",
@@ -658,6 +660,23 @@
       "genericError": "Something went wrong. Please try again.",
       "networkError": "Network error. Please try again.",
       "pickUserFirst": "Choose a target user first."
+    },
+    "pagination": {
+      "loadMore": "Load more",
+      "loading": "Loading...",
+      "loaded": "{count} shown",
+      "loadMoreFailed": "Could not load more results."
+    },
+    "customers": {
+      "title": "Customers",
+      "subtitle": "Everyone who has registered to order. Read-only.",
+      "searchPlaceholder": "Filter by username...",
+      "emailPlaceholder": "Filter by e-mail...",
+      "empty": "No customers to show.",
+      "tableName": "Name",
+      "tableEmail": "E-mail",
+      "tablePhone": "Phone",
+      "tableStatus": "Status"
     }
   },
   "errors": {

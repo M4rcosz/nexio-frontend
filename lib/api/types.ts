@@ -177,13 +177,20 @@ export type CreateStaffUserRequest = {
   businessUnitIds?: string[]
 }
 
-/** `GET /users` filters (all substrings except businessUnitId). */
+/** `GET /users` filters (all substrings except businessUnitId and role). */
 export type ListUsersQuery = {
   limit?: number
   cursor?: string
   businessUnitId?: string
   username?: string
   email?: string
+  /**
+   * Plain AND filter, **not** a scope widener. CUSTOMERs carry no unit links,
+   * so `role=CUSTOMER` only returns rows for an ADMIN who sends no
+   * `businessUnitId`; a MANAGER (pinned to their claim) always gets an empty
+   * page. See docs — `frontend-users-and-business-units.md` §1.3.
+   */
+  role?: Role
 }
 
 /** `PATCH /users/me` — at least one field required. */

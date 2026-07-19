@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createInternalUser, listInternalUsers } from '@/lib/api/admin-users'
-import { ApiError, describeError } from '@/lib/api/errors'
+import { ApiError, backendErrorStatus, describeError } from '@/lib/api/errors'
+import { parseLimit } from '@/lib/api/pagination'
 import { canManageRole, getAdminContext } from '@/lib/auth/access'
 import {
   EMAIL_MAX_LENGTH,
@@ -34,33 +35,68 @@ const CreateBody = z.object({
 
 export async function GET(req: Request) {
   const ctx = await getAdminContext()
+  // `getAdminContext()` returns null both for an absent/expired session and
+  // for a role that is not ADMIN/MANAGER. Contract §0 separates them (401 vs
+  // 403) and the client keys its re-auth prompt off 401, so collapsing both
+  // into 403 leaves a lapsed staff user staring at "Forbidden" with no way
+  // back. Mirrors the customers route.
   if (!ctx) {
-    return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
+    return NextResponse.json(
+      { error: 'Session expired.', code: 'session_expired' },
+      { status: 401 },
+    )
   }
   const url = new URL(req.url)
   const roleParam = url.searchParams.get('role')
   const businessUnitId = url.searchParams.get('businessUnitId') ?? undefined
   const search = url.searchParams.get('search') ?? undefined
+  const email = url.searchParams.get('email') ?? undefined
+  const cursor = url.searchParams.get('cursor') ?? undefined
   const role =
     roleParam && ctx.manageableRoles.includes(roleParam as never)
       ? (roleParam as 'ATTENDANT' | 'KITCHEN' | 'MANAGER' | 'ADMIN')
       : undefined
+  const limit = parseLimit(url.searchParams.get('limit'))
   try {
-    const users = await listInternalUsers(ctx, {
+    // Returns the backend's `{ data, meta }` envelope untouched — `meta` is
+    // what the Load more control needs to ask for the next cursor.
+    const page = await listInternalUsers(ctx, {
       role,
       businessUnitId,
       search,
+      email,
+      limit,
+      cursor,
     })
-    return NextResponse.json({ data: users })
+    return NextResponse.json(page)
   } catch (err) {
-    return NextResponse.json({ error: describeError(err) }, { status: 500 })
+    // A MANAGER probing a unit outside their claim is answered 404 by the
+    // backend, deliberately, so it cannot be used to enumerate units. Pass
+    // that through as a plain not-found; never reword it as a permission
+    // error, which would leak exactly what the 404 hides (docs §1.3).
+    if (err instanceof ApiError && err.status === 404) {
+      return NextResponse.json({ error: 'Not found.' }, { status: 404 })
+    }
+    // `backendErrorStatus` normalizes `err.status || 500` before comparing.
+    // Testing `err.status < 500` directly is wrong: `serverFetch` throws
+    // `ApiError(0, …)` on a network failure or the 4s timeout, and `0 < 500`
+    // would hand `NextResponse.json` a status of 0 — outside the legal
+    // 200..599 range, so it throws a RangeError and the client gets an opaque
+    // framework 500 exactly when the backend is down.
+    return NextResponse.json(
+      { error: describeError(err) },
+      { status: backendErrorStatus(err) },
+    )
   }
 }
 
 export async function POST(req: Request) {
   const ctx = await getAdminContext()
   if (!ctx) {
-    return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
+    return NextResponse.json(
+      { error: 'Session expired.', code: 'session_expired' },
+      { status: 401 },
+    )
   }
   let parsed: z.infer<typeof CreateBody>
   try {
