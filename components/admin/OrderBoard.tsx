@@ -7,6 +7,7 @@ import { clientFetch } from '@/lib/api/client'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { formatMoney } from '@/lib/money'
 import { formatDateTime } from '@/lib/format'
+import { canCancel, forwardStatuses } from '@/lib/orders/statusMachine'
 import type {
   Order,
   OrderChannel,
@@ -26,20 +27,6 @@ const STATUSES: OrderStatus[] = [
   'DELIVERED',
   'CANCELLED',
 ]
-
-/** The status a row's primary action button moves it to. CANCELLED is
- * deliberately absent — it only ever happens through the separate Cancel
- * action, which runs compensations the plain status PATCH does not. */
-const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
-  PENDING: 'CONFIRMED',
-  CONFIRMED: 'PREPARING',
-  PREPARING: 'READY',
-  READY: 'DELIVERED',
-}
-
-function canCancel(status: OrderStatus): boolean {
-  return status === 'PENDING' || status === 'CONFIRMED'
-}
 
 type Filters = {
   channel: OrderChannel | ''
@@ -251,9 +238,7 @@ export function OrderBoard({
     }
   }
 
-  function advance(order: Order) {
-    const next = NEXT_STATUS[order.orderStatus]
-    if (!next) return
+  function advance(order: Order, next: OrderStatus) {
     void withRow(order.id, () =>
       fetch(`/api/orders/${order.id}/status`, {
         method: 'PATCH',
@@ -381,7 +366,7 @@ export function OrderBoard({
               </thead>
               <tbody>
                 {orders.map((order) => {
-                  const next = NEXT_STATUS[order.orderStatus]
+                  const forwards = forwardStatuses(order.orderStatus)
                   const pending = !!rowPending[order.id]
                   const unit = unitsById.get(order.businessUnitId)
                   return (
@@ -417,6 +402,11 @@ export function OrderBoard({
                         </td>
                       ) : null}
                       <td className="px-4 py-3 text-xs text-fg-muted">
+                        {order.customerName ? (
+                          <p className="font-medium text-fg">
+                            {order.customerName}
+                          </p>
+                        ) : null}
                         {order.attendantId ? (
                           <p>
                             {t('table.attendantOf', { id: order.attendantId })}
@@ -427,24 +417,29 @@ export function OrderBoard({
                             {t('table.customerOf', { id: order.customerId })}
                           </p>
                         ) : null}
-                        {!order.attendantId && !order.customerId ? '—' : null}
+                        {!order.customerName &&
+                        !order.attendantId &&
+                        !order.customerId
+                          ? '—'
+                          : null}
                       </td>
                       <td className="px-4 py-3 font-semibold text-fg">
                         {formatMoney(order.totalAmount, locale)}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1.5">
-                          {next ? (
+                          {forwards.map((next) => (
                             <button
+                              key={next}
                               type="button"
                               disabled={pending}
-                              onClick={() => advance(order)}
+                              onClick={() => advance(order, next)}
                               className="btn-secondary px-2.5 py-1 text-xs"
                             >
                               {t(`actions.${next}`)}
                             </button>
-                          ) : null}
-                          {canCancel(order.orderStatus) ? (
+                          ))}
+                          {canCancel(order.orderStatus, 'staff') ? (
                             <button
                               type="button"
                               disabled={pending}

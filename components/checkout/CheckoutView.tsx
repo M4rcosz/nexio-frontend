@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from 'next-intl'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { Link, useRouter } from '@/i18n/navigation'
 import { cartTotal, useCartStore } from '@/lib/cart/store'
+import { useIdempotencyKey } from '@/lib/orders/idempotency'
 import { formatMoney, multiplyMoney } from '@/lib/money'
 import { bestPromotion, nextPromotionNudge } from '@/lib/promotions'
 import { useDiscountLabel } from '@/lib/hooks/usePromotionLabel'
@@ -46,6 +47,23 @@ export function CheckoutView() {
   const tCommon = useTranslations('common')
   const locale = useLocale()
 
+  // The exact body we POST. A stable idempotency key is derived from it, so
+  // retries of the same submission return the original order (backend §4) while
+  // an edited cart gets a fresh key. Built before the early returns to keep the
+  // hook order stable.
+  const orderPayload = {
+    businessUnitId,
+    orderChannel: 'WEB' as const,
+    notes: orderNotes || undefined,
+    orderItems: items.map((i) => ({
+      productId: i.productId,
+      quantity: i.quantity,
+      unitPrice: i.unitPrice,
+      notes: i.notes || undefined,
+    })),
+  }
+  const idempotencyKey = useIdempotencyKey(orderPayload)
+
   if (!hydrated) {
     return (
       <div className="card p-12 text-center text-sm text-fg-muted">
@@ -82,19 +100,9 @@ export function CheckoutView() {
           'content-type': 'application/json',
           // Retries of this exact submission return the same order instead of
           // duplicating it (backend idempotency).
-          'idempotency-key': crypto.randomUUID(),
+          'idempotency-key': idempotencyKey,
         },
-        body: JSON.stringify({
-          businessUnitId,
-          orderChannel: 'WEB',
-          notes: orderNotes || undefined,
-          orderItems: items.map((i) => ({
-            productId: i.productId,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice,
-            notes: i.notes || undefined,
-          })),
-        }),
+        body: JSON.stringify(orderPayload),
       })
       if (!res.ok) {
         if (res.status === 401) {

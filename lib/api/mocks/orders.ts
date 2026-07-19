@@ -10,6 +10,7 @@ import type {
 } from '@/lib/api/types'
 import { MOCK_PRODUCTS } from './products'
 import { promotionsForUnitMockSync } from './promotions'
+import { findUserBySubMock } from './admin-users'
 import {
   asMoney,
   LOYALTY_POINT_VALUE,
@@ -17,6 +18,8 @@ import {
   sumMoney,
 } from '@/lib/money'
 import { bestPromotion } from '@/lib/promotions'
+import { VALID_TRANSITIONS } from '@/lib/orders/statusMachine'
+import { getChannelPolicy } from '@/lib/orders/channelPolicy'
 import { mockDelay } from './_delay'
 
 const STORE: Order[] = []
@@ -29,19 +32,24 @@ const ORDER_TIMELINE: OrderStatus[] = [
   'DELIVERED',
 ]
 
-// Mirrors the backend state machine (transitions outside this map → 422).
-const VALID_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  PENDING: ['CONFIRMED', 'CANCELLED'],
-  CONFIRMED: ['PREPARING', 'CANCELLED'],
-  PREPARING: ['READY', 'CANCELLED'],
-  READY: ['DELIVERED'],
-  DELIVERED: [],
-  CANCELLED: [],
-}
-
 function newId(prefix = 'ord'): string {
   const rand = Math.random().toString(36).slice(2, 10)
   return `${prefix}_${Date.now().toString(36)}${rand}`
+}
+
+/**
+ * Resolve the display `customerName` at read time (doc §5): for an account
+ * order (has `customerId`) it is the customer's *current* name, looked up live
+ * from the user record — so a rename is reflected in past orders. For a guest
+ * order it is the typed walk-in name stored on the order. Never cached as
+ * immutable, so the mock re-resolves on every read.
+ */
+function withResolvedName(order: Order): Order {
+  if (order.customerId) {
+    const user = findUserBySubMock(order.customerId)
+    return { ...order, customerName: user?.name ?? order.customerName ?? null }
+  }
+  return { ...order }
 }
 
 function tickStatus(order: Order): Order {
@@ -64,7 +72,7 @@ function tickStatus(order: Order): Order {
 }
 
 export async function createOrderMock(
-  customerId: string | null,
+  actorId: string | null,
   body: CreateOrderRequest,
 ): Promise<Order> {
   await mockDelay()
@@ -97,11 +105,28 @@ export async function createOrderMock(
   const clampedTotal = total.lt(0) ? asMoney(0) : total
   const now = new Date().toISOString()
 
+  // Channel decides who the actor is (doc §3). Only APP/WEB take the JWT
+  // subject as the customer; COUNTER/PICKUP put the subject on `attendantId`
+  // and the customer (if any) comes from the body; TOTEM has neither.
+  const policy = getChannelPolicy(body.orderChannel)
+  let customerId: string | null
+  let attendantId: string | null = null
+  if (policy.requiresStaffActor) {
+    attendantId = actorId
+    customerId = body.customerId ?? null
+  } else if (body.orderChannel === 'TOTEM') {
+    customerId = null
+  } else {
+    customerId = actorId
+  }
+
   const order: Order = {
     id: newId(),
     businessUnitId: body.businessUnitId,
-    customerId: body.customerId ?? customerId,
-    attendantId: null,
+    customerId,
+    // Guest walk-in name is stored; account orders resolve it live on read.
+    customerName: body.customerName ?? null,
+    attendantId,
     pointsRedeemed,
     // Earning: 1 point per R$10, granted on payment approval server-side.
     pointsEarned: Math.floor(Number(clampedTotal.toFixed(2)) / 10),
@@ -115,7 +140,7 @@ export async function createOrderMock(
     orderItems,
   }
   STORE.unshift(order)
-  return { ...order }
+  return withResolvedName(order)
 }
 
 export async function getOrderMock(id: string): Promise<Order | null> {
@@ -123,7 +148,7 @@ export async function getOrderMock(id: string): Promise<Order | null> {
   const found = STORE.find((o) => o.id === id)
   if (!found) return null
   tickStatus(found)
-  return { ...found }
+  return withResolvedName(found)
 }
 
 export async function listMyOrdersMock(
@@ -148,7 +173,7 @@ export async function listMyOrdersMock(
   }
   const limit =
     query.limit && query.limit > 0 ? Math.min(Math.trunc(query.limit), 100) : 20
-  const page = rows.slice(0, limit).map((o) => ({ ...o }))
+  const page = rows.slice(0, limit).map(withResolvedName)
   const hasMore = rows.length > limit
   const nextCursor =
     hasMore && page.length > 0 ? page[page.length - 1].id : null
@@ -198,7 +223,7 @@ export async function listOrdersMock(
 
   let data = STORE.map((o) => {
     tickStatus(o)
-    return { ...o }
+    return withResolvedName(o)
   })
   if (query.businessUnitId) {
     data = data.filter((o) => o.businessUnitId === query.businessUnitId)
@@ -283,7 +308,7 @@ export async function updateOrderStatusMock(
   }
   found.orderStatus = orderStatus
   found.updatedAt = new Date().toISOString()
-  return { ...found }
+  return withResolvedName(found)
 }
 
 const STAFF_ROLES = ['ADMIN', 'MANAGER', 'ATTENDANT', 'KITCHEN']
@@ -309,5 +334,5 @@ export async function cancelOrderMock(
 
   found.orderStatus = 'CANCELLED'
   found.updatedAt = new Date().toISOString()
-  return { ...found }
+  return withResolvedName(found)
 }

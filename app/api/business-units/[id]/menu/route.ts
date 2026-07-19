@@ -1,9 +1,46 @@
 import { NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
-import { addMenuItem } from '@/lib/api/menu'
+import { addMenuItem, listMenu } from '@/lib/api/menu'
 import { ApiError, describeError } from '@/lib/api/errors'
 import { canAccessUnit, getAdminContext } from '@/lib/auth/access'
+import { USE_MOCKS } from '@/lib/api/client'
+
+/**
+ * Public, available-only menu of a unit — proxies the anonymous
+ * `GET /business-units/:id/menu`. Used client-side by the POS/kiosk create
+ * form to load (and re-load, on a unit change) the products it can ring up.
+ */
+export async function GET(
+  _req: Request,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  const { id: businessUnitId } = await ctx.params
+  // Validate the id before it is concatenated into the backend URL — guards
+  // against path/query injection through the fetch URL building, matching the
+  // strict UUID check the sibling POST handler already performs. The mock
+  // backend uses non-uuid unit ids, so only under USE_MOCKS do we relax to a
+  // "clearly malformed" check — and even there we still reject ids carrying
+  // path/query/fragment separators that could smuggle extra URL segments.
+  if (!z.string().uuid().safeParse(businessUnitId).success) {
+    const smugglesUrlParts = /[/?#&]/.test(businessUnitId)
+    if (!USE_MOCKS || businessUnitId.length === 0 || smugglesUrlParts) {
+      return NextResponse.json(
+        { error: 'Invalid business unit id.', data: [] },
+        { status: 400 },
+      )
+    }
+  }
+  try {
+    const page = await listMenu(businessUnitId, { limit: 100 })
+    return NextResponse.json(page)
+  } catch (err) {
+    return NextResponse.json(
+      { error: describeError(err), data: [] },
+      { status: 200 },
+    )
+  }
+}
 
 // Positive decimal string with ≤2 places; "0"/"0.00" are rejected.
 const MONEY = z

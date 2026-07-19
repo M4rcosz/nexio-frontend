@@ -49,7 +49,7 @@ resource marked "real backend + mock fallback" honours `NEXT_PUBLIC_USE_MOCKS`.
 | User profile          | Real backend + mock fallback (`GET /api/users/me`, `PATCH /api/users/me`, `PATCH /api/users/me/password`) |
 | Orders / Payment      | Real backend + mock fallback (`GET /api/orders/me`, `POST/GET /api/orders`, `/api/payments/...`) |
 | Products (admin CRUD) | Real backend + mock fallback (`POST /api/products`, `PATCH /api/products/:id`) |
-| Menu (business unit — admin) | Real backend + mock fallback (`POST /api/business-units/:id/menu`, `PATCH /api/business-units/:id/menu/:itemId`, `POST /api/business-units/:id/menu/:itemId/available`) |
+| Menu (business unit)  | Real backend + mock fallback (`GET /api/business-units/:id/menu` — public, used by POS/kiosk; `POST /api/business-units/:id/menu`, `PATCH /api/business-units/:id/menu/:itemId`, `POST /api/business-units/:id/menu/:itemId/available` — admin) |
 | Loyalty               | Mock                                            |
 | Inventory (admin)     | Real backend + mock fallback (`GET /api/inventory/:businessUnitId`, `POST /api/inventory/:businessUnitId/items`, `POST /api/inventory/:businessUnitId/adjust`)  |
 | Promotions (admin)    | Real backend + mock fallback (`/api/promotions/...`)         |
@@ -90,6 +90,10 @@ See `.env.example`. The relevant ones:
   backend has no WebSocket yet.
 - **No OpenAPI**: types are typed manually in `lib/api/types.ts`. Route
   handler input is validated with Zod.
+- **Order channels** (`APP`/`WEB`/`TOTEM`/`COUNTER`/`PICKUP`) and the order
+  status state machine are centralized in `lib/orders/channelPolicy.ts` and
+  `lib/orders/statusMachine.ts` — derive form/board behaviour from those
+  tables rather than re-deriving the rules per screen.
 
 ## Internationalization
 
@@ -126,6 +130,8 @@ app/
 │   ├── loyalty/                 # Points and LGPD consent
 │   ├── profile/                 # Own account (GET/PATCH /users/me + change password)
 │   ├── admin/                   # Admin area: overview, users, products, categories, menu, business-units, inventory, promotions
+│   ├── pos/                     # Attendant order entry (COUNTER/PICKUP; ADMIN/MANAGER/ATTENDANT)
+│   ├── totem/                   # Kiosk order entry (TOTEM; "attended kiosk" — see auth note in page.tsx)
 │   ├── error.tsx                # Boundary
 │   ├── loading.tsx
 │   ├── not-found.tsx
@@ -173,6 +179,17 @@ token refresh, it just busts the stale render.
 3. Drop the `StubBadge` from the corresponding pages.
 
 ## Backlog
+
+### Kiosk (TOTEM) device auth
+
+`/totem` currently ships as an "attended kiosk": the device authenticates
+with a normal staff session (ADMIN/MANAGER/ATTENDANT), and the `TOTEM`
+channel just means the backend attaches no attendant/customer to the order.
+This is an interim compromise, not a device/kiosk-account model — there is
+no backend concept of an unattended kiosk identity today. A production
+kiosk would want a dedicated device/service-account auth path (backend
+work) so a physical kiosk doesn't need a logged-in staff member's session
+sitting on the device. Revisit this once that's available.
 
 ### Nearest-unit selection via GPS
 

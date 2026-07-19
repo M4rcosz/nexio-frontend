@@ -264,6 +264,13 @@ export type Order = {
   id: string
   businessUnitId: string
   customerId: string | null
+  /**
+   * The name to call the order by (doc §5). For a guest order (no `customerId`)
+   * this is the typed walk-in name; for an account order it is the customer's
+   * current name, resolved live from their user record on every read — so never
+   * cache it as immutable order data.
+   */
+  customerName: string | null
   attendantId: string | null
   pointsRedeemed: number
   pointsEarned: number
@@ -288,8 +295,12 @@ export type CreateOrderItemRequest = {
 
 export type CreateOrderRequest = {
   businessUnitId: string
-  /** Only used for COUNTER/PICKUP channels (attendant-placed orders). */
+  /** Only used for COUNTER/PICKUP channels (attendant-placed orders). Never
+   * sent together with `customerName` — the API and a DB constraint reject it. */
   customerId?: string
+  /** Walk-in / "call the order by" name. Required for TOTEM and for a
+   * COUNTER/PICKUP walk-in; rejected for APP/WEB (doc §3). Max 60 chars. */
+  customerName?: string
   /** Loyalty points to redeem (integer ≥0). */
   pointsRedeemed?: number
   notes?: string

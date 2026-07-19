@@ -624,11 +624,14 @@ Header opcional de idempotência:
 
 - `Idempotency-Key: <string ≤255>` — reenvio com a mesma chave e mesmo corpo retorna o mesmo pedido; mesma chave com corpo diferente é rejeitada. Chave ausente/vazia/grande demais desliga a idempotência.
 
-Regras de canal (`orderChannel`):
+Regras de canal (`orderChannel`) — ver também `customerName` abaixo:
 
-- `APP`, `WEB`: cliente = usuário autenticado.
-- `TOTEM`: pedido anônimo (sem cliente).
-- `COUNTER`, `PICKUP`: exigem atendente (ADMIN/MANAGER/ATTENDANT); `customerId` vem no corpo.
+- `APP`, `WEB`: cliente = usuário autenticado (do JWT); `customerId`/`customerName` no corpo são rejeitados.
+- `TOTEM`: sem atendente, sem `customerId`; `customerName` é **obrigatório** (breaking change: TOTEM não aceita mais pedido anônimo).
+- `COUNTER`, `PICKUP`: exigem atendente (ADMIN/MANAGER/ATTENDANT); o atendente informa **um dos dois**, nunca os dois — `customerId` (cliente cadastrado) ou `customerName` (cliente avulso).
+- Em qualquer canal, enviar `customerId` e `customerName` juntos → `422`.
+
+`customerName`: até 60 caracteres; o backend remove caracteres de formatação Unicode (zero-width space, BOM) e espaços nas pontas, exigindo ao menos uma letra/dígito — nomes só com espaços/símbolos contam como ausentes.
 
 Request:
 
@@ -636,6 +639,7 @@ Request:
 {
   "businessUnitId": "<uuid>",
   "customerId": "<uuid>",     // opcional; só usado em COUNTER/PICKUP
+  "customerName": "Maria",    // opcional; ver regras de canal acima (obrigatório em TOTEM; nunca junto com customerId)
   "pointsRedeemed": 0,        // opcional, inteiro ≥0 (resgate de pontos de fidelidade)
   "notes": "sem cebola",      // opcional, ≤150
   "orderChannel": "APP",      // APP|WEB|TOTEM|COUNTER|PICKUP
@@ -664,7 +668,9 @@ Response `200`: paginado de [Order](#order). Erros: `401` token ausente/expirado
 
 **Staff** (ADMIN, MANAGER, ATTENDANT, KITCHEN). Lista paginada com filtros.
 
-Query: `limit`, `cursor`, `businessUnitId` (uuid), `orderChannel` (enum), `orderStatus` (enum). Staff vê apenas unidades do seu escopo.
+Query: `limit`, `cursor`, `businessUnitId` (uuid), `orderChannel` (enum), `orderStatus` (enum), `attendantId` (uuid), `customerId` (uuid), `createdAtFrom`/`createdAtTo` (date-time), `minTotal`/`maxTotal` (decimal string), `sortBy` (`createdAt`|`totalAmount`, default `createdAt`), `sortDir` (`asc`|`desc`, default `desc`). Staff vê apenas unidades do seu escopo.
+
+O cursor é opaco e atrelado ao `sortBy`/`sortDir` vigente na página anterior — trocar a ordenação sem descartar o cursor retorna `422`.
 
 Response `200`: paginado de [Order](#order).
 
@@ -711,6 +717,7 @@ Response `200`: [Order](#order). Erros: `404`; `422` fora da janela de cancelame
   "id": "<uuid>",
   "businessUnitId": "<uuid>",
   "customerId": "<uuid>",       // ou null
+  "customerName": "Maria",      // ou null; nome para chamar o pedido — se houver customerId, é o nome atual do cliente (resolvido ao vivo); senão, o nome avulso digitado
   "attendantId": "<uuid>",      // ou null
   "pointsRedeemed": 0,
   "pointsEarned": 0,

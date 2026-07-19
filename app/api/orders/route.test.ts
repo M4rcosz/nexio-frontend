@@ -4,18 +4,24 @@ import { ApiError } from '@/lib/api/errors'
 vi.mock('@/lib/auth/session')
 vi.mock('@/lib/api/orders')
 
-import { hasActiveOrRefreshableSession } from '@/lib/auth/session'
+import { getSession, hasActiveOrRefreshableSession } from '@/lib/auth/session'
 import { createOrder, listMyOrders } from '@/lib/api/orders'
 import { POST, GET } from './route'
 
 const mockedGate = vi.mocked(hasActiveOrRefreshableSession)
+const mockedGetSession = vi.mocked(getSession)
 const mockedCreateOrder = vi.mocked(createOrder)
 const mockedListMyOrders = vi.mocked(listMyOrders)
 
+// The schema validates businessUnitId and every productId as UUIDs (doc §4).
+const BU_ID = '11111111-1111-4111-8111-111111111111'
+const P_ID = '22222222-2222-4222-8222-222222222222'
+const CUSTOMER_ID = 'f3b7c2e1-1a2b-4c4d-8e6f-7a8b9c0d1e2f'
+
 const validBody = {
-  businessUnitId: 'bu-1',
+  businessUnitId: BU_ID,
   orderChannel: 'WEB' as const,
-  orderItems: [{ productId: 'p1', quantity: 2, unitPrice: '25.90' }],
+  orderItems: [{ productId: P_ID, quantity: 2, unitPrice: '25.90' }],
 }
 
 function postReq(body: unknown, headers: Record<string, string> = {}): Request {
@@ -28,6 +34,13 @@ function postReq(body: unknown, headers: Record<string, string> = {}): Request {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // Default to a staff session so COUNTER/PICKUP orders pass the actor gate;
+  // individual tests override the role where the gate itself is under test.
+  mockedGetSession.mockResolvedValue({
+    sub: 'u1',
+    username: 'attendant',
+    role: 'ATTENDANT',
+  } as never)
 })
 
 describe('POST /api/orders', () => {
@@ -51,7 +64,7 @@ describe('POST /api/orders', () => {
     mockedCreateOrder.mockResolvedValue({ id: 'o1' } as never)
     await POST(postReq(validBody, { 'idempotency-key': 'idem-123' }))
     expect(mockedCreateOrder).toHaveBeenCalledWith(
-      expect.objectContaining({ businessUnitId: 'bu-1' }),
+      expect.objectContaining({ businessUnitId: BU_ID }),
       { idempotencyKey: 'idem-123' },
     )
   })
@@ -77,16 +90,252 @@ describe('POST /api/orders', () => {
     const res = await POST(
       postReq({
         ...validBody,
-        orderItems: [{ productId: 'p1', quantity: 1, unitPrice: '9.999' }],
+        orderItems: [{ productId: P_ID, quantity: 1, unitPrice: '9.999' }],
       }),
     )
     expect(res.status).toBe(400)
   })
 
-  it('returns 400 when the channel is not WEB', async () => {
+  it('accepts an APP order with no customer fields (identity from JWT)', async () => {
     mockedGate.mockResolvedValue(true)
+    mockedCreateOrder.mockResolvedValue({ id: 'o1' } as never)
     const res = await POST(postReq({ ...validBody, orderChannel: 'APP' }))
+    expect(res.status).toBe(201)
+  })
+
+  it('returns 400 for an unknown channel', async () => {
+    mockedGate.mockResolvedValue(true)
+    const res = await POST(postReq({ ...validBody, orderChannel: 'DRIVE' }))
     expect(res.status).toBe(400)
+    expect(mockedCreateOrder).not.toHaveBeenCalled()
+  })
+
+  it('rejects a customerName on APP/WEB (identity is the JWT)', async () => {
+    mockedGate.mockResolvedValue(true)
+    const res = await POST(
+      postReq({ ...validBody, orderChannel: 'WEB', customerName: 'Maria' }),
+    )
+    expect(res.status).toBe(400)
+    expect(mockedCreateOrder).not.toHaveBeenCalled()
+  })
+
+  it('requires a customerName on TOTEM', async () => {
+    mockedGate.mockResolvedValue(true)
+    const res = await POST(postReq({ ...validBody, orderChannel: 'TOTEM' }))
+    expect(res.status).toBe(400)
+    expect(mockedCreateOrder).not.toHaveBeenCalled()
+  })
+
+  it('accepts a TOTEM order with a valid customerName', async () => {
+    mockedGate.mockResolvedValue(true)
+    mockedCreateOrder.mockResolvedValue({ id: 'o1' } as never)
+    const res = await POST(
+      postReq({
+        ...validBody,
+        orderChannel: 'TOTEM',
+        customerName: '  Maria  ',
+      }),
+    )
+    expect(res.status).toBe(201)
+    // The name is trimmed before it reaches the service (matches the hash the
+    // backend stores under the idempotency key).
+    expect(mockedCreateOrder).toHaveBeenCalledWith(
+      expect.objectContaining({ customerName: 'Maria' }),
+      expect.anything(),
+    )
+  })
+
+  it('rejects a blank/zero-width TOTEM customerName', async () => {
+    mockedGate.mockResolvedValue(true)
+    const res = await POST(
+      postReq({ ...validBody, orderChannel: 'TOTEM', customerName: '   ' }),
+    )
+    expect(res.status).toBe(400)
+    expect(mockedCreateOrder).not.toHaveBeenCalled()
+  })
+
+  it('rejects both customerId and customerName on COUNTER', async () => {
+    mockedGate.mockResolvedValue(true)
+    const res = await POST(
+      postReq({
+        ...validBody,
+        orderChannel: 'COUNTER',
+        customerId: 'f3b7c2e1-1a2b-4c4d-8e6f-7a8b9c0d1e2f',
+        customerName: 'Maria',
+      }),
+    )
+    expect(res.status).toBe(400)
+    expect(mockedCreateOrder).not.toHaveBeenCalled()
+  })
+
+  it('rejects a COUNTER order with neither customerId nor customerName', async () => {
+    mockedGate.mockResolvedValue(true)
+    const res = await POST(postReq({ ...validBody, orderChannel: 'COUNTER' }))
+    expect(res.status).toBe(400)
+    expect(mockedCreateOrder).not.toHaveBeenCalled()
+  })
+
+  it('accepts a COUNTER walk-in with just a customerName', async () => {
+    mockedGate.mockResolvedValue(true)
+    mockedCreateOrder.mockResolvedValue({ id: 'o1' } as never)
+    const res = await POST(
+      postReq({
+        ...validBody,
+        orderChannel: 'COUNTER',
+        customerName: 'Seu Antonio',
+      }),
+    )
+    expect(res.status).toBe(201)
+  })
+
+  it('accepts a COUNTER order with just a customerId', async () => {
+    mockedGate.mockResolvedValue(true)
+    mockedCreateOrder.mockResolvedValue({ id: 'o1' } as never)
+    const res = await POST(
+      postReq({
+        ...validBody,
+        orderChannel: 'COUNTER',
+        customerId: 'f3b7c2e1-1a2b-4c4d-8e6f-7a8b9c0d1e2f',
+      }),
+    )
+    expect(res.status).toBe(201)
+  })
+
+  it('rejects a COUNTER order placed by a non-staff caller (403)', async () => {
+    mockedGate.mockResolvedValue(true)
+    mockedGetSession.mockResolvedValue({
+      sub: 'c1',
+      username: 'customer',
+      role: 'CUSTOMER',
+    } as never)
+    const res = await POST(
+      postReq({
+        ...validBody,
+        orderChannel: 'COUNTER',
+        customerName: 'Maria',
+      }),
+    )
+    expect(res.status).toBe(403)
+    expect(mockedCreateOrder).not.toHaveBeenCalled()
+  })
+
+  it('rejects a PICKUP order placed by a non-staff caller (403)', async () => {
+    mockedGate.mockResolvedValue(true)
+    mockedGetSession.mockResolvedValue({
+      sub: 'c1',
+      username: 'customer',
+      role: 'CUSTOMER',
+    } as never)
+    const res = await POST(
+      postReq({
+        ...validBody,
+        orderChannel: 'PICKUP',
+        customerName: 'Maria',
+      }),
+    )
+    expect(res.status).toBe(403)
+    expect(mockedCreateOrder).not.toHaveBeenCalled()
+  })
+
+  // PICKUP shares COUNTER's channel policy (doc §3) — mirror the quartet.
+  it('accepts a PICKUP walk-in with just a customerName', async () => {
+    mockedGate.mockResolvedValue(true)
+    mockedCreateOrder.mockResolvedValue({ id: 'o1' } as never)
+    const res = await POST(
+      postReq({
+        ...validBody,
+        orderChannel: 'PICKUP',
+        customerName: 'Seu Antonio',
+      }),
+    )
+    expect(res.status).toBe(201)
+  })
+
+  it('accepts a PICKUP order with just a customerId', async () => {
+    mockedGate.mockResolvedValue(true)
+    mockedCreateOrder.mockResolvedValue({ id: 'o1' } as never)
+    const res = await POST(
+      postReq({
+        ...validBody,
+        orderChannel: 'PICKUP',
+        customerId: CUSTOMER_ID,
+      }),
+    )
+    expect(res.status).toBe(201)
+  })
+
+  it('rejects both customerId and customerName on PICKUP', async () => {
+    mockedGate.mockResolvedValue(true)
+    const res = await POST(
+      postReq({
+        ...validBody,
+        orderChannel: 'PICKUP',
+        customerId: CUSTOMER_ID,
+        customerName: 'Maria',
+      }),
+    )
+    expect(res.status).toBe(400)
+    expect(mockedCreateOrder).not.toHaveBeenCalled()
+  })
+
+  it('rejects a PICKUP order with neither customerId nor customerName', async () => {
+    mockedGate.mockResolvedValue(true)
+    const res = await POST(postReq({ ...validBody, orderChannel: 'PICKUP' }))
+    expect(res.status).toBe(400)
+    expect(mockedCreateOrder).not.toHaveBeenCalled()
+  })
+
+  it.each(['APP', 'WEB', 'TOTEM'] as const)(
+    'rejects a lone customerId on %s (channel disallows it)',
+    async (orderChannel) => {
+      mockedGate.mockResolvedValue(true)
+      const res = await POST(
+        postReq({
+          ...validBody,
+          orderChannel,
+          // TOTEM also needs a name, but the customerId rejection fires first.
+          customerId: CUSTOMER_ID,
+        }),
+      )
+      expect(res.status).toBe(400)
+      expect(mockedCreateOrder).not.toHaveBeenCalled()
+    },
+  )
+
+  it('rejects a customerName over 60 characters with name_too_long', async () => {
+    mockedGate.mockResolvedValue(true)
+    const res = await POST(
+      postReq({
+        ...validBody,
+        orderChannel: 'TOTEM',
+        customerName: 'a'.repeat(61),
+      }),
+    )
+    expect(res.status).toBe(400)
+    const body = (await res.json()) as {
+      details?: { fieldErrors?: Record<string, string[]> }
+    }
+    expect(body.details?.fieldErrors?.customerName).toContain('name_too_long')
+    expect(mockedCreateOrder).not.toHaveBeenCalled()
+  })
+
+  it('rejects a non-uuid businessUnitId', async () => {
+    mockedGate.mockResolvedValue(true)
+    const res = await POST(postReq({ ...validBody, businessUnitId: 'bu-1' }))
+    expect(res.status).toBe(400)
+    expect(mockedCreateOrder).not.toHaveBeenCalled()
+  })
+
+  it('rejects a non-uuid productId', async () => {
+    mockedGate.mockResolvedValue(true)
+    const res = await POST(
+      postReq({
+        ...validBody,
+        orderItems: [{ productId: 'p1', quantity: 1, unitPrice: '10.00' }],
+      }),
+    )
+    expect(res.status).toBe(400)
+    expect(mockedCreateOrder).not.toHaveBeenCalled()
   })
 
   it('maps a backend 422 to a friendly unprocessable response', async () => {

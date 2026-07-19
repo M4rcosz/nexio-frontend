@@ -27,6 +27,13 @@ vi.mock('@/i18n/navigation', () => ({
 
 vi.mock('@/lib/auth/session', () => ({ getSession: vi.fn() }))
 
+// Header reads the current pathname from a middleware-set request header to
+// suppress its nav on the kiosk; outside a request scope there is none, so an
+// empty header set keeps these (non-kiosk) assertions unaffected.
+vi.mock('next/headers', () => ({
+  headers: async () => new Headers(),
+}))
+
 vi.mock('@/lib/tenant/resolve', () => ({
   getTenant: async () => ({
     id: 'nexio',

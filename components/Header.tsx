@@ -1,5 +1,7 @@
+import { headers } from 'next/headers'
 import { getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
+import { PATHNAME_HEADER, stripLocale } from '@/lib/i18n/pathname'
 import { getSession } from '@/lib/auth/session'
 import { getMyAiMembership } from '@/lib/api/ai'
 import type { Theme } from '@/lib/theme'
@@ -22,6 +24,12 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
   // actually hold an AI membership (no dead link to a locked-out page).
   const membership = isLogged && !isCustomer ? await getMyAiMembership() : null
   const showAssistantLink = isLogged && !isCustomer && membership !== null
+  // On the attended kiosk (/totem) the device holds a staff session, but it is
+  // physically operated by walk-up customers. Suppress the account menu and all
+  // nav so a customer can't log the device out or reach staff/admin areas
+  // mid-order. Interim mitigation until /totem gets its own chrome-less layout.
+  const pathname = stripLocale((await headers()).get(PATHNAME_HEADER) ?? '')
+  const isKiosk = pathname === '/totem' || pathname.startsWith('/totem/')
   const t = await getTranslations('header')
   const tAdmin = await getTranslations('admin')
   const tenant = await getTenant()
@@ -55,7 +63,7 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
         </Link>
 
         <nav className="flex flex-none items-center gap-1 text-sm sm:gap-2">
-          {isLogged ? (
+          {isKiosk ? null : isLogged ? (
             <>
               {isCustomer ? (
                 <Link
@@ -108,7 +116,9 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
               </Link>
             </>
           )}
-          <div className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
+          {isKiosk ? null : (
+            <div className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
+          )}
           <LanguageSwitcher />
           <ThemeToggle initial={initialTheme} />
           {showCart ? <CartBadge /> : null}
