@@ -117,8 +117,8 @@ export function ProductForm({
           setError(errorMessage(data?.code, res.status) ?? t('failed'))
           return
         }
-        router.push('/admin/products')
         router.refresh()
+        router.push('/admin/products')
       })
       return
     }
@@ -142,8 +142,8 @@ export function ProductForm({
         setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }
-      router.push('/admin/products')
       router.refresh()
+      router.push('/admin/products')
     })
   }
 

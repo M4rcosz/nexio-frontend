@@ -6,6 +6,7 @@ import { Link } from '@/i18n/navigation'
 import { clientFetch } from '@/lib/api/client'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { formatDateTime, maskCnpj } from '@/lib/format'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import type { BusinessUnit, Paginated } from '@/lib/api/types'
 
 type Meta = Paginated<BusinessUnit>['meta']
@@ -45,12 +46,24 @@ export function BusinessUnitList({
 
   const [units, setUnits] = useState<BusinessUnit[]>(initial.data)
   const [meta, setMeta] = useState<Meta>(initial.meta)
+  // The server page is the source of truth: when the RSC re-renders in place
+  // (router.refresh() after a mutation) the component is not remounted, so the
+  // state above would otherwise keep serving the pre-update list. Any extra
+  // pages pulled by loadMore are intentionally dropped on resync.
+  const [syncedFrom, setSyncedFrom] = useState(initial)
+  if (syncedFrom !== initial) {
+    setSyncedFrom(initial)
+    setUnits(initial.data)
+    setMeta(initial.meta)
+  }
   const [loadingMore, setLoadingMore] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [rowError, setRowError] = useState<{
     id: string
     message: string
   } | null>(null)
+  const [pendingDeactivate, setPendingDeactivate] =
+    useState<BusinessUnit | null>(null)
 
   async function loadMore() {
     if (!meta.hasMore || !meta.nextCursor || loadingMore) return
@@ -80,12 +93,15 @@ export function BusinessUnitList({
     }
   }
 
-  async function toggleActive(unit: BusinessUnit) {
-    const next = !unit.isActive
-    if (!next) {
-      const ok = window.confirm(t('confirmDisable'))
-      if (!ok) return
+  function toggleActive(unit: BusinessUnit) {
+    if (unit.isActive) {
+      setPendingDeactivate(unit)
+      return
     }
+    void performToggle(unit, true)
+  }
+
+  async function performToggle(unit: BusinessUnit, next: boolean) {
     setRowError(null)
     setTogglingId(unit.id)
     // Optimistic flip; revert on failure.
@@ -118,6 +134,16 @@ export function BusinessUnitList({
     } finally {
       setTogglingId(null)
     }
+  }
+
+  function confirmDeactivate() {
+    if (!pendingDeactivate) return
+    void performToggle(pendingDeactivate, false)
+    setPendingDeactivate(null)
+  }
+
+  function cancelDeactivate() {
+    setPendingDeactivate(null)
   }
 
   if (units.length === 0) {
@@ -276,6 +302,15 @@ export function BusinessUnitList({
           </button>
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={pendingDeactivate !== null}
+        message={t('confirmDisable')}
+        confirmLabel={t('actionDisable')}
+        danger
+        onConfirm={confirmDeactivate}
+        onCancel={cancelDeactivate}
+      />
     </>
   )
 }

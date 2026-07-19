@@ -133,8 +133,8 @@ export function PromotionForm({
         setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }
-      router.push('/admin/promotions')
       router.refresh()
+      router.push('/admin/promotions')
     })
   }
 

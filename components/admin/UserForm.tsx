@@ -141,8 +141,8 @@ export function UserForm({
         else setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }
-      router.push('/admin/users')
       router.refresh()
+      router.push('/admin/users')
     })
   }
 
