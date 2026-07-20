@@ -11,7 +11,7 @@
 // scoped to their own business units and limited to the roles they may manage.
 import { serverFetch, USE_MOCKS } from './client'
 import { ApiError } from './errors'
-import type { Paginated, User } from './types'
+import type { ListUsersQuery, Paginated, User } from './types'
 import type { AdminContext } from '@/lib/auth/access'
 import {
   type CreateInternalUserInput,
@@ -19,20 +19,18 @@ import {
   type UpdateInternalUserInput,
   createInternalUserMock,
   getInternalUserMock,
+  listCustomersMock,
   listInternalUsersMock,
   setInternalUserActiveMock,
   updateInternalUserMock,
 } from './mocks/admin-users'
 
-const PAGE_LIMIT = 100
+/** Matches the backend default; the server caps anything above 100. */
+export const PAGE_LIMIT = 20
+/** Used only by the id-walking fallback in `getInternalUser`. */
+const SCAN_LIMIT = 100
 
-async function fetchUsersPage(query: {
-  limit?: number
-  cursor?: string
-  businessUnitId?: string
-  username?: string
-  email?: string
-}): Promise<Paginated<User>> {
+async function fetchUsersPage(query: ListUsersQuery): Promise<Paginated<User>> {
   return serverFetch<Paginated<User>>('/users', {
     query: {
       limit: query.limit,
@@ -40,10 +38,34 @@ async function fetchUsersPage(query: {
       businessUnitId: query.businessUnitId,
       username: query.username,
       email: query.email,
+      role: query.role,
     },
     cache: 'no-store',
   })
 }
+
+/**
+ * Staff listing, one cursor page at a time. `role` now goes to the backend as
+ * a real query param instead of being applied to an over-fetched page.
+ *
+ * The post-filter on `manageableRoles` stays as a belt-and-braces guard for
+ * the unfiltered case (a MANAGER must never see an ADMIN row).
+ *
+ * That filter runs *after* the backend has already paginated, so a page can
+ * come back full and end up empty — a MANAGER pinned to their unit is served
+ * the other MANAGERs of that unit, none of which they may manage.
+ *
+ * We deliberately do NOT re-fetch to fill such a page. Doing so makes the
+ * number of backend round-trips depend on content the actor is forbidden to
+ * see, which turns request latency into an oracle for counting those hidden
+ * rows (`limit` is client-controlled down to 1). It also multiplies one
+ * request into several sequential upstream calls, each with its own 4s
+ * timeout, inside an RSC render.
+ *
+ * The dead end that would otherwise cause is handled in the UI instead:
+ * `UserList` renders the Load more control alongside the empty state when
+ * `hasMore` is set, so an empty page is a click-through rather than a wall.
+ */
 
 export async function listInternalUsers(
   ctx: AdminContext,
@@ -51,24 +73,73 @@ export async function listInternalUsers(
     InternalUserFilters,
     'scopedBusinessUnitIds' | 'allowedRoles'
   > = {},
-): Promise<User[]> {
+): Promise<Paginated<User>> {
+  // A role the actor cannot manage would otherwise be forwarded verbatim and
+  // answered with rows they have no business seeing.
+  const role =
+    filters.role && ctx.manageableRoles.includes(filters.role)
+      ? filters.role
+      : undefined
+
   if (USE_MOCKS) {
     return listInternalUsersMock({
       ...filters,
+      role,
       scopedBusinessUnitIds: ctx.scopedBusinessUnitIds,
       allowedRoles: ctx.manageableRoles,
     })
   }
-  // The backend filters by unit/username/email and already scopes MANAGERs to
-  // their own units; role filtering is applied client-side (no query param).
   const page = await fetchUsersPage({
-    limit: PAGE_LIMIT,
+    limit: filters.limit ?? PAGE_LIMIT,
+    cursor: filters.cursor,
     businessUnitId: filters.businessUnitId,
     username: filters.search,
+    email: filters.email,
+    role,
   })
-  let users = page.data.filter((u) => ctx.manageableRoles.includes(u.role))
-  if (filters.role) users = users.filter((u) => u.role === filters.role)
-  return users
+  return {
+    data: page.data.filter((u) => ctx.manageableRoles.includes(u.role)),
+    // Keep the envelope self-consistent: an upstream page claiming `hasMore`
+    // without a cursor would otherwise render a Load more button that cannot
+    // do anything, since the hook has nothing to send.
+    meta: {
+      ...page.meta,
+      hasMore: page.meta.hasMore && Boolean(page.meta.nextCursor),
+    },
+  }
+}
+
+/**
+ * Customer listing — `GET /users?role=CUSTOMER`, ADMIN only.
+ *
+ * Customers hold no business-unit links, so this is only reachable by an
+ * actor with no unit scoping. A MANAGER is pinned to their claim by the
+ * backend and would always get an empty page, so we return one directly
+ * rather than burning a round-trip on a guaranteed-empty answer. No
+ * `businessUnitId` is ever forwarded: AND-combining it would collapse the
+ * result to empty (docs §1.3).
+ */
+export async function listCustomers(
+  ctx: AdminContext,
+  filters: Pick<
+    InternalUserFilters,
+    'search' | 'email' | 'limit' | 'cursor'
+  > = {},
+): Promise<Paginated<User>> {
+  const limit = filters.limit ?? PAGE_LIMIT
+  if (ctx.role !== 'ADMIN') {
+    return { data: [], meta: { limit, nextCursor: null, hasMore: false } }
+  }
+  if (USE_MOCKS) {
+    return listCustomersMock({ ...filters, limit })
+  }
+  return fetchUsersPage({
+    limit,
+    cursor: filters.cursor,
+    username: filters.search,
+    email: filters.email,
+    role: 'CUSTOMER',
+  })
 }
 
 /**
@@ -88,7 +159,7 @@ export async function getInternalUser(
   }
   let cursor: string | undefined
   for (let i = 0; i < 5; i++) {
-    const page = await fetchUsersPage({ limit: PAGE_LIMIT, cursor })
+    const page = await fetchUsersPage({ limit: SCAN_LIMIT, cursor })
     const found = page.data.find((u) => u.id === id)
     if (found) {
       return ctx.manageableRoles.includes(found.role) ? found : null

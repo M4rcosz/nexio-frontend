@@ -23,6 +23,7 @@ function makeOrder(id: string, status: OrderStatus = 'PENDING'): Order {
     id,
     businessUnitId: 'bu-1',
     customerId: 'c1',
+    customerName: null,
     attendantId: null,
     pointsRedeemed: 0,
     pointsEarned: 0,

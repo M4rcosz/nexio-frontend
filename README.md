@@ -49,9 +49,11 @@ resource marked "real backend + mock fallback" honours `NEXT_PUBLIC_USE_MOCKS`.
 | User profile          | Real backend + mock fallback (`GET /api/users/me`, `PATCH /api/users/me`, `PATCH /api/users/me/password`) |
 | Orders / Payment      | Real backend + mock fallback (`GET /api/orders/me`, `POST/GET /api/orders`, `/api/payments/...`) |
 | Products (admin CRUD) | Real backend + mock fallback (`POST /api/products`, `PATCH /api/products/:id`) |
-| Menu (business unit — admin) | Real backend + mock fallback (`POST /api/business-units/:id/menu`, `PATCH /api/business-units/:id/menu/:itemId`, `POST /api/business-units/:id/menu/:itemId/available`) |
+| Menu (business unit)  | Real backend + mock fallback (`GET /api/business-units/:id/menu` — public, used by POS/kiosk; `POST /api/business-units/:id/menu`, `PATCH /api/business-units/:id/menu/:itemId`, `POST /api/business-units/:id/menu/:itemId/available` — admin) |
 | Loyalty               | Mock                                            |
 | Inventory (admin)     | Real backend + mock fallback (`GET /api/inventory/:businessUnitId`, `POST /api/inventory/:businessUnitId/items`, `POST /api/inventory/:businessUnitId/adjust`)  |
+| Staff users (admin)   | Real backend + mock fallback (`GET/POST /api/admin/users`, cursor-paginated; filters `role`, `businessUnitId`, `search`, `email`) |
+| Customers (admin)     | Real backend + mock fallback (`GET /api/admin/customers` — ADMIN only; `GET /api/users?role=CUSTOMER` upstream) |
 | Promotions (admin)    | Real backend + mock fallback (`/api/promotions/...`)         |
 
 The `NEXT_PUBLIC_USE_MOCKS=true` flag in `.env.local` forces the *menu* and
@@ -90,6 +92,10 @@ See `.env.example`. The relevant ones:
   backend has no WebSocket yet.
 - **No OpenAPI**: types are typed manually in `lib/api/types.ts`. Route
   handler input is validated with Zod.
+- **Order channels** (`APP`/`WEB`/`TOTEM`/`COUNTER`/`PICKUP`) and the order
+  status state machine are centralized in `lib/orders/channelPolicy.ts` and
+  `lib/orders/statusMachine.ts` — derive form/board behaviour from those
+  tables rather than re-deriving the rules per screen.
 
 ## Internationalization
 
@@ -125,7 +131,9 @@ app/
 │   ├── orders/                  # History + tracking (cursor pagination, channel/status filters)
 │   ├── loyalty/                 # Points and LGPD consent
 │   ├── profile/                 # Own account (GET/PATCH /users/me + change password)
-│   ├── admin/                   # Admin area: overview, users, products, categories, menu, business-units, inventory, promotions
+│   ├── admin/                   # Admin area: overview, users, customers, products, categories, menu, business-units, inventory, promotions
+│   ├── pos/                     # Attendant order entry (COUNTER/PICKUP; ADMIN/MANAGER/ATTENDANT)
+│   ├── totem/                   # Kiosk order entry (TOTEM; "attended kiosk" — see auth note in page.tsx)
 │   ├── error.tsx                # Boundary
 │   ├── loading.tsx
 │   ├── not-found.tsx
@@ -148,12 +156,22 @@ lib/
 middleware.ts                    # i18n + protected-route guard
 ```
 
-## Auth flow (60s expiration warning)
+## Auth flow
 
-The backend JWT expires after **60 seconds** (PoC; this will change).
-On a 401 response the user is sent back to `/login` with `?redirect=...`.
-There is no refresh: `/api/auth/refresh` answers 501 on purpose. Do not
-implement client-side refresh until the backend exposes the endpoint.
+The access token (session cookie) expires after **30 minutes**; the refresh
+token cookie lasts **7 days**. `middleware.ts` proactively renews the access
+token on protected routes when it's expired but a refresh token is still
+valid, rotating both cookies before the page renders. Only when the refresh
+token is also invalid/missing does a protected route redirect to `/login`
+with `?redirect=...`.
+
+Next.js's client Router Cache reuses the root layout's last render (where
+`Header` reads the session cookie) across soft `<Link>` navigations, so an
+expired session can keep showing the logged-in header/nav until something
+forces a fresh server render. `SessionWatcher` (mounted in `Header` only
+when logged in) calls `router.refresh()` on tab focus/visibility change and
+on a 5-minute fallback interval to catch that case — it does not implement
+token refresh, it just busts the stale render.
 
 ## Next steps when the backend ships more endpoints
 
@@ -163,6 +181,17 @@ implement client-side refresh until the backend exposes the endpoint.
 3. Drop the `StubBadge` from the corresponding pages.
 
 ## Backlog
+
+### Kiosk (TOTEM) device auth
+
+`/totem` currently ships as an "attended kiosk": the device authenticates
+with a normal staff session (ADMIN/MANAGER/ATTENDANT), and the `TOTEM`
+channel just means the backend attaches no attendant/customer to the order.
+This is an interim compromise, not a device/kiosk-account model — there is
+no backend concept of an unattended kiosk identity today. A production
+kiosk would want a dedicated device/service-account auth path (backend
+work) so a physical kiosk doesn't need a logged-in staff member's session
+sitting on the device. Revisit this once that's available.
 
 ### Nearest-unit selection via GPS
 

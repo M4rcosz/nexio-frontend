@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
 import { createPromotion } from '@/lib/api/promotions'
 import { ApiError, describeError } from '@/lib/api/errors'
@@ -69,6 +70,7 @@ export async function POST(req: Request) {
 
   try {
     const promotion = await createPromotion({ ...parsed, businessUnitId })
+    revalidateTag(`promotions:${businessUnitId}`)
     return NextResponse.json(promotion, { status: 201 })
   } catch (err) {
     if (err instanceof ApiError && err.status < 500) {

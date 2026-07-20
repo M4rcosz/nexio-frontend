@@ -5,9 +5,11 @@ import { getBusinessUnit } from '@/lib/api/business-units'
 import { listProductsByBusinessUnit } from '@/lib/api/products'
 import { listMenu } from '@/lib/api/menu'
 import { listCategories } from '@/lib/api/categories'
-import { ProductCard } from '@/components/ProductCard'
+import { listActivePromotions } from '@/lib/api/promotions'
+import { ProductCard } from '@/components/catalog/ProductCard'
+import { PromotionBanner } from '@/components/catalog/PromotionBanner'
 import { BackendBadge } from '@/components/StubBadge'
-import { CategoryFilter } from '@/components/CategoryFilter'
+import { CategoryFilter } from '@/components/catalog/CategoryFilter'
 
 type SearchParams = { search?: string; categoryId?: string }
 
@@ -23,15 +25,17 @@ export default async function MenuPage({
   const sp = await searchParams
   const t = await getTranslations('menu')
 
-  const [unit, productsPage, menuPage, categoriesPage] = await Promise.all([
-    getBusinessUnit(id),
-    listProductsByBusinessUnit(id, {
-      search: sp.search,
-      categoryId: sp.categoryId,
-    }),
-    listMenu(id, { limit: 100 }),
-    listCategories(),
-  ])
+  const [unit, productsPage, menuPage, categoriesPage, promotions] =
+    await Promise.all([
+      getBusinessUnit(id),
+      listProductsByBusinessUnit(id, {
+        search: sp.search,
+        categoryId: sp.categoryId,
+      }),
+      listMenu(id, { limit: 100 }),
+      listCategories(),
+      listActivePromotions(id),
+    ])
 
   if (!unit) notFound()
 
@@ -70,14 +74,11 @@ export default async function MenuPage({
               {unit.address} · {unit.city}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="chip-success">
-              <span className="h-1.5 w-1.5 rounded-full bg-forest-500 animate-pulse" />
-              open now
-            </span>
-          </div>
         </div>
       </section>
+
+      {/* Live promotions -------------------------------------------------- */}
+      <PromotionBanner promotions={promotions} />
 
       {/* Menu ------------------------------------------------------------ */}
       <section className="space-y-5">
@@ -111,7 +112,7 @@ export default async function MenuPage({
           </button>
         </form>
 
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <div className="scrollbar-thin flex items-center gap-2 overflow-x-auto pb-1">
           <CategoryFilter
             categories={categories}
             selected={sp.categoryId}

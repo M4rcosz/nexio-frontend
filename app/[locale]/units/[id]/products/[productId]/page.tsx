@@ -5,7 +5,8 @@ import { getBusinessUnit } from '@/lib/api/business-units'
 import { getProduct } from '@/lib/api/products'
 import { listMenu } from '@/lib/api/menu'
 import { formatMoney } from '@/lib/money'
-import { AddToCartButton } from '@/components/AddToCartButton'
+import { AddToCartButton } from '@/components/cart/AddToCartButton'
+import { ProductImage } from '@/components/ui/ProductImage'
 
 export default async function ProductPage({
   params,
@@ -40,18 +41,12 @@ export default async function ProductPage({
 
       <article className="card grid gap-0 overflow-hidden p-0 md:grid-cols-2">
         <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-brand-soft md:aspect-auto">
-          {product.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={product.imageUrl}
-              alt={product.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <span className="text-8xl opacity-90" aria-hidden>
-              🍲
-            </span>
-          )}
+          <ProductImage
+            src={product.imageUrl}
+            alt={product.name}
+            className="h-full w-full object-cover"
+            fallbackClassName="text-8xl opacity-90"
+          />
         </div>
         <div className="flex flex-col p-7 sm:p-9">
           <span className="text-[11px] font-mono uppercase tracking-widest text-fg-subtle">

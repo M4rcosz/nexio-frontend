@@ -17,8 +17,11 @@ export default async function AdminOverviewPage({
   if (!ctx) return null // layout already renders the 403 card
 
   const t = await getTranslations('admin.overview')
-  const [users, unit] = await Promise.all([
-    listInternalUsers(ctx),
+  // The staff counters below are a headline stat, not a listing — ask for the
+  // server's maximum page. Unchanged from the pre-pagination behaviour, which
+  // also topped out at 100.
+  const [{ data: users }, unit] = await Promise.all([
+    listInternalUsers(ctx, { limit: 100 }),
     ctx.scopedBusinessUnitId
       ? getBusinessUnit(ctx.scopedBusinessUnitId)
       : Promise.resolve(null),

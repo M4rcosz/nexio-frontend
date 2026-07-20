@@ -6,6 +6,7 @@ import { Link } from '@/i18n/navigation'
 import { clientFetch } from '@/lib/api/client'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { formatDateTime, maskCnpj } from '@/lib/format'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import type { BusinessUnit, Paginated } from '@/lib/api/types'
 
 type Meta = Paginated<BusinessUnit>['meta']
@@ -45,12 +46,24 @@ export function BusinessUnitList({
 
   const [units, setUnits] = useState<BusinessUnit[]>(initial.data)
   const [meta, setMeta] = useState<Meta>(initial.meta)
+  // The server page is the source of truth: when the RSC re-renders in place
+  // (router.refresh() after a mutation) the component is not remounted, so the
+  // state above would otherwise keep serving the pre-update list. Any extra
+  // pages pulled by loadMore are intentionally dropped on resync.
+  const [syncedFrom, setSyncedFrom] = useState(initial)
+  if (syncedFrom !== initial) {
+    setSyncedFrom(initial)
+    setUnits(initial.data)
+    setMeta(initial.meta)
+  }
   const [loadingMore, setLoadingMore] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [rowError, setRowError] = useState<{
     id: string
     message: string
   } | null>(null)
+  const [pendingDeactivate, setPendingDeactivate] =
+    useState<BusinessUnit | null>(null)
 
   async function loadMore() {
     if (!meta.hasMore || !meta.nextCursor || loadingMore) return
@@ -80,12 +93,15 @@ export function BusinessUnitList({
     }
   }
 
-  async function toggleActive(unit: BusinessUnit) {
-    const next = !unit.isActive
-    if (!next) {
-      const ok = window.confirm(t('confirmDisable'))
-      if (!ok) return
+  function toggleActive(unit: BusinessUnit) {
+    if (unit.isActive) {
+      setPendingDeactivate(unit)
+      return
     }
+    void performToggle(unit, true)
+  }
+
+  async function performToggle(unit: BusinessUnit, next: boolean) {
     setRowError(null)
     setTogglingId(unit.id)
     // Optimistic flip; revert on failure.
@@ -118,6 +134,16 @@ export function BusinessUnitList({
     } finally {
       setTogglingId(null)
     }
+  }
+
+  function confirmDeactivate() {
+    if (!pendingDeactivate) return
+    void performToggle(pendingDeactivate, false)
+    setPendingDeactivate(null)
+  }
+
+  function cancelDeactivate() {
+    setPendingDeactivate(null)
   }
 
   if (units.length === 0) {
@@ -172,7 +198,7 @@ export function BusinessUnitList({
             <div className="flex items-center gap-1.5">
               <Link
                 href={`/admin/business-units/${u.id}`}
-                className="btn-ghost flex-1 justify-center text-xs"
+                className="btn-ghost flex-1 min-h-[44px] justify-center text-xs"
               >
                 {t('actionEdit')}
               </Link>
@@ -180,7 +206,7 @@ export function BusinessUnitList({
                 type="button"
                 onClick={() => toggleActive(u)}
                 disabled={togglingId === u.id}
-                className={`rounded-lg px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                className={`inline-flex min-h-[44px] items-center justify-center rounded-lg px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
                   u.isActive
                     ? 'text-accent-600 hover:bg-accent-500/10'
                     : 'text-forest-600 hover:bg-forest-500/10'
@@ -200,7 +226,7 @@ export function BusinessUnitList({
 
       {/* Tablet/desktop: data table */}
       <div className="card hidden overflow-hidden p-0 md:block">
-        <div className="overflow-x-auto">
+        <div className="scrollbar-thin overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-surface-2 text-[10px] font-mono uppercase tracking-widest text-fg-subtle">
               <tr>
@@ -276,6 +302,15 @@ export function BusinessUnitList({
           </button>
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={pendingDeactivate !== null}
+        message={t('confirmDisable')}
+        confirmLabel={t('actionDisable')}
+        danger
+        onConfirm={confirmDeactivate}
+        onCancel={cancelDeactivate}
+      />
     </>
   )
 }

@@ -7,9 +7,12 @@ describe('landingPathForRole', () => {
     expect(landingPathForRole('MANAGER')).toBe('/admin')
   })
 
+  it('routes ATTENDANT to the POS order-entry surface', () => {
+    expect(landingPathForRole('ATTENDANT')).toBe('/pos')
+  })
+
   it('routes staff without a dashboard and customers to home', () => {
     expect(landingPathForRole('KITCHEN')).toBe('/')
-    expect(landingPathForRole('ATTENDANT')).toBe('/')
     expect(landingPathForRole('CUSTOMER')).toBe('/')
   })
 

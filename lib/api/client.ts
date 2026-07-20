@@ -20,20 +20,37 @@ type FetchInit = Omit<RequestInit, 'body'> & {
   query?: Record<string, string | number | undefined>
   // Next-specific fetch options
   next?: { revalidate?: number | false; tags?: string[] }
+  /**
+   * Override the default abort timeout for this call. Use a longer value for
+   * endpoints that legitimately take a beat (e.g. the AI chat, which may run
+   * several bounded internal model round-trips server-side).
+   */
+  timeoutMs?: number
 }
 
-function buildUrl(path: string, query?: FetchInit['query']): string {
-  const base = path.startsWith('http')
-    ? path
-    : `${BACKEND_URL.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`
-  if (!query) return base
+/** Appends a query object to a URL/path, dropping undefined/null/empty values. */
+function appendQuery(url: string, query?: FetchInit['query']): string {
+  if (!query) return url
   const params = new URLSearchParams()
   for (const [k, v] of Object.entries(query)) {
     if (v === undefined || v === null || v === '') continue
     params.append(k, String(v))
   }
   const qs = params.toString()
-  return qs ? `${base}?${qs}` : base
+  return qs ? `${url}?${qs}` : url
+}
+
+/** Absolute backend URL — only for `serverFetch`/`serverFetchAnonymous`, which
+ * talk to the backend directly. `clientFetch` must NOT go through this: it
+ * targets this app's own same-origin route handlers, so prepending the
+ * backend's base URL here would send the browser to the wrong origin (and,
+ * since callers already pass paths like `/api/orders`, double up the `/api`
+ * segment on top of it). */
+function buildUrl(path: string, query?: FetchInit['query']): string {
+  const base = path.startsWith('http')
+    ? path
+    : `${BACKEND_URL.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`
+  return appendQuery(base, query)
 }
 
 async function parseBody(res: Response): Promise<unknown> {
@@ -62,9 +79,11 @@ async function rawFetch<T>(
   if (token) headers.set('authorization', `Bearer ${token}`)
 
   // Bound every call with a timeout so a hung backend surfaces as a network
-  // ApiError rather than blocking a render/refresh indefinitely.
+  // ApiError rather than blocking a render/refresh indefinitely. Callers may
+  // widen it per-request for slow-but-legitimate endpoints.
+  const timeoutMs = init.timeoutMs ?? REQUEST_TIMEOUT_MS
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
   const fetchInit: RequestInit = {
     method: init.method ?? 'GET',
@@ -84,7 +103,7 @@ async function rawFetch<T>(
       0,
       null,
       aborted
-        ? `Network failure: request timed out after ${REQUEST_TIMEOUT_MS}ms`
+        ? `Network failure: request timed out after ${timeoutMs}ms`
         : err instanceof Error
           ? `Network failure: ${err.message}`
           : 'Network failure while calling the backend.',
@@ -215,5 +234,7 @@ export async function clientFetch<T>(
   path: string,
   init: FetchInit = {},
 ): Promise<T> {
-  return rawFetch<T>(buildUrl(path, init.query), init, null)
+  // Same-origin, relative to this app — never routed through `buildUrl`'s
+  // backend-URL prefixing (see the note on `buildUrl`).
+  return rawFetch<T>(appendQuery(path, init.query), init, null)
 }

@@ -2,8 +2,21 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createOrder, listMyOrders } from '@/lib/api/orders'
 import { ApiError, backendErrorStatus, describeError } from '@/lib/api/errors'
-import { hasActiveOrRefreshableSession } from '@/lib/auth/session'
+import { getSession, hasActiveOrRefreshableSession } from '@/lib/auth/session'
+import {
+  getChannelPolicy,
+  nameRequired,
+  requiresStaffActor,
+} from '@/lib/orders/channelPolicy'
+import { checkCustomerName } from '@/lib/validation/customerName'
 import type { OrderChannel, OrderStatus } from '@/lib/api/types'
+
+/**
+ * Roles allowed to place a staff-actor (COUNTER/PICKUP) order in person
+ * (doc §1/§2). KITCHEN is staff but does not serve customers, so it is
+ * excluded — mirroring who the doc lists as serving the counter/pickup.
+ */
+const POS_ACTOR_ROLES = ['ADMIN', 'MANAGER', 'ATTENDANT']
 
 const ORDER_CHANNELS: OrderChannel[] = [
   'APP',
@@ -25,31 +38,87 @@ const MoneyString = z
   .string()
   .regex(/^\d+(\.\d{1,2})?$/, 'Invalid price format.')
 
-// Mirrors the backend CreateOrderDto for the WEB channel (customer checkout).
-const Body = z.object({
-  businessUnitId: z.string().min(1),
-  orderChannel: z.literal('WEB'),
-  pointsRedeemed: z.number().int().min(0).optional(),
-  orderItems: z
-    .array(
-      z.object({
-        productId: z.string().min(1),
-        quantity: z.number().int().min(1).max(99),
-        unitPrice: MoneyString,
-        notes: z
-          .string()
-          .max(150)
-          .nullish()
-          .transform((v) => v ?? undefined),
-      }),
-    )
-    .min(1, 'Add at least one item to the order.'),
-  notes: z
-    .string()
-    .max(150)
-    .nullish()
-    .transform((v) => v ?? undefined),
-})
+/**
+ * Mirrors the backend CreateOrderDto. A single schema keyed off `orderChannel`
+ * with a policy-driven refinement (rather than a per-channel object) so the
+ * channel rules live in exactly one place — the {@link getChannelPolicy} table
+ * (doc §3). The refinement enforces, per channel:
+ *   - never `customerId` and `customerName` together (any channel);
+ *   - APP/WEB reject both (identity is the JWT);
+ *   - TOTEM requires a valid `customerName`;
+ *   - COUNTER/PICKUP require exactly one of `customerId` / `customerName`.
+ */
+const Body = z
+  .object({
+    businessUnitId: z.string().uuid(),
+    orderChannel: z.enum(['APP', 'WEB', 'TOTEM', 'COUNTER', 'PICKUP']),
+    customerId: z.string().uuid().optional(),
+    // Format is validated in the refinement (channel decides if it is even
+    // allowed); here we only bound the raw length defensively.
+    customerName: z.string().max(255).optional(),
+    pointsRedeemed: z.number().int().min(0).optional(),
+    orderItems: z
+      .array(
+        z.object({
+          productId: z.string().uuid(),
+          quantity: z.number().int().min(1),
+          unitPrice: MoneyString,
+          notes: z
+            .string()
+            .max(150)
+            .nullish()
+            .transform((v) => v ?? undefined),
+        }),
+      )
+      .min(1, 'Add at least one item to the order.'),
+    notes: z
+      .string()
+      .max(150)
+      .nullish()
+      .transform((v) => v ?? undefined),
+  })
+  .superRefine((val, ctx) => {
+    const policy = getChannelPolicy(val.orderChannel)
+    const hasId = val.customerId !== undefined
+    const hasName =
+      val.customerName !== undefined && val.customerName.trim() !== ''
+
+    // Hard constraint on every channel (also enforced by a backend DB rule).
+    if (hasId && hasName) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['customerName'],
+        message: 'both_customer_fields',
+      })
+      return
+    }
+    if (policy.nameRejected && hasName) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['customerName'],
+        message: 'name_rejected',
+      })
+    }
+    if (!policy.allowsCustomerId && hasId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['customerId'],
+        message: 'customer_id_not_allowed',
+      })
+    }
+    // A name is required (TOTEM always, COUNTER/PICKUP walk-in) or, when
+    // provided where allowed, must still be well-formed.
+    if (nameRequired(val.orderChannel, hasId) || hasName) {
+      const rule = checkCustomerName(val.customerName ?? '')
+      if (rule) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['customerName'],
+          message: rule === 'too-long' ? 'name_too_long' : 'name_required',
+        })
+      }
+    }
+  })
 
 export async function POST(req: Request) {
   if (!(await hasActiveOrRefreshableSession())) {
@@ -67,12 +136,38 @@ export async function POST(req: Request) {
       { status: 400 },
     )
   }
+  // Defense-in-depth on top of the backend's own gate: a COUNTER/PICKUP order
+  // requires a staff attendant to place it (doc §2/§3), so fail fast here for a
+  // request we already know is disallowed. APP/WEB/TOTEM never reach this branch
+  // (they don't require a staff actor); their `customerId` is already rejected
+  // at the schema level (allowsCustomerId=false → customer_id_not_allowed), so
+  // no non-staff actor can smuggle another customer's id. When the session is
+  // currently unreadable (expired but refreshable), we defer to the backend
+  // rather than block a legitimate retry.
+  if (requiresStaffActor(parsed.orderChannel)) {
+    const session = await getSession()
+    if (session && !POS_ACTOR_ROLES.includes(session.role)) {
+      return NextResponse.json(
+        {
+          error: 'Only staff can place counter or pickup orders.',
+          code: 'forbidden',
+        },
+        { status: 403 },
+      )
+    }
+  }
   // Forward the client idempotency key (or mint one) so backend retries of
   // the same order don't duplicate it.
   const idempotencyKey =
     req.headers.get('idempotency-key') ?? crypto.randomUUID()
+  // Send the trimmed name (and drop an empty one) so what we hash for
+  // idempotency matches what the backend stores.
+  const body = {
+    ...parsed,
+    customerName: parsed.customerName?.trim() || undefined,
+  }
   try {
-    const order = await createOrder(parsed, { idempotencyKey })
+    const order = await createOrder(body, { idempotencyKey })
     return NextResponse.json(order, { status: 201 })
   } catch (err) {
     if (err instanceof ApiError && err.status === 422) {

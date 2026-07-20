@@ -121,4 +121,74 @@ describe('Select', () => {
     await user.click(screen.getByRole('button', { name: 'outside' }))
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
+
+  describe('searchable', () => {
+    it('does not render a search input by default', async () => {
+      const user = userEvent.setup()
+      renderSelect({ value: 'a' })
+      await user.click(screen.getByRole('combobox'))
+      expect(screen.queryByPlaceholderText('Search...')).not.toBeInTheDocument()
+    })
+
+    it('filters options as the user types', async () => {
+      const user = userEvent.setup()
+      renderSelect({ value: 'a', searchable: true })
+      await user.click(screen.getByRole('combobox'))
+      const search = screen.getByPlaceholderText('Search...')
+      expect(search).toHaveFocus()
+
+      await user.type(search, 'an')
+      const listbox = screen.getByRole('listbox')
+      expect(within(listbox).getAllByRole('option')).toHaveLength(1)
+      expect(within(listbox).getByRole('option')).toHaveTextContent('Banana')
+    })
+
+    it('shows a message when nothing matches', async () => {
+      const user = userEvent.setup()
+      renderSelect({ value: 'a', searchable: true })
+      await user.click(screen.getByRole('combobox'))
+      await user.type(screen.getByPlaceholderText('Search...'), 'zzz')
+      expect(screen.queryByRole('option')).not.toBeInTheDocument()
+      expect(screen.getByText('No results found.')).toBeInTheDocument()
+    })
+
+    it('selects a filtered option and clears the query on reopen', async () => {
+      const user = userEvent.setup()
+      const { onChange } = renderSelect({ value: 'a', searchable: true })
+      await user.click(screen.getByRole('combobox'))
+      await user.type(screen.getByPlaceholderText('Search...'), 'ban')
+      await user.click(screen.getByRole('option', { name: 'Banana' }))
+      expect(onChange).toHaveBeenCalledWith('b')
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+
+      await user.click(screen.getByRole('combobox'))
+      expect(screen.getByPlaceholderText('Search...')).toHaveValue('')
+      expect(
+        within(screen.getByRole('listbox')).getAllByRole('option'),
+      ).toHaveLength(OPTIONS.length)
+    })
+
+    it('navigates and selects filtered results with the keyboard', async () => {
+      const user = userEvent.setup()
+      const { onChange } = renderSelect({ value: 'a', searchable: true })
+      await user.click(screen.getByRole('combobox'))
+      const search = screen.getByPlaceholderText('Search...')
+      await user.type(search, 'a') // matches Apple, Banana, Date
+      await user.keyboard('{ArrowDown}{ArrowDown}{Enter}')
+      expect(onChange).toHaveBeenCalledWith('d')
+    })
+
+    it('supports custom placeholder and no-results text', async () => {
+      const user = userEvent.setup()
+      renderSelect({
+        value: 'a',
+        searchable: true,
+        searchPlaceholder: 'Find a fruit',
+        noResultsLabel: 'Nothing here',
+      })
+      await user.click(screen.getByRole('combobox'))
+      await user.type(screen.getByPlaceholderText('Find a fruit'), 'zzz')
+      expect(screen.getByText('Nothing here')).toBeInTheDocument()
+    })
+  })
 })

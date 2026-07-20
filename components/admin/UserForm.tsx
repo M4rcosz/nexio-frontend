@@ -3,8 +3,8 @@
 import { useMemo, useState, useTransition } from 'react'
 import { useTranslations } from 'next-intl'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
-import { PasswordInput } from '@/components/PasswordInput'
-import { PasswordStrengthMeter } from '@/components/PasswordStrengthMeter'
+import { PasswordInput } from '@/components/ui/PasswordInput'
+import { PasswordStrengthMeter } from '@/components/ui/PasswordStrengthMeter'
 import { Select } from '@/components/ui/Select'
 import { useRouter } from '@/i18n/navigation'
 import { useUsernameError } from '@/lib/validation/useUsernameError'
@@ -141,8 +141,8 @@ export function UserForm({
         else setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }
-      router.push('/admin/users')
       router.refresh()
+      router.push('/admin/users')
     })
   }
 
@@ -252,7 +252,7 @@ export function UserForm({
         {unitFieldVisible ? (
           <fieldset>
             <legend className="label">{t('businessUnits')}</legend>
-            <div className="max-h-56 space-y-2 overflow-auto rounded-xl border border-border bg-surface-2 p-3">
+            <div className="scrollbar-thin max-h-56 space-y-2 overflow-auto rounded-xl border border-border bg-surface-2 p-3">
               {selectableUnits.map((u) => (
                 <label
                   key={u.id}

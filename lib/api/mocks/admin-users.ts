@@ -1,10 +1,12 @@
 // Mock fallback for the `/users` staff-management endpoints (used when
 // NEXT_PUBLIC_USE_MOCKS=true or the backend is unavailable).
 //
-// Single in-memory store of internal users (anything other than CUSTOMER).
-// Shared between `getMe` lookup and the admin management endpoints so a user
-// created from the admin UI is immediately resolvable as a JWT subject.
-import type { Role, User } from '@/lib/api/types'
+// Single in-memory store of every user, staff and customer alike. Shared
+// between `getMe` lookup and the admin management endpoints so a user created
+// from the admin UI is immediately resolvable as a JWT subject. Customers live
+// here too — they are only kept out of the staff listings by `allowedRoles`,
+// since CUSTOMER is in no actor's `manageableRoles`.
+import type { Paginated, Role, User } from '@/lib/api/types'
 import { MOCK_BUSINESS_UNITS } from './business-units'
 import { mockDelay } from './_delay'
 
@@ -102,6 +104,55 @@ const STORE: User[] = [
     [MOCK_BUSINESS_UNITS[1].id],
     'lucia@nexio.com',
   ),
+
+  // Customers. They carry no unit binding at all, which is exactly why they
+  // were unreachable before `?role=CUSTOMER` existed. Kept in this same store
+  // so `findUserBySubMock` can resolve a customer JWT subject; the staff
+  // listings never surface them because CUSTOMER is in nobody's
+  // `manageableRoles`.
+  makeUser(
+    'usr_customer_demo',
+    'demo.customer',
+    'Demo Customer',
+    'CUSTOMER',
+    [],
+    'demo.customer@nexio.com',
+  ),
+  makeUser(
+    'usr_customer_nexio',
+    'nexio.customer',
+    'Nexio Customer',
+    'CUSTOMER',
+    [],
+    'nexio.customer@nexio.com',
+  ),
+  makeUser(
+    'usr_customer_carla',
+    'carla.oliveira',
+    'Carla Oliveira',
+    'CUSTOMER',
+    [],
+    'carla.oliveira@gmail.com',
+    '(81) 98888-1122',
+  ),
+  makeUser(
+    'usr_customer_tiago',
+    'tiago.ramos',
+    'Tiago Ramos',
+    'CUSTOMER',
+    [],
+    'tiago.ramos@gmail.com',
+    '(81) 97777-3344',
+  ),
+  makeUser(
+    'usr_customer_helena',
+    'helena.barros',
+    'Helena Barros',
+    'CUSTOMER',
+    [],
+    'helena.barros@outlook.com',
+    null,
+  ),
 ]
 
 function newId(prefix = 'usr'): string {
@@ -117,6 +168,9 @@ export type InternalUserFilters = {
   role?: Role
   businessUnitId?: string
   search?: string
+  email?: string
+  limit?: number
+  cursor?: string
   /** When set, scopes the listing to these units (used for MANAGER). */
   scopedBusinessUnitIds?: string[] | null
   /** Restrict listing to these roles (the actor's manageable roles). */
@@ -125,9 +179,42 @@ export type InternalUserFilters = {
 
 const DEFAULT_ALLOWED: Role[] = ['ATTENDANT', 'KITCHEN']
 
+export const DEFAULT_PAGE_LIMIT = 20
+const MAX_PAGE_LIMIT = 100
+
+/**
+ * Slices an already-filtered list into the backend's cursor envelope. The
+ * cursor is the id of the last item of the previous page — matching the real
+ * API, where `meta.nextCursor` is an opaque row id rather than an offset.
+ */
+function paginate<T extends { id: string }>(
+  rows: T[],
+  limit = DEFAULT_PAGE_LIMIT,
+  cursor?: string,
+): Paginated<T> {
+  const size = Math.min(
+    Math.max(Math.trunc(limit) || DEFAULT_PAGE_LIMIT, 1),
+    MAX_PAGE_LIMIT,
+  )
+  const start = cursor ? rows.findIndex((r) => r.id === cursor) + 1 : 0
+  // An unknown cursor yields findIndex === -1 → start 0. Restarting from the
+  // top beats returning a silently empty page the UI would read as "the end".
+  const slice = rows.slice(start, start + size)
+  const last = slice[slice.length - 1]
+  const hasMore = start + slice.length < rows.length
+  return {
+    data: slice.map((r) => ({ ...r })),
+    meta: {
+      limit: size,
+      nextCursor: hasMore && last ? last.id : null,
+      hasMore,
+    },
+  }
+}
+
 export async function listInternalUsersMock(
   filters: InternalUserFilters = {},
-): Promise<User[]> {
+): Promise<Paginated<User>> {
   await mockDelay()
   const allowed = filters.allowedRoles ?? DEFAULT_ALLOWED
   let users = STORE.filter((u) => allowed.includes(u.role))
@@ -142,14 +229,37 @@ export async function listInternalUsersMock(
     )
   if (filters.search) {
     const term = filters.search.toLowerCase()
-    users = users.filter(
-      (u) =>
-        u.name.toLowerCase().includes(term) ||
-        u.username.toLowerCase().includes(term) ||
-        (u.email ?? '').toLowerCase().includes(term),
-    )
+    users = users.filter((u) => u.username.toLowerCase().includes(term))
   }
-  return users.map((u) => ({ ...u }))
+  if (filters.email) {
+    const term = filters.email.toLowerCase()
+    users = users.filter((u) => (u.email ?? '').toLowerCase().includes(term))
+  }
+  return paginate(users, filters.limit, filters.cursor)
+}
+
+/**
+ * `GET /users?role=CUSTOMER`. Deliberately ignores `businessUnitId`: the real
+ * endpoint AND-combines it, and since customers hold no unit links any unit
+ * filter collapses the page to empty. Callers are ADMIN-only (§1.3).
+ */
+export async function listCustomersMock(
+  filters: Pick<
+    InternalUserFilters,
+    'search' | 'email' | 'limit' | 'cursor'
+  > = {},
+): Promise<Paginated<User>> {
+  await mockDelay()
+  let users = STORE.filter((u) => u.role === 'CUSTOMER')
+  if (filters.search) {
+    const term = filters.search.toLowerCase()
+    users = users.filter((u) => u.username.toLowerCase().includes(term))
+  }
+  if (filters.email) {
+    const term = filters.email.toLowerCase()
+    users = users.filter((u) => (u.email ?? '').toLowerCase().includes(term))
+  }
+  return paginate(users, filters.limit, filters.cursor)
 }
 
 export async function getInternalUserMock(

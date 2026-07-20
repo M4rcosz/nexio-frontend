@@ -72,6 +72,16 @@ function newId(prefix = 'promo'): string {
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`
 }
 
+/**
+ * Synchronous read of a unit's promotions for other mocks (order creation
+ * applies the best live promotion without an extra mock round-trip).
+ */
+export function promotionsForUnitMockSync(businessUnitId: string): Promotion[] {
+  return STORE.filter((p) => p.businessUnitId === businessUnitId).map((p) => ({
+    ...p,
+  }))
+}
+
 export async function listPromotionsByBusinessUnitMock(
   businessUnitId: string,
 ): Promise<Paginated<Promotion>> {

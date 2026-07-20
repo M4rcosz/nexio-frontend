@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { getOrder } from '@/lib/api/orders'
 import { formatMoney } from '@/lib/money'
-import { PaymentView } from '@/components/PaymentView'
+import { PaymentView } from '@/components/checkout/PaymentView'
 
 export default async function PaymentPage({
   params,

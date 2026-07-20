@@ -24,6 +24,15 @@ type SelectProps = {
   align?: 'start' | 'end'
   /** Trigger fills its container (matches the old full-width `<select>`). */
   fullWidth?: boolean
+  /**
+   * Show a text filter at the top of the popover. Use for long option lists
+   * (business units, etc.) where scrolling a flat list doesn't scale.
+   */
+  searchable?: boolean
+  /** Placeholder for the search input, shown when `searchable` is set. */
+  searchPlaceholder?: string
+  /** Message shown when the search filter matches no options. */
+  noResultsLabel?: string
 }
 
 /**
@@ -43,16 +52,28 @@ export function Select({
   leading,
   align = 'start',
   fullWidth = true,
+  searchable = false,
+  searchPlaceholder = 'Search...',
+  noResultsLabel = 'No results found.',
 }: SelectProps) {
   const [open, setOpen] = useState(false)
   const [highlight, setHighlight] = useState(0)
+  const [query, setQuery] = useState('')
   const rootRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const reactId = useId()
   const baseId = id ?? reactId
 
   const selectedIndex = options.findIndex((o) => o.value === value)
   const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined
+
+  const filteredOptions =
+    searchable && query.trim()
+      ? options.filter((o) =>
+          o.label.toLowerCase().includes(query.trim().toLowerCase()),
+        )
+      : options
 
   // Close on outside click.
   useEffect(() => {
@@ -73,6 +94,20 @@ export function Select({
     el?.scrollIntoView({ block: 'nearest' })
   }, [open, highlight])
 
+  // Reset the filter and focus it whenever the popover opens.
+  useEffect(() => {
+    if (!open) {
+      setQuery('')
+      return
+    }
+    if (searchable) searchInputRef.current?.focus()
+  }, [open, searchable])
+
+  // Re-clamp the highlight whenever the filtered list changes.
+  useEffect(() => {
+    setHighlight((h) => Math.min(h, Math.max(filteredOptions.length - 1, 0)))
+  }, [filteredOptions.length])
+
   function openMenu() {
     if (disabled) return
     setHighlight(selectedIndex >= 0 ? selectedIndex : 0)
@@ -80,7 +115,7 @@ export function Select({
   }
 
   function commit(index: number) {
-    const opt = options[index]
+    const opt = filteredOptions[index]
     if (!opt || opt.disabled) return
     onChange(opt.value)
     setOpen(false)
@@ -89,9 +124,9 @@ export function Select({
   function moveHighlight(dir: 1 | -1) {
     setHighlight((h) => {
       let next = h
-      for (let i = 0; i < options.length; i++) {
-        next = (next + dir + options.length) % options.length
-        if (!options[next]?.disabled) break
+      for (let i = 0; i < filteredOptions.length; i++) {
+        next = (next + dir + filteredOptions.length) % filteredOptions.length
+        if (!filteredOptions[next]?.disabled) break
       }
       return next
     })
@@ -121,12 +156,18 @@ export function Select({
         break
       case 'End':
         e.preventDefault()
-        setHighlight(options.length - 1)
+        setHighlight(filteredOptions.length - 1)
         break
       case 'Enter':
-      case ' ':
         e.preventDefault()
         commit(highlight)
+        break
+      case ' ':
+        // A space in the search field should filter, not select.
+        if (!searchable) {
+          e.preventDefault()
+          commit(highlight)
+        }
         break
       case 'Escape':
         e.preventDefault()
@@ -167,43 +208,76 @@ export function Select({
       </button>
 
       {open ? (
-        <ul
-          ref={listRef}
-          id={`${baseId}-listbox`}
-          role="listbox"
-          tabIndex={-1}
-          className={`absolute z-50 mt-2 max-h-64 min-w-full overflow-auto rounded-xl border border-border bg-bg-elevated p-1 shadow-soft-lg ${
+        <div
+          className={`absolute z-50 mt-2 min-w-full overflow-hidden rounded-xl border border-border bg-bg-elevated shadow-soft-lg ${
             align === 'end' ? 'right-0' : 'left-0'
           }`}
         >
-          {options.map((opt, i) => {
-            const isSelected = opt.value === value
-            const isActive = i === highlight
-            return (
-              <li
-                key={opt.value}
-                id={`${baseId}-opt-${i}`}
-                role="option"
-                aria-selected={isSelected}
-                aria-disabled={opt.disabled}
-                onMouseEnter={() => setHighlight(i)}
-                onClick={() => commit(i)}
-                className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
-                  opt.disabled ? 'pointer-events-none opacity-40' : ''
-                } ${
-                  isSelected
-                    ? 'font-semibold text-brand-700 dark:text-brand-300'
-                    : 'text-fg'
-                } ${isActive ? 'bg-surface-2' : ''}`}
-              >
-                <span className="truncate">{opt.label}</span>
-                {isSelected ? (
-                  <CheckIcon className="h-4 w-4 flex-none text-brand-500" />
-                ) : null}
+          {searchable ? (
+            <div className="border-b border-border p-1.5">
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value)
+                  setHighlight(0)
+                }}
+                onKeyDown={onKeyDown}
+                placeholder={searchPlaceholder}
+                aria-label={searchPlaceholder}
+                aria-controls={`${baseId}-listbox`}
+                aria-activedescendant={
+                  filteredOptions.length
+                    ? `${baseId}-opt-${highlight}`
+                    : undefined
+                }
+                className="input"
+              />
+            </div>
+          ) : null}
+          <ul
+            ref={listRef}
+            id={`${baseId}-listbox`}
+            role="listbox"
+            tabIndex={-1}
+            className="scrollbar-thin max-h-64 overflow-auto p-1"
+          >
+            {filteredOptions.length === 0 ? (
+              <li className="px-3 py-2 text-sm text-fg-subtle">
+                {noResultsLabel}
               </li>
-            )
-          })}
-        </ul>
+            ) : (
+              filteredOptions.map((opt, i) => {
+                const isSelected = opt.value === value
+                const isActive = i === highlight
+                return (
+                  <li
+                    key={opt.value}
+                    id={`${baseId}-opt-${i}`}
+                    role="option"
+                    aria-selected={isSelected}
+                    aria-disabled={opt.disabled}
+                    onMouseEnter={() => setHighlight(i)}
+                    onClick={() => commit(i)}
+                    className={`flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+                      opt.disabled ? 'pointer-events-none opacity-40' : ''
+                    } ${
+                      isSelected
+                        ? 'font-semibold text-brand-700 dark:text-brand-300'
+                        : 'text-fg'
+                    } ${isActive ? 'bg-surface-2' : ''}`}
+                  >
+                    <span className="truncate">{opt.label}</span>
+                    {isSelected ? (
+                      <CheckIcon className="h-4 w-4 flex-none text-brand-500" />
+                    ) : null}
+                  </li>
+                )
+              })
+            )}
+          </ul>
+        </div>
       ) : null}
     </div>
   )

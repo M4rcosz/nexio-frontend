@@ -8,13 +8,16 @@
     "back": "Back",
     "save": "Save",
     "cancel": "Cancel",
+    "confirm": "Confirm",
     "remove": "remove",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "stub": "mock",
     "stubTitle": "Backend endpoint not implemented yet — using mock data.",
     "backendBadge": "backend",
-    "backendBadgeTitle": "Real backend endpoint."
+    "backendBadgeTitle": "Real backend endpoint.",
+    "search": "Search...",
+    "noResults": "No results found."
   },
   "header": {
     "brand": "Nexio",
@@ -28,7 +31,8 @@
     "signUp": "Sign up",
     "signOut": "Sign out",
     "signingOut": "Signing out...",
-    "myProfile": "My profile"
+    "myProfile": "My profile",
+    "assistant": "Assistant"
   },
   "languageSwitcher": {
     "label": "Language",
@@ -71,7 +75,16 @@
     "available": "available at {unit}",
     "noDescription": "No description.",
     "addToCart": "Add to cart",
-    "added": "Added!"
+    "added": "Added!",
+    "promotions": {
+      "title": "Promotions running",
+      "percentOverMin": "{value}% off orders over {min}",
+      "percentAll": "{value}% off your order",
+      "fixedOverMin": "{value} off orders over {min}",
+      "fixedAll": "{value} off your order",
+      "until": "until {date}",
+      "appliedNote": "The discount is applied automatically to eligible orders."
+    }
   },
   "cart": {
     "title": "Your cart",
@@ -82,6 +95,7 @@
     "backToMenu": "back to menu",
     "notesPlaceholder": "Notes (e.g.: no onion)",
     "clear": "Empty cart",
+    "confirmClear": "Empty your cart? This removes all items and cannot be undone.",
     "summary": "Summary",
     "items": "Items",
     "total": "Total",
@@ -103,7 +117,12 @@
     "submitting": "Creating order...",
     "submitFailed": "Failed to create order.",
     "paymentNext": "You'll pay on the next step.",
-    "noteWith": "note: {value}"
+    "noteWith": "note: {value}",
+    "subtotal": "Subtotal",
+    "promoDiscount": "Promotion — {name}",
+    "estimatedTotal": "Estimated total",
+    "promoEstimateNote": "The discount is applied automatically when your order is created.",
+    "promoNudge": "Add {missing} in items to unlock {name} ({label})."
   },
   "payment": {
     "title": "Payment",
@@ -148,7 +167,10 @@
     "cancelling": "Cancelling...",
     "cancelFailed": "Could not cancel.",
     "cancelled": "Order cancelled.",
-    "cancelledMessage": "Order cancelled at some step before delivery."
+    "cancelledMessage": "Order cancelled at some step before delivery.",
+    "subtotal": "Subtotal",
+    "pointsDiscount": "Loyalty points ({points} pts)",
+    "promotionDiscount": "Promotion discount"
   },
   "loyalty": {
     "title": "Loyalty program",
@@ -196,17 +218,22 @@
     "failed": "Failed to register."
   },
   "admin": {
-    "headerLink": "Admin",
+    "headerLink": "ERP",
     "nav": {
       "overview": "Overview",
+      "orders": "Orders",
       "users": "Users",
+      "customers": "Customers",
       "inventory": "Inventory",
       "promotions": "Promotions",
       "title": "Admin",
       "products": "Products",
       "categories": "Categories",
       "menu": "Menu",
-      "businessUnits": "Business Units"
+      "businessUnits": "Business Units",
+      "ai": "AI Assistant",
+      "openMenu": "Open admin menu",
+      "closeMenu": "Close admin menu"
     },
     "overview": {
       "title": "Admin overview",
@@ -217,12 +244,66 @@
       "manageUsers": "Manage staff users",
       "manageUsersHint": "Create attendants and kitchen accounts, toggle access."
     },
+    "orders": {
+      "title": "Order board",
+      "subtitle": "Filter, sort and move orders through the kitchen flow.",
+      "noResults": "No orders match these filters.",
+      "loadFailed": "Could not load orders.",
+      "actionFailed": "Could not complete this action.",
+      "loadMore": "Load more",
+      "loadingMore": "Loading…",
+      "filters": {
+        "channel": "Channel",
+        "allChannels": "All channels",
+        "status": "Status",
+        "allStatuses": "All statuses",
+        "unit": "Unit",
+        "allUnits": "All units",
+        "attendant": "Attendant",
+        "attendantPlaceholder": "Attendant ID",
+        "customer": "Customer",
+        "customerPlaceholder": "Customer ID",
+        "from": "From",
+        "to": "To",
+        "minTotal": "Min total",
+        "maxTotal": "Max total",
+        "sortBy": "Sort by",
+        "sortCreatedAt": "Date",
+        "sortTotal": "Total",
+        "sortDir": "Direction",
+        "sortDesc": "Newest first",
+        "sortAsc": "Oldest first",
+        "kitchenQueue": "Kitchen queue",
+        "clear": "Clear filters",
+        "moreFilters": "Filters",
+        "moreFiltersCount": "Filters ({count})",
+        "moreFiltersPanelLabel": "More filters",
+        "closeFilters": "Close filters"
+      },
+      "table": {
+        "order": "Order",
+        "status": "Status",
+        "unit": "Unit",
+        "who": "Attendant / Customer",
+        "total": "Total",
+        "actions": "Actions",
+        "attendantOf": "Attendant {id}",
+        "customerOf": "Customer {id}"
+      },
+      "actions": {
+        "CONFIRMED": "Confirm",
+        "PREPARING": "Start preparing",
+        "READY": "Mark ready",
+        "DELIVERED": "Deliver",
+        "cancel": "Cancel"
+      }
+    },
     "users": {
       "title": "Staff users",
       "subtitle": "Attendants and kitchen accounts for the units you manage.",
       "newUser": "New user",
       "count": "{count} user(s)",
-      "searchPlaceholder": "Search by name, e-mail or username...",
+      "searchPlaceholder": "Search by username...",
       "filterRoleAll": "All roles",
       "filterUnitAll": "All units",
       "empty": "No staff users yet.",
@@ -268,7 +349,8 @@
       "emailTaken": "E-mail already registered.",
       "roleForbidden": "You can't assign this role.",
       "unitRequired": "Pick a business unit.",
-      "unitsRequired": "Pick at least one business unit."
+      "unitsRequired": "Pick at least one business unit.",
+      "roleCustomer": "Customer"
     },
     "inventory": {
       "title": "Inventory",
@@ -337,9 +419,15 @@
       "tableActions": "Actions",
       "statusActive": "Active",
       "statusInactive": "Inactive",
+      "statusScheduled": "Scheduled",
+      "statusExpired": "Expired",
       "discountPercentage": "{value}% off",
       "discountFixed": "{value} off",
       "actionEdit": "Edit",
+      "actionActivate": "Activate",
+      "actionDeactivate": "Deactivate",
+      "toggling": "Saving...",
+      "toggleFailed": "Could not update the promotion.",
       "loadFailed": "Could not load promotions.",
       "form": {
         "createTitle": "New promotion",
@@ -538,6 +626,57 @@
         "submitting": "Saving…",
         "failed": "Could not save the business unit."
       }
+    },
+    "ai": {
+      "title": "AI memberships",
+      "subtitle": "Grant AI assistant access and manage token balances.",
+      "adminOnly": "Only administrators can manage AI memberships.",
+      "targetUser": "Target user",
+      "targetUserPlaceholder": "User ID (UUID)",
+      "targetHint": "Pick a staff member or paste any user ID.",
+      "targetSelected": "Selected: {name} · {username}",
+      "enrollTitle": "Enroll",
+      "enrollHint": "One-time grant of an initial token balance.",
+      "initialBalanceLabel": "Initial balance",
+      "initialBalancePlaceholder": "Initial token balance (e.g. 10000)",
+      "enrollButton": "Grant access",
+      "enrollSuccess": "Enrolled. Balance is now {balance} tokens.",
+      "alreadyEnrolled": "This user is already enrolled — use Adjust to change their balance.",
+      "userNotFound": "No user exists with that ID.",
+      "invalidBalance": "Enter a whole number between 0 and 2,147,483,647.",
+      "adjustTitle": "Adjust balance",
+      "adjustHint": "Add or remove tokens with a signed amount.",
+      "deltaLabel": "Delta",
+      "deltaPlaceholder": "e.g. 5000 or -1000",
+      "adjustButton": "Apply adjustment",
+      "adjustSuccess": "Balance is now {balance} tokens.",
+      "notEnrolled": "This user isn't enrolled yet — grant access first.",
+      "outOfRange": "That change would drive the balance below zero or over the maximum.",
+      "invalidDelta": "Enter a non-zero whole number.",
+      "increment": "Increase",
+      "decrement": "Decrease",
+      "working": "Working…",
+      "forbidden": "You don't have permission to do that.",
+      "genericError": "Something went wrong. Please try again.",
+      "networkError": "Network error. Please try again.",
+      "pickUserFirst": "Choose a target user first."
+    },
+    "pagination": {
+      "loadMore": "Load more",
+      "loading": "Loading...",
+      "loaded": "{count} shown",
+      "loadMoreFailed": "Could not load more results."
+    },
+    "customers": {
+      "title": "Customers",
+      "subtitle": "Everyone who has registered to order. Read-only.",
+      "searchPlaceholder": "Filter by username...",
+      "emailPlaceholder": "Filter by e-mail...",
+      "empty": "No customers to show.",
+      "tableName": "Name",
+      "tableEmail": "E-mail",
+      "tablePhone": "Phone",
+      "tableStatus": "Status"
     }
   },
   "errors": {
@@ -565,7 +704,10 @@
       "phone_taken": "Phone number already in use.",
       "cnpj_or_phone_taken": "CNPJ or phone already registered.",
       "inventory_over_max": "This restock would exceed the maximum quantity.",
-      "inventory_exists": "A stock balance already exists for this product at the unit."
+      "inventory_exists": "A stock balance already exists for this product at the unit.",
+      "cancel_window_closed": "This order is past the cancellation window.",
+      "invalid_transition": "This status change is not allowed from the order's current state.",
+      "invalid_cursor": "The list changed. Reset to the first page and try again."
     }
   },
   "orderStatus": {
@@ -653,5 +795,86 @@
     "wrongPassword": "Current password is incorrect.",
     "samePassword": "The new password must differ from the current one.",
     "failed": "Could not change your password."
+  },
+  "ai": {
+    "title": "AI assistant",
+    "subtitle": "Ask about your orders and loyalty points. Each reply spends tokens from your balance.",
+    "balance": "Token balance",
+    "tokens": "tokens",
+    "balanceHint": "Tokens are spent per message. Your balance updates after each reply.",
+    "notEnrolledTitle": "No AI access yet",
+    "notEnrolledBody": "Ask an admin to grant you AI assistant access.",
+    "outOfTokensTitle": "Out of tokens",
+    "outOfTokensBody": "Ask an admin to top up your balance to keep chatting.",
+    "chatTitle": "Conversation",
+    "emptyState": "Ask me about the status of an order or your loyalty points.",
+    "inputPlaceholder": "Type your message…",
+    "inputDisabledPlaceholder": "Chat unavailable",
+    "send": "Send",
+    "thinking": "Assistant is typing",
+    "tokensSpent": "{count, number} tokens spent",
+    "unavailable": "The assistant is temporarily unavailable. No tokens were charged.",
+    "retry": "Try again",
+    "sendFailed": "Couldn't send your message. Please try again."
+  },
+  "createOrder": {
+    "itemsTitle": "Items",
+    "customerSection": "Customer",
+    "walkIn": "Walk-in",
+    "lookupCustomer": "Registered customer",
+    "walkInName": "Name to call the order",
+    "walkInNamePlaceholder": "e.g. Maria",
+    "customerId": "Customer ID",
+    "customerIdPlaceholder": "Customer UUID",
+    "customerIdRequired": "Enter the registered customer’s ID, or switch to walk-in.",
+    "notesLabel": "Order notes",
+    "notesPlaceholder": "Anything the kitchen should know?",
+    "submit": "Place order",
+    "submitting": "Placing…",
+    "submitFailed": "Could not place the order. Please try again.",
+    "total": "Total",
+    "estimatedTotal": "Estimated total",
+    "noItems": "Add at least one item to the order.",
+    "emptyMenu": "No products are available at this unit.",
+    "menuLoadError": "Couldn’t load the menu.",
+    "retry": "Retry",
+    "loadingProducts": "Loading products…",
+    "decrement": "Decrease quantity",
+    "increment": "Increase quantity",
+    "validation": {
+      "nameRequired": "Enter a name with at least one letter or number.",
+      "nameTooLong": "Name must be 60 characters or fewer."
+    }
+  },
+  "pos": {
+    "kicker": "Point of sale",
+    "title": "Ring up an order",
+    "subtitle": "Take counter and pickup orders in person.",
+    "channel": "Order type",
+    "unit": "Unit",
+    "noUnits": "You are not assigned to any unit yet.",
+    "orderPlaced": "Order placed",
+    "orderRef": "Order ref #{ref}",
+    "newOrder": "New order",
+    "viewOrder": "View order",
+    "forbiddenTitle": "Staff only",
+    "forbiddenBody": "You need an attendant, manager or admin account to use the point of sale."
+  },
+  "totem": {
+    "welcome": "Welcome",
+    "start": "Start order",
+    "namePrompt": "What name should we call?",
+    "namePlaceholder": "Your name",
+    "continue": "Continue",
+    "back": "Back",
+    "cancel": "Cancel order",
+    "chooseItems": "Choose your items",
+    "orderPlaced": "Thanks, {name}!",
+    "orderNumber": "Your order number",
+    "orderRef": "Order ref #{ref}",
+    "newOrder": "Start a new order",
+    "unavailableTitle": "Kiosk unavailable",
+    "unavailableBody": "This kiosk needs to be set up on a unit device before it can take orders.",
+    "noUnit": "This kiosk is not linked to a unit yet."
   }
 }

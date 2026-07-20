@@ -1,6 +1,7 @@
 import createIntlMiddleware from 'next-intl/middleware'
 import { NextResponse, type NextRequest } from 'next/server'
 import { routing } from './i18n/routing'
+import { PATHNAME_HEADER, stripLocale } from '@/lib/i18n/pathname'
 import { refreshBackend } from '@/lib/api/auth'
 import { ApiError } from '@/lib/api/errors'
 import type { LoginResponse } from '@/lib/api/types'
@@ -18,17 +19,9 @@ const intlMiddleware = createIntlMiddleware(routing)
 const PROTECTED_PATTERNS: RegExp[] = [
   /^\/(?:cart|checkout|loyalty)(?:\/|$)/,
   /^\/(?:payment|orders|profile)(?:\/|$)/,
+  /^\/(?:ai)(?:\/|$)/,
   /^\/admin(?:\/|$)/,
 ]
-
-function stripLocale(pathname: string): string {
-  for (const locale of routing.locales) {
-    const prefix = `/${locale}`
-    if (pathname === prefix) return '/'
-    if (pathname.startsWith(`${prefix}/`)) return pathname.slice(prefix.length)
-  }
-  return pathname
-}
 
 /**
  * Best-effort coalescing of concurrent refreshes inside a single edge isolate.
@@ -106,6 +99,12 @@ export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
   const localeStripped = stripLocale(pathname)
   const isProtected = PROTECTED_PATTERNS.some((p) => p.test(localeStripped))
+
+  // Expose the current pathname to server components (which cannot read the URL
+  // otherwise) so surfaces like Header can branch on the route — e.g. hiding the
+  // account menu on the attended kiosk (/totem). next-intl forwards the request
+  // headers to the render, so a header set here reaches the RSC.
+  req.headers.set(PATHNAME_HEADER, pathname)
 
   let refreshed: LoginResponse | null = null
   let sessionCleared = false

@@ -12,7 +12,7 @@ const ROLE_LABEL_KEY: Record<Role, string> = {
   KITCHEN: 'roleKitchen',
   MANAGER: 'roleManager',
   ADMIN: 'roleAdmin',
-  CUSTOMER: 'roleAttendant',
+  CUSTOMER: 'roleCustomer',
 }
 
 /** Mobile-friendly variant of UserRow — used below `md` screens. */
@@ -95,7 +95,7 @@ export function UserCard({
       <div className="mt-4 flex items-center gap-2">
         <Link
           href={`/admin/users/${user.id}`}
-          className="btn-secondary flex-1 !py-2 text-xs"
+          className="btn-secondary flex-1 min-h-[44px] !py-2 text-xs"
         >
           {t('actionEdit')}
         </Link>
@@ -103,7 +103,7 @@ export function UserCard({
           type="button"
           onClick={toggleActive}
           disabled={pending}
-          className={`flex-1 rounded-xl px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50 ${
+          className={`flex flex-1 min-h-[44px] items-center justify-center rounded-xl px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50 ${
             optimisticActive
               ? 'border border-accent-500/30 bg-accent-500/10 text-accent-700 hover:bg-accent-500/20 dark:text-accent-300'
               : 'border border-forest-500/30 bg-forest-500/10 text-forest-700 hover:bg-forest-500/20 dark:text-forest-400'

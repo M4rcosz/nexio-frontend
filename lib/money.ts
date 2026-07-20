@@ -2,6 +2,9 @@ import Big from 'big.js'
 
 export type Money = Big
 
+/** 1 loyalty point = R$0.10 discount. Mirrors the backend redemption rule. */
+export const LOYALTY_POINT_VALUE = '0.10'
+
 export function asMoney(v: string | number | Big): Big {
   if (v instanceof Big) return v
   return new Big(v)

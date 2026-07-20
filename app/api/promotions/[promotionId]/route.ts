@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { z } from 'zod'
-import { getPromotion, updatePromotion } from '@/lib/api/promotions'
+import {
+  getPromotion,
+  setPromotionActive,
+  updatePromotion,
+} from '@/lib/api/promotions'
 import { ApiError, describeError } from '@/lib/api/errors'
 import { canAccessUnit, getAdminContext } from '@/lib/auth/access'
 
@@ -109,13 +114,21 @@ export async function PATCH(
         )
       }
     }
-    const promotion = await updatePromotion(promotionId, parsed)
+    // A bare isActive flip (the quick toggle) maps to the backend's dedicated
+    // activate/deactivate endpoints instead of the generic update.
+    const keys = Object.keys(parsed)
+    const promotion =
+      keys.length === 1 && parsed.isActive !== undefined
+        ? await setPromotionActive(promotionId, parsed.isActive)
+        : await updatePromotion(promotionId, parsed)
     if (!promotion) {
       return NextResponse.json(
         { error: 'Promotion not found.' },
         { status: 404 },
       )
     }
+    revalidateTag(`promotion:${promotionId}`)
+    revalidateTag(`promotions:${promotion.businessUnitId}`)
     return NextResponse.json(promotion)
   } catch (err) {
     if (err instanceof ApiError && err.status < 500) {

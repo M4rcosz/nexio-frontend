@@ -13,7 +13,7 @@ vi.mock('next/headers', () => ({
   }),
 }))
 
-import { serverFetch } from './client'
+import { clientFetch, serverFetch } from './client'
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -106,5 +106,34 @@ describe('serverFetch 401 retry', () => {
       status: 401,
     })
     expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+})
+
+describe('clientFetch', () => {
+  it('calls the given path as-is (same-origin), never prefixed with the backend URL', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { data: [] }))
+    await clientFetch('/api/admin/orders')
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/admin/orders',
+      expect.anything(),
+    )
+  })
+
+  it('appends the query string to the relative path without touching the origin', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { data: [] }))
+    await clientFetch('/api/admin/orders', {
+      query: { limit: 20, cursor: undefined, orderStatus: 'PENDING' },
+    })
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/admin/orders?limit=20&orderStatus=PENDING',
+      expect.anything(),
+    )
+  })
+
+  it('sends no Authorization header (the BFF route owns the cookie-stored JWT)', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, { ok: true }))
+    await clientFetch('/api/orders')
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect((init.headers as Headers).has('authorization')).toBe(false)
   })
 })

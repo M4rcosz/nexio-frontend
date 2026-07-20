@@ -5,7 +5,9 @@ import type { ReactNode } from 'react'
 import { renderWithIntl } from '@/lib/test/intl'
 import type { Promotion } from '@/lib/api/types'
 
+const refresh = vi.fn()
 vi.mock('@/i18n/navigation', () => ({
+  useRouter: () => ({ refresh }),
   Link: ({ children, href }: { children: ReactNode; href: string }) => (
     <a href={href}>{children}</a>
   ),
@@ -66,5 +68,50 @@ describe('PromotionList', () => {
       'href',
       '/admin/promotions/promo1',
     )
+  })
+
+  it('derives scheduled/expired/active from the date window', () => {
+    renderWithIntl(
+      <PromotionList
+        promotions={[
+          promo({
+            id: 'p-active',
+            startDate: '2000-01-01T00:00:00Z',
+            endDate: '2999-01-01T00:00:00Z',
+          }),
+          promo({ id: 'p-scheduled', startDate: '2999-01-01T00:00:00Z' }),
+          promo({
+            id: 'p-expired',
+            startDate: '2000-01-01T00:00:00Z',
+            endDate: '2000-02-01T00:00:00Z',
+          }),
+        ]}
+      />,
+    )
+    const table = screen.getByRole('table')
+    expect(within(table).getByText('Active')).toBeInTheDocument()
+    expect(within(table).getByText('Scheduled')).toBeInTheDocument()
+    expect(within(table).getByText('Expired')).toBeInTheDocument()
+  })
+
+  it('toggles isActive from the list and refreshes', async () => {
+    const fetchFn = vi
+      .fn()
+      .mockResolvedValue({ ok: true, status: 200, json: async () => ({}) })
+    vi.stubGlobal('fetch', fetchFn)
+    const { default: userEvent } = await import('@testing-library/user-event')
+    const user = userEvent.setup()
+
+    renderWithIntl(<PromotionList promotions={[promo({ isActive: true })]} />)
+    const table = screen.getByRole('table')
+    await user.click(within(table).getByRole('button', { name: /deactivate/i }))
+
+    expect(fetchFn).toHaveBeenCalledWith('/api/promotions/promo1', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ isActive: false }),
+    })
+    await vi.waitFor(() => expect(refresh).toHaveBeenCalled())
+    vi.unstubAllGlobals()
   })
 })

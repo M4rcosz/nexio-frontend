@@ -177,13 +177,20 @@ export type CreateStaffUserRequest = {
   businessUnitIds?: string[]
 }
 
-/** `GET /users` filters (all substrings except businessUnitId). */
+/** `GET /users` filters (all substrings except businessUnitId and role). */
 export type ListUsersQuery = {
   limit?: number
   cursor?: string
   businessUnitId?: string
   username?: string
   email?: string
+  /**
+   * Plain AND filter, **not** a scope widener. CUSTOMERs carry no unit links,
+   * so `role=CUSTOMER` only returns rows for an ADMIN who sends no
+   * `businessUnitId`; a MANAGER (pinned to their claim) always gets an empty
+   * page. See docs — `frontend-users-and-business-units.md` §1.3.
+   */
+  role?: Role
 }
 
 /** `PATCH /users/me` — at least one field required. */
@@ -264,6 +271,13 @@ export type Order = {
   id: string
   businessUnitId: string
   customerId: string | null
+  /**
+   * The name to call the order by (doc §5). For a guest order (no `customerId`)
+   * this is the typed walk-in name; for an account order it is the customer's
+   * current name, resolved live from their user record on every read — so never
+   * cache it as immutable order data.
+   */
+  customerName: string | null
   attendantId: string | null
   pointsRedeemed: number
   pointsEarned: number
@@ -288,8 +302,12 @@ export type CreateOrderItemRequest = {
 
 export type CreateOrderRequest = {
   businessUnitId: string
-  /** Only used for COUNTER/PICKUP channels (attendant-placed orders). */
+  /** Only used for COUNTER/PICKUP channels (attendant-placed orders). Never
+   * sent together with `customerName` — the API and a DB constraint reject it. */
   customerId?: string
+  /** Walk-in / "call the order by" name. Required for TOTEM and for a
+   * COUNTER/PICKUP walk-in; rejected for APP/WEB (doc §3). Max 60 chars. */
+  customerName?: string
   /** Loyalty points to redeem (integer ≥0). */
   pointsRedeemed?: number
   notes?: string
@@ -299,6 +317,9 @@ export type CreateOrderRequest = {
 
 export type UpdateOrderStatusRequest = { orderStatus: OrderStatus }
 
+export type OrderSortField = 'createdAt' | 'totalAmount'
+export type SortDirection = 'asc' | 'desc'
+
 /** `GET /orders` (staff) filters. */
 export type ListOrdersQuery = {
   limit?: number
@@ -306,6 +327,18 @@ export type ListOrdersQuery = {
   businessUnitId?: string
   orderChannel?: OrderChannel
   orderStatus?: OrderStatus
+  attendantId?: string
+  customerId?: string
+  /** ISO instant, inclusive. */
+  createdAtFrom?: string
+  /** ISO instant, inclusive. */
+  createdAtTo?: string
+  /** Decimal string, inclusive. */
+  minTotal?: string
+  /** Decimal string, inclusive. */
+  maxTotal?: string
+  sortBy?: OrderSortField
+  sortDir?: SortDirection
 }
 
 /** `GET /orders/me` (customer) filters — cursor-paginated. */
@@ -357,6 +390,57 @@ export type LoyaltyAccount = {
   createdAt: string
   /** Front-side enrichment (mock only); not returned by the backend. */
   transactions?: LoyaltyTransaction[]
+}
+
+// --- AI assistant ---
+
+/**
+ * A per-user token wallet an ADMIN grants and tops up. `tokenBalance` is a plain
+ * integer token count (not money) — format it with a thousands separator.
+ */
+export type AiMembership = {
+  id: string
+  userId: string
+  tokenBalance: number
+  createdAt: string
+}
+
+/** `POST /ai/memberships/:userId` body — the initial grant. */
+export type EnrollAiMembershipRequest = {
+  /** Integer in [0, 2_147_483_647]. */
+  initialBalance: number
+}
+
+/** `PATCH /ai/memberships/:userId/balance` body — signed, non-zero delta. */
+export type AdjustAiMembershipBalanceRequest = {
+  /** Non-zero integer in [-2_147_483_647, 2_147_483_647]. Positive credits. */
+  delta: number
+}
+
+/** Only plain user/model turns are accepted — the server strips tool turns. */
+export type ChatRole = 'user' | 'model'
+
+export type ChatTurn = {
+  role: ChatRole
+  /** Non-empty, max 4000 chars. */
+  text: string
+}
+
+/** `POST /ai/chat` body. `history` is replayed context (server is stateless). */
+export type SendChatMessageRequest = {
+  /** Required, non-empty, max 4000. */
+  message: string
+  /** Optional prior turns, max 50. */
+  history?: ChatTurn[]
+}
+
+export type ChatResponse = {
+  /** The assistant's answer — render as the next `model` turn. */
+  reply: string
+  /** Tokens metered for this exchange (may span several internal model calls). */
+  tokensSpent: number
+  /** Caller's balance after this exchange — drive the balance display from it. */
+  balanceRemaining: number
 }
 
 // --- Inventory ---

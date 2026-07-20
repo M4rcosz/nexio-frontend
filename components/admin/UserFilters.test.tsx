@@ -34,7 +34,9 @@ describe('UserFilters', () => {
         manageableRoles={ROLES}
       />,
     )
-    expect(screen.getByPlaceholderText(/search by name/i)).toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText(/search by username/i),
+    ).toBeInTheDocument()
     // Role Select present; unit Select absent (only one combobox).
     expect(screen.getAllByRole('combobox')).toHaveLength(1)
   })
@@ -61,7 +63,7 @@ describe('UserFilters', () => {
         manageableRoles={ROLES}
       />,
     )
-    await user.type(screen.getByPlaceholderText(/search by name/i), 'bob')
+    await user.type(screen.getByPlaceholderText(/search by username/i), 'bob')
     await waitFor(() =>
       expect(replace).toHaveBeenCalledWith('/admin/users?search=bob'),
     )

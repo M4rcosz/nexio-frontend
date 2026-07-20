@@ -1,5 +1,7 @@
 'use client'
 
+import { useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslations } from 'next-intl'
 import { Link, usePathname } from '@/i18n/navigation'
 import type { AdminRole } from '@/lib/auth/access'
@@ -8,19 +10,31 @@ const NAV: Array<{
   href: string
   key:
     | 'overview'
+    | 'orders'
     | 'users'
+    | 'customers'
     | 'products'
     | 'categories'
     | 'menu'
     | 'businessUnits'
     | 'inventory'
     | 'promotions'
+    | 'ai'
   icon: React.FC<{ className?: string }>
   /** When true, the entry is only shown to ADMIN. */
   adminOnly?: boolean
 }> = [
   { href: '/admin', key: 'overview', icon: GridIcon },
+  { href: '/admin/orders', key: 'orders', icon: OrdersIcon },
   { href: '/admin/users', key: 'users', icon: UsersIcon },
+  // Customers are unreachable for a MANAGER (no unit links to scope by), so
+  // the entry would only ever open an empty screen for them.
+  {
+    href: '/admin/customers',
+    key: 'customers',
+    icon: UsersIcon,
+    adminOnly: true,
+  },
   { href: '/admin/products', key: 'products', icon: DishIcon },
   {
     href: '/admin/categories',
@@ -37,47 +51,211 @@ const NAV: Array<{
   },
   { href: '/admin/inventory', key: 'inventory', icon: BoxIcon },
   { href: '/admin/promotions', key: 'promotions', icon: TagIcon },
+  { href: '/admin/ai', key: 'ai', icon: SparkIcon, adminOnly: true },
 ]
 
+type NavItem = (typeof NAV)[number]
+
 export function AdminSidebar({ role }: { role: AdminRole }) {
-  const pathname = usePathname()
   const t = useTranslations('admin.nav')
+  const pathname = usePathname()
 
   const items = NAV.filter((item) => !item.adminOnly || role === 'ADMIN')
 
+  const [open, setOpen] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const panelId = useId()
+
+  // Close the mobile drawer whenever the route changes.
+  useEffect(() => {
+    setOpen(false)
+  }, [pathname])
+
+  // Focus management, focus trap, Escape-to-close and scroll lock while open.
+  useEffect(() => {
+    if (!open) return
+    const panel = panelRef.current
+    if (!panel) return
+
+    const previouslyFocused = triggerRef.current
+
+    const getFocusable = () =>
+      Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      )
+
+    getFocusable()[0]?.focus()
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setOpen(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+      const focusable = getFocusable()
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      const active = document.activeElement
+      if (event.shiftKey) {
+        if (active === first || !panel!.contains(active)) {
+          event.preventDefault()
+          last.focus()
+        }
+      } else if (active === last || !panel!.contains(active)) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+      previouslyFocused?.focus()
+    }
+  }, [open])
+
   return (
-    <aside className="lg:sticky lg:top-24">
-      <nav className="card overflow-hidden p-0">
-        <div className="border-b border-border px-4 py-3">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-fg-subtle">
-            {t('title')}
-          </p>
-        </div>
-        <ul className="flex flex-row gap-1 p-2 lg:flex-col">
-          {items.map(({ href, key, icon: Icon }) => {
-            const active =
-              href === '/admin'
-                ? pathname === '/admin'
-                : pathname === href || pathname.startsWith(`${href}/`)
-            return (
-              <li key={href} className="flex-1">
-                <Link
-                  href={href}
-                  className={`group flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                    active
-                      ? 'bg-brand-gradient text-white shadow-soft'
-                      : 'text-fg-muted hover:bg-surface-2 hover:text-fg'
-                  }`}
-                >
-                  <Icon className="h-4 w-4 flex-none" />
-                  <span>{t(key)}</span>
-                </Link>
-              </li>
-            )
-          })}
-        </ul>
-      </nav>
-    </aside>
+    <>
+      {/* Desktop: sticky vertical rail (lg and up). */}
+      <aside className="hidden lg:sticky lg:top-24 lg:block">
+        <nav className="card overflow-hidden p-0">
+          <div className="border-b border-border px-4 py-3">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-fg-subtle">
+              {t('title')}
+            </p>
+          </div>
+          <NavList items={items} className="flex flex-col gap-1 p-2" />
+        </nav>
+      </aside>
+
+      {/* Mobile: hamburger trigger + slide-over drawer (below lg). */}
+      <div className="lg:hidden">
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={() => setOpen(true)}
+          aria-expanded={open}
+          aria-controls={open ? panelId : undefined}
+          aria-haspopup="dialog"
+          aria-label={t('openMenu')}
+          className="btn-secondary w-full justify-between"
+        >
+          <span className="flex items-center gap-2.5">
+            <MenuIcon className="h-4 w-4" />
+            <span className="font-mono text-[10px] uppercase tracking-widest text-fg-subtle">
+              {t('title')}
+            </span>
+          </span>
+        </button>
+
+        {open &&
+          createPortal(
+            <div className="fixed inset-0 z-50 lg:hidden">
+              <div
+                className="absolute inset-0 bg-fg/40 backdrop-blur-sm"
+                onClick={() => setOpen(false)}
+                aria-hidden
+              />
+              <div
+                ref={panelRef}
+                id={panelId}
+                role="dialog"
+                aria-modal="true"
+                aria-label={t('title')}
+                className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col bg-surface shadow-soft-lg"
+              >
+                <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-fg-subtle">
+                    {t('title')}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    aria-label={t('closeMenu')}
+                    className="-mr-2 rounded-lg p-2 text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg"
+                  >
+                    <CloseIcon className="h-5 w-5" />
+                  </button>
+                </div>
+                <NavList
+                  items={items}
+                  onNavigate={() => setOpen(false)}
+                  className="scrollbar-thin flex flex-col gap-1 overflow-y-auto p-2"
+                />
+              </div>
+            </div>,
+            document.body,
+          )}
+      </div>
+    </>
+  )
+}
+
+function NavList({
+  items,
+  className,
+  onNavigate,
+}: {
+  items: NavItem[]
+  className?: string
+  onNavigate?: () => void
+}) {
+  const t = useTranslations('admin.nav')
+  const pathname = usePathname()
+
+  return (
+    <ul className={className}>
+      {items.map(({ href, key, icon: Icon }) => {
+        const active =
+          href === '/admin'
+            ? pathname === '/admin'
+            : pathname === href || pathname.startsWith(`${href}/`)
+        return (
+          <li key={href}>
+            <Link
+              href={href}
+              onClick={onNavigate}
+              aria-current={active ? 'page' : undefined}
+              className={`group flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                active
+                  ? 'bg-brand-gradient text-white shadow-soft'
+                  : 'text-fg-muted hover:bg-surface-2 hover:text-fg'
+              }`}
+            >
+              <Icon className="h-4 w-4 flex-none" />
+              <span>{t(key)}</span>
+            </Link>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function CloseIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
   )
 }
 
@@ -97,6 +275,25 @@ function GridIcon({ className = '' }: { className?: string }) {
       <rect x="14" y="3" width="7" height="7" rx="1.5" />
       <rect x="3" y="14" width="7" height="7" rx="1.5" />
       <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  )
+}
+
+function OrdersIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+      <path d="M3 6h18" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
     </svg>
   )
 }
@@ -213,6 +410,24 @@ function MenuIcon({ className = '' }: { className?: string }) {
       <path d="M3 12h18" />
       <path d="M3 6h18" />
       <path d="M3 18h18" />
+    </svg>
+  )
+}
+
+function SparkIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4" />
+      <path d="M12 8a4 4 0 0 0 4 4 4 4 0 0 0-4 4 4 4 0 0 0-4-4 4 4 0 0 0 4-4z" />
     </svg>
   )
 }

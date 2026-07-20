@@ -15,7 +15,7 @@ const ROLE_LABEL_KEY: Record<Role, string> = {
   KITCHEN: 'roleKitchen',
   MANAGER: 'roleManager',
   ADMIN: 'roleAdmin',
-  CUSTOMER: 'roleAttendant',
+  CUSTOMER: 'roleCustomer',
 }
 
 export function UserFilters({
@@ -31,6 +31,7 @@ export function UserFilters({
 }) {
   const t = useTranslations('admin.users')
   const tForm = useTranslations('admin.form')
+  const tCommon = useTranslations('common')
 
   const [search, setSearch] = useState(initial.search ?? '')
   const [role, setRole] = useState(initial.role ?? '')
@@ -70,6 +71,9 @@ export function UserFilters({
               { value: '', label: t('filterUnitAll') },
               ...units.map((u) => ({ value: u.id, label: u.name })),
             ]}
+            searchable
+            searchPlaceholder={tCommon('search')}
+            noResultsLabel={tCommon('noResults')}
           />
         </FilterControl>
       ) : null}

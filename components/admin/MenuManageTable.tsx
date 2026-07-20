@@ -199,14 +199,14 @@ export function MenuManageTable({
                       type="button"
                       onClick={() => savePrice(item)}
                       disabled={savingId === item.id}
-                      className="rounded-lg px-2 py-1 text-xs font-medium text-forest-600 hover:bg-forest-500/10 disabled:opacity-50"
+                      className="inline-flex min-h-[44px] items-center justify-center rounded-lg px-2 py-1 text-xs font-medium text-forest-600 hover:bg-forest-500/10 disabled:opacity-50"
                     >
                       {savingId === item.id ? t('saving') : t('save')}
                     </button>
                     <button
                       type="button"
                       onClick={cancelEdit}
-                      className="rounded-lg px-2 py-1 text-xs font-medium text-fg-muted hover:bg-surface-2"
+                      className="inline-flex min-h-[44px] items-center justify-center rounded-lg px-2 py-1 text-xs font-medium text-fg-muted hover:bg-surface-2"
                     >
                       {t('cancel')}
                     </button>
@@ -231,7 +231,7 @@ export function MenuManageTable({
                 <button
                   type="button"
                   onClick={() => startEdit(item)}
-                  className="btn-ghost flex-1 justify-center text-xs"
+                  className="btn-ghost flex-1 min-h-[44px] justify-center text-xs"
                 >
                   {t('editPrice')}
                 </button>
@@ -240,7 +240,7 @@ export function MenuManageTable({
                 type="button"
                 onClick={() => toggleAvailable(item)}
                 disabled={togglingId === item.id || editingId === item.id}
-                className={`rounded-lg px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
+                className={`inline-flex min-h-[44px] items-center justify-center rounded-lg px-2 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
                   item.isAvailable
                     ? 'text-accent-600 hover:bg-accent-500/10'
                     : 'text-forest-600 hover:bg-forest-500/10'
@@ -260,7 +260,7 @@ export function MenuManageTable({
 
       {/* Tablet/desktop: data table */}
       <div className="card hidden overflow-hidden p-0 md:block">
-        <div className="overflow-x-auto">
+        <div className="scrollbar-thin overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-surface-2 text-[10px] font-mono uppercase tracking-widest text-fg-subtle">
               <tr>

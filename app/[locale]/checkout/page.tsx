@@ -1,5 +1,5 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
-import { CheckoutView } from '@/components/CheckoutView'
+import { CheckoutView } from '@/components/checkout/CheckoutView'
 
 export default async function CheckoutPage({
   params,

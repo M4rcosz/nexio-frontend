@@ -66,8 +66,8 @@ export function CategoryForm({
           setError(errorMessage(data?.code, res.status) ?? t('failed'))
           return
         }
-        router.push('/admin/categories')
         router.refresh()
+        router.push('/admin/categories')
       })
       return
     }
@@ -91,8 +91,8 @@ export function CategoryForm({
         setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }
-      router.push('/admin/categories')
       router.refresh()
+      router.push('/admin/categories')
     })
   }
 

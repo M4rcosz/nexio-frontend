@@ -83,8 +83,10 @@ export function BusinessUnitForm({
           setError(errorMessage(data?.code, res.status) ?? t('failed'))
           return
         }
-        router.push('/admin/business-units')
+        // Refresh before navigating: a refresh queued after push races the
+        // pending navigation and can be dropped, leaving the cached list.
         router.refresh()
+        router.push('/admin/business-units')
       })
       return
     }
@@ -108,8 +110,8 @@ export function BusinessUnitForm({
         setError(errorMessage(data?.code, res.status) ?? t('failed'))
         return
       }
-      router.push('/admin/business-units')
       router.refresh()
+      router.push('/admin/business-units')
     })
   }
 

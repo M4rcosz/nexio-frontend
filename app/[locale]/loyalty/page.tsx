@@ -2,7 +2,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { redirect } from '@/i18n/navigation'
 import { getSession } from '@/lib/auth/session'
 import { getMyLoyalty } from '@/lib/api/loyalty'
-import { LoyaltyView } from '@/components/LoyaltyView'
+import { LoyaltyView } from '@/components/loyalty/LoyaltyView'
 
 export const dynamic = 'force-dynamic'
 

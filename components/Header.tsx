@@ -1,10 +1,14 @@
+import { headers } from 'next/headers'
 import { getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
+import { PATHNAME_HEADER, stripLocale } from '@/lib/i18n/pathname'
 import { getSession } from '@/lib/auth/session'
+import { getMyAiMembership } from '@/lib/api/ai'
 import type { Theme } from '@/lib/theme'
 import { getTenant } from '@/lib/tenant/resolve'
-import { CartBadge } from './CartBadge'
-import { LogoutButton } from './LogoutButton'
+import { CartBadge } from '@/components/cart/CartBadge'
+import { SessionWatcher } from '@/components/auth/SessionWatcher'
+import { UserMenu } from './UserMenu'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { ThemeToggle } from './ThemeToggle'
 
@@ -16,6 +20,16 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
   const isCustomer = session?.role === 'CUSTOMER'
   // The cart stays available to logged-out guests too (guest checkout).
   const showCart = !isLogged || isCustomer
+  // Assistant nav: customers never see it, and staff only see it once they
+  // actually hold an AI membership (no dead link to a locked-out page).
+  const membership = isLogged && !isCustomer ? await getMyAiMembership() : null
+  const showAssistantLink = isLogged && !isCustomer && membership !== null
+  // On the attended kiosk (/totem) the device holds a staff session, but it is
+  // physically operated by walk-up customers. Suppress the account menu and all
+  // nav so a customer can't log the device out or reach staff/admin areas
+  // mid-order. Interim mitigation until /totem gets its own chrome-less layout.
+  const pathname = stripLocale((await headers()).get(PATHNAME_HEADER) ?? '')
+  const isKiosk = pathname === '/totem' || pathname.startsWith('/totem/')
   const t = await getTranslations('header')
   const tAdmin = await getTranslations('admin')
   const tenant = await getTenant()
@@ -49,23 +63,23 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
         </Link>
 
         <nav className="flex flex-none items-center gap-1 text-sm sm:gap-2">
-          {isLogged ? (
+          {isKiosk ? null : isLogged ? (
             <>
               {isCustomer ? (
-                <>
-                  <Link
-                    href="/orders"
-                    className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:inline-flex"
-                  >
-                    {t('myOrders')}
-                  </Link>
-                  <Link
-                    href="/loyalty"
-                    className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:inline-flex"
-                  >
-                    {t('points')}
-                  </Link>
-                </>
+                <Link
+                  href="/orders"
+                  className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:inline-flex"
+                >
+                  {t('myOrders')}
+                </Link>
+              ) : null}
+              {showAssistantLink ? (
+                <Link
+                  href="/ai"
+                  className="hidden rounded-xl px-3 py-2 font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg lg:inline-flex"
+                >
+                  {t('assistant')}
+                </Link>
               ) : null}
               {showAdminLink ? (
                 <Link
@@ -80,14 +94,11 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
                 </Link>
               ) : null}
               <div className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
-              <Link
-                href="/profile"
-                aria-label={t('myProfile')}
-                className="hidden rounded-xl px-3 py-2 text-xs font-medium text-fg-muted transition-colors hover:bg-surface-2 hover:text-fg xl:inline-flex"
-              >
-                {t('greeting', { name: session?.username ?? '' })}
-              </Link>
-              <LogoutButton />
+              <UserMenu
+                username={session?.username ?? ''}
+                showPoints={isCustomer}
+              />
+              <SessionWatcher />
             </>
           ) : (
             <>
@@ -105,7 +116,9 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
               </Link>
             </>
           )}
-          <div className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
+          {isKiosk ? null : (
+            <div className="mx-0.5 hidden h-6 w-px bg-border sm:block" />
+          )}
           <LanguageSwitcher />
           <ThemeToggle initial={initialTheme} />
           {showCart ? <CartBadge /> : null}

@@ -8,13 +8,16 @@
     "back": "Voltar",
     "save": "Salvar",
     "cancel": "Cancelar",
+    "confirm": "Confirmar",
     "remove": "remover",
     "showPassword": "Mostrar senha",
     "hidePassword": "Ocultar senha",
     "stub": "mock",
     "stubTitle": "Endpoint ainda não existe no backend — usando dados de mock.",
     "backendBadge": "backend",
-    "backendBadgeTitle": "Endpoint real do backend."
+    "backendBadgeTitle": "Endpoint real do backend.",
+    "search": "Buscar...",
+    "noResults": "Nenhum resultado encontrado."
   },
   "header": {
     "brand": "Nexio",
@@ -28,7 +31,8 @@
     "signUp": "Cadastrar",
     "signOut": "Sair",
     "signingOut": "Saindo...",
-    "myProfile": "Meu perfil"
+    "myProfile": "Meu perfil",
+    "assistant": "Assistente"
   },
   "languageSwitcher": {
     "label": "Idioma",
@@ -71,7 +75,16 @@
     "available": "disponível em {unit}",
     "noDescription": "Sem descrição.",
     "addToCart": "Adicionar",
-    "added": "Adicionado!"
+    "added": "Adicionado!",
+    "promotions": {
+      "title": "Promoções ativas",
+      "percentOverMin": "{value}% de desconto em pedidos acima de {min}",
+      "percentAll": "{value}% de desconto no pedido",
+      "fixedOverMin": "{value} de desconto em pedidos acima de {min}",
+      "fixedAll": "{value} de desconto no pedido",
+      "until": "até {date}",
+      "appliedNote": "O desconto é aplicado automaticamente aos pedidos elegíveis."
+    }
   },
   "cart": {
     "title": "Seu carrinho",
@@ -82,6 +95,7 @@
     "backToMenu": "voltar ao cardápio",
     "notesPlaceholder": "Observações (ex: sem cebola)",
     "clear": "Esvaziar carrinho",
+    "confirmClear": "Esvaziar o carrinho? Isso remove todos os itens e não pode ser desfeito.",
     "summary": "Resumo",
     "items": "Itens",
     "total": "Total",
@@ -103,7 +117,12 @@
     "submitting": "Criando pedido...",
     "submitFailed": "Falha ao criar pedido.",
     "paymentNext": "O pagamento será feito na próxima etapa.",
-    "noteWith": "obs: {value}"
+    "noteWith": "obs: {value}",
+    "subtotal": "Subtotal",
+    "promoDiscount": "Promoção — {name}",
+    "estimatedTotal": "Total estimado",
+    "promoEstimateNote": "O desconto é aplicado automaticamente na criação do pedido.",
+    "promoNudge": "Adicione {missing} em itens para desbloquear {name} ({label})."
   },
   "payment": {
     "title": "Pagamento",
@@ -148,7 +167,10 @@
     "cancelling": "Cancelando...",
     "cancelFailed": "Falha ao cancelar.",
     "cancelled": "Pedido cancelado.",
-    "cancelledMessage": "Pedido cancelado em alguma etapa antes da entrega."
+    "cancelledMessage": "Pedido cancelado em alguma etapa antes da entrega.",
+    "subtotal": "Subtotal",
+    "pointsDiscount": "Pontos de fidelidade ({points} pts)",
+    "promotionDiscount": "Desconto de promoção"
   },
   "loyalty": {
     "title": "Programa de fidelidade",
@@ -196,17 +218,22 @@
     "failed": "Falha ao cadastrar."
   },
   "admin": {
-    "headerLink": "Admin",
+    "headerLink": "ERP",
     "nav": {
       "overview": "Visão geral",
+      "orders": "Pedidos",
       "users": "Usuários",
+      "customers": "Clientes",
       "inventory": "Estoque",
       "promotions": "Promoções",
       "title": "Administração",
       "products": "Produtos",
       "categories": "Categorias",
       "menu": "Cardápio",
-      "businessUnits": "Unidades"
+      "businessUnits": "Unidades",
+      "ai": "Assistente IA",
+      "openMenu": "Abrir menu de administração",
+      "closeMenu": "Fechar menu de administração"
     },
     "overview": {
       "title": "Painel administrativo",
@@ -217,12 +244,66 @@
       "manageUsers": "Gerenciar equipe",
       "manageUsersHint": "Cadastre atendentes e cozinheiros, ative ou desative acessos."
     },
+    "orders": {
+      "title": "Painel de pedidos",
+      "subtitle": "Filtre, ordene e avance pedidos pelo fluxo da cozinha.",
+      "noResults": "Nenhum pedido corresponde a estes filtros.",
+      "loadFailed": "Não foi possível carregar os pedidos.",
+      "actionFailed": "Não foi possível concluir esta ação.",
+      "loadMore": "Carregar mais",
+      "loadingMore": "Carregando…",
+      "filters": {
+        "channel": "Canal",
+        "allChannels": "Todos os canais",
+        "status": "Status",
+        "allStatuses": "Todos os status",
+        "unit": "Unidade",
+        "allUnits": "Todas as unidades",
+        "attendant": "Atendente",
+        "attendantPlaceholder": "ID do atendente",
+        "customer": "Cliente",
+        "customerPlaceholder": "ID do cliente",
+        "from": "De",
+        "to": "Até",
+        "minTotal": "Total mínimo",
+        "maxTotal": "Total máximo",
+        "sortBy": "Ordenar por",
+        "sortCreatedAt": "Data",
+        "sortTotal": "Total",
+        "sortDir": "Direção",
+        "sortDesc": "Mais recentes primeiro",
+        "sortAsc": "Mais antigos primeiro",
+        "kitchenQueue": "Fila da cozinha",
+        "clear": "Limpar filtros",
+        "moreFilters": "Filtros",
+        "moreFiltersCount": "Filtros ({count})",
+        "moreFiltersPanelLabel": "Mais filtros",
+        "closeFilters": "Fechar filtros"
+      },
+      "table": {
+        "order": "Pedido",
+        "status": "Status",
+        "unit": "Unidade",
+        "who": "Atendente / Cliente",
+        "total": "Total",
+        "actions": "Ações",
+        "attendantOf": "Atendente {id}",
+        "customerOf": "Cliente {id}"
+      },
+      "actions": {
+        "CONFIRMED": "Confirmar",
+        "PREPARING": "Iniciar preparo",
+        "READY": "Marcar como pronto",
+        "DELIVERED": "Entregar",
+        "cancel": "Cancelar"
+      }
+    },
     "users": {
       "title": "Usuários da equipe",
       "subtitle": "Contas de atendentes e cozinha das unidades que você gerencia.",
       "newUser": "Novo usuário",
       "count": "{count} usuário(s)",
-      "searchPlaceholder": "Buscar por nome, e-mail ou usuário...",
+      "searchPlaceholder": "Buscar por usuário...",
       "filterRoleAll": "Todos os papéis",
       "filterUnitAll": "Todas as unidades",
       "empty": "Ainda não há usuários cadastrados.",
@@ -268,7 +349,8 @@
       "emailTaken": "E-mail já cadastrado.",
       "roleForbidden": "Você não pode atribuir este papel.",
       "unitRequired": "Selecione uma unidade.",
-      "unitsRequired": "Selecione ao menos uma unidade."
+      "unitsRequired": "Selecione ao menos uma unidade.",
+      "roleCustomer": "Cliente"
     },
     "inventory": {
       "title": "Estoque",
@@ -337,9 +419,15 @@
       "tableActions": "Ações",
       "statusActive": "Ativa",
       "statusInactive": "Inativa",
+      "statusScheduled": "Agendada",
+      "statusExpired": "Expirada",
       "discountPercentage": "{value}% off",
       "discountFixed": "{value} off",
       "actionEdit": "Editar",
+      "actionActivate": "Ativar",
+      "actionDeactivate": "Desativar",
+      "toggling": "Salvando...",
+      "toggleFailed": "Não foi possível atualizar a promoção.",
       "loadFailed": "Não foi possível carregar as promoções.",
       "form": {
         "createTitle": "Nova promoção",
@@ -538,6 +626,57 @@
         "submitting": "Salvando…",
         "failed": "Não foi possível salvar a unidade."
       }
+    },
+    "ai": {
+      "title": "Assinaturas de IA",
+      "subtitle": "Libere o acesso ao assistente de IA e gerencie os saldos de tokens.",
+      "adminOnly": "Apenas administradores podem gerenciar assinaturas de IA.",
+      "targetUser": "Usuário alvo",
+      "targetUserPlaceholder": "ID do usuário (UUID)",
+      "targetHint": "Escolha um membro da equipe ou cole qualquer ID de usuário.",
+      "targetSelected": "Selecionado: {name} · {username}",
+      "enrollTitle": "Conceder acesso",
+      "enrollHint": "Concessão única de um saldo inicial de tokens.",
+      "initialBalanceLabel": "Saldo inicial",
+      "initialBalancePlaceholder": "Saldo inicial de tokens (ex.: 10000)",
+      "enrollButton": "Conceder",
+      "enrollSuccess": "Acesso concedido. O saldo agora é de {balance} tokens.",
+      "alreadyEnrolled": "Este usuário já possui acesso — use Ajustar para alterar o saldo.",
+      "userNotFound": "Nenhum usuário existe com esse ID.",
+      "invalidBalance": "Informe um número inteiro entre 0 e 2.147.483.647.",
+      "adjustTitle": "Ajustar saldo",
+      "adjustHint": "Adicione ou remova tokens com um valor com sinal.",
+      "deltaLabel": "Ajuste",
+      "deltaPlaceholder": "ex.: 5000 ou -1000",
+      "adjustButton": "Aplicar ajuste",
+      "adjustSuccess": "O saldo agora é de {balance} tokens.",
+      "notEnrolled": "Este usuário ainda não tem acesso — conceda o acesso primeiro.",
+      "outOfRange": "Essa alteração deixaria o saldo abaixo de zero ou acima do máximo.",
+      "invalidDelta": "Informe um número inteiro diferente de zero.",
+      "increment": "Aumentar",
+      "decrement": "Diminuir",
+      "working": "Processando…",
+      "forbidden": "Você não tem permissão para isso.",
+      "genericError": "Algo deu errado. Tente novamente.",
+      "networkError": "Erro de rede. Tente novamente.",
+      "pickUserFirst": "Escolha um usuário alvo primeiro."
+    },
+    "pagination": {
+      "loadMore": "Carregar mais",
+      "loading": "Carregando...",
+      "loaded": "{count} exibido(s)",
+      "loadMoreFailed": "Não foi possível carregar mais resultados."
+    },
+    "customers": {
+      "title": "Clientes",
+      "subtitle": "Todos os cadastrados para fazer pedidos. Somente leitura.",
+      "searchPlaceholder": "Filtrar por usuário...",
+      "emailPlaceholder": "Filtrar por e-mail...",
+      "empty": "Nenhum cliente para exibir.",
+      "tableName": "Nome",
+      "tableEmail": "E-mail",
+      "tablePhone": "Telefone",
+      "tableStatus": "Status"
     }
   },
   "errors": {
@@ -565,7 +704,10 @@
       "phone_taken": "Telefone já cadastrado.",
       "cnpj_or_phone_taken": "CNPJ ou telefone já cadastrado.",
       "inventory_over_max": "Esta entrada excederia a quantidade máxima.",
-      "inventory_exists": "Já existe um saldo de estoque para este produto na unidade."
+      "inventory_exists": "Já existe um saldo de estoque para este produto na unidade.",
+      "cancel_window_closed": "Este pedido está fora da janela de cancelamento.",
+      "invalid_transition": "Esta mudança de status não é permitida a partir do estado atual do pedido.",
+      "invalid_cursor": "A lista mudou. Volte para a primeira página e tente novamente."
     }
   },
   "orderStatus": {
@@ -653,5 +795,86 @@
     "wrongPassword": "A senha atual está incorreta.",
     "samePassword": "A nova senha deve ser diferente da atual.",
     "failed": "Não foi possível alterar sua senha."
+  },
+  "ai": {
+    "title": "Assistente de IA",
+    "subtitle": "Pergunte sobre seus pedidos e pontos de fidelidade. Cada resposta consome tokens do seu saldo.",
+    "balance": "Saldo de tokens",
+    "tokens": "tokens",
+    "balanceHint": "Os tokens são consumidos por mensagem. Seu saldo é atualizado a cada resposta.",
+    "notEnrolledTitle": "Sem acesso à IA ainda",
+    "notEnrolledBody": "Peça a um administrador para liberar seu acesso ao assistente de IA.",
+    "outOfTokensTitle": "Tokens esgotados",
+    "outOfTokensBody": "Peça a um administrador para recarregar seu saldo e continuar a conversa.",
+    "chatTitle": "Conversa",
+    "emptyState": "Pergunte sobre o status de um pedido ou seus pontos de fidelidade.",
+    "inputPlaceholder": "Digite sua mensagem…",
+    "inputDisabledPlaceholder": "Chat indisponível",
+    "send": "Enviar",
+    "thinking": "O assistente está digitando",
+    "tokensSpent": "{count, number} tokens usados",
+    "unavailable": "O assistente está temporariamente indisponível. Nenhum token foi cobrado.",
+    "retry": "Tentar novamente",
+    "sendFailed": "Não foi possível enviar sua mensagem. Tente novamente."
+  },
+  "createOrder": {
+    "itemsTitle": "Itens",
+    "customerSection": "Cliente",
+    "walkIn": "Sem cadastro",
+    "lookupCustomer": "Cliente cadastrado",
+    "walkInName": "Nome para chamar o pedido",
+    "walkInNamePlaceholder": "ex.: Maria",
+    "customerId": "ID do cliente",
+    "customerIdPlaceholder": "UUID do cliente",
+    "customerIdRequired": "Informe o ID do cliente cadastrado ou use “sem cadastro”.",
+    "notesLabel": "Observações do pedido",
+    "notesPlaceholder": "Algo que a cozinha precise saber?",
+    "submit": "Fazer pedido",
+    "submitting": "Enviando…",
+    "submitFailed": "Não foi possível fazer o pedido. Tente novamente.",
+    "total": "Total",
+    "estimatedTotal": "Total estimado",
+    "noItems": "Adicione ao menos um item ao pedido.",
+    "emptyMenu": "Nenhum produto disponível nesta unidade.",
+    "menuLoadError": "Não foi possível carregar o cardápio.",
+    "retry": "Tentar novamente",
+    "loadingProducts": "Carregando produtos…",
+    "decrement": "Diminuir quantidade",
+    "increment": "Aumentar quantidade",
+    "validation": {
+      "nameRequired": "Informe um nome com ao menos uma letra ou número.",
+      "nameTooLong": "O nome deve ter no máximo 60 caracteres."
+    }
+  },
+  "pos": {
+    "kicker": "Ponto de venda",
+    "title": "Registrar um pedido",
+    "subtitle": "Atenda pedidos de balcão e retirada presencialmente.",
+    "channel": "Tipo de pedido",
+    "unit": "Unidade",
+    "noUnits": "Você ainda não está vinculado a nenhuma unidade.",
+    "orderPlaced": "Pedido registrado",
+    "orderRef": "Pedido ref. #{ref}",
+    "newOrder": "Novo pedido",
+    "viewOrder": "Ver pedido",
+    "forbiddenTitle": "Somente equipe",
+    "forbiddenBody": "Você precisa de uma conta de atendente, gerente ou administrador para usar o ponto de venda."
+  },
+  "totem": {
+    "welcome": "Bem-vindo",
+    "start": "Iniciar pedido",
+    "namePrompt": "Qual nome vamos chamar?",
+    "namePlaceholder": "Seu nome",
+    "continue": "Continuar",
+    "back": "Voltar",
+    "cancel": "Cancelar pedido",
+    "chooseItems": "Escolha seus itens",
+    "orderPlaced": "Obrigado, {name}!",
+    "orderNumber": "Número do seu pedido",
+    "orderRef": "Pedido ref. #{ref}",
+    "newOrder": "Fazer novo pedido",
+    "unavailableTitle": "Totem indisponível",
+    "unavailableBody": "Este totem precisa ser configurado em um dispositivo da unidade antes de receber pedidos.",
+    "noUnit": "Este totem ainda não está vinculado a uma unidade."
   }
 }
