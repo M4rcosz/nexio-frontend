@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { cleanup, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { renderWithIntl } from '@/lib/test/intl'
-import type { Order, OrderStatus, Paginated } from '@/lib/api/types'
+import type { Order, OrderItem, OrderStatus, Paginated } from '@/lib/api/types'
 
 vi.mock('@/i18n/navigation', () => ({
   Link: ({ children, href }: { children: ReactNode; href: string }) => (
@@ -18,7 +18,23 @@ import { MyOrdersList } from './MyOrdersList'
 
 const mockedClientFetch = vi.mocked(clientFetch)
 
-function makeOrder(id: string, status: OrderStatus = 'PENDING'): Order {
+function makeItem(name: string): OrderItem {
+  return {
+    id: `oi-${name}`,
+    productId: `p-${name}`,
+    productName: name,
+    quantity: 1,
+    unitPrice: '5.00',
+    subtotal: '5.00',
+    notes: null,
+  }
+}
+
+function makeOrder(
+  id: string,
+  status: OrderStatus = 'PENDING',
+  extra: Partial<Order> = {},
+): Order {
   return {
     id,
     businessUnitId: 'bu-1',
@@ -35,6 +51,7 @@ function makeOrder(id: string, status: OrderStatus = 'PENDING'): Order {
     updatedAt: '',
     updatedById: null,
     orderItems: [],
+    ...extra,
   }
 }
 
@@ -110,8 +127,71 @@ describe('MyOrdersList', () => {
     await user.click(screen.getByRole('button', { name: /load more/i }))
     await waitFor(() => expect(screen.getByText('o3')).toBeInTheDocument())
 
-    const list = screen.getByRole('list')
-    expect(within(list).getAllByText(/^o2$/)).toHaveLength(1)
-    expect(within(list).getAllByRole('listitem')).toHaveLength(3)
+    expect(screen.getAllByText(/^o2$/)).toHaveLength(1)
+    expect(screen.getAllByRole('link')).toHaveLength(3)
+  })
+
+  it('groups orders under one heading per day', () => {
+    renderWithIntl(
+      <MyOrdersList
+        initial={page([
+          makeOrder('o1', 'PENDING', { createdAt: '2026-07-02T15:00:00Z' }),
+          makeOrder('o2', 'PENDING', { createdAt: '2026-07-01T18:00:00Z' }),
+          makeOrder('o3', 'PENDING', { createdAt: '2026-07-01T12:00:00Z' }),
+        ])}
+      />,
+    )
+    // Two days → two group headings, with the same-day orders sharing one.
+    const headings = screen.getAllByRole('heading', { level: 2 })
+    expect(headings).toHaveLength(2)
+    expect(headings[0]).toHaveTextContent(/July 2, 2026/)
+    // Each heading is annotated with how many orders landed that day.
+    expect(screen.getByText('1 order')).toBeInTheDocument()
+    expect(screen.getByText('2 orders')).toBeInTheDocument()
+  })
+
+  it('previews the first items and expands to the full list on demand', async () => {
+    const user = userEvent.setup()
+    renderWithIntl(
+      <MyOrdersList
+        initial={page([
+          makeOrder('o1', 'PENDING', {
+            orderItems: [
+              makeItem('Espresso'),
+              makeItem('Croissant'),
+              makeItem('Latte'),
+              makeItem('Brownie'),
+            ],
+          }),
+        ])}
+      />,
+    )
+
+    expect(screen.getByText(/Espresso/)).toBeInTheDocument()
+    expect(screen.queryByText(/Brownie/)).not.toBeInTheDocument()
+
+    const toggle = screen.getByRole('button', { name: /see all 4 items/i })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await user.click(toggle)
+
+    expect(screen.getByText(/Brownie/)).toBeInTheDocument()
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+
+    await user.click(screen.getByRole('button', { name: /show fewer items/i }))
+    expect(screen.queryByText(/Brownie/)).not.toBeInTheDocument()
+  })
+
+  it('omits the toggle when the order fits within the preview', () => {
+    renderWithIntl(
+      <MyOrdersList
+        initial={page([
+          makeOrder('o1', 'PENDING', {
+            orderItems: [makeItem('Espresso'), makeItem('Latte')],
+          }),
+        ])}
+      />,
+    )
+    expect(screen.getByText(/Latte/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /see all/i })).toBeNull()
   })
 })

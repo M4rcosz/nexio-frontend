@@ -7,6 +7,7 @@
 // here too — they are only kept out of the staff listings by `allowedRoles`,
 // since CUSTOMER is in no actor's `manageableRoles`.
 import type { Paginated, Role, User } from '@/lib/api/types'
+import { cursorStart, encodeMockCursor } from './_cursor'
 import { MOCK_BUSINESS_UNITS } from './business-units'
 import { mockDelay } from './_delay'
 
@@ -183,9 +184,8 @@ export const DEFAULT_PAGE_LIMIT = 20
 const MAX_PAGE_LIMIT = 100
 
 /**
- * Slices an already-filtered list into the backend's cursor envelope. The
- * cursor is the id of the last item of the previous page — matching the real
- * API, where `meta.nextCursor` is an opaque row id rather than an offset.
+ * Slices an already-filtered list into the backend's cursor envelope, using
+ * the same opaque keyset token the live API issues (see `_cursor.ts`).
  */
 function paginate<T extends { id: string }>(
   rows: T[],
@@ -196,9 +196,7 @@ function paginate<T extends { id: string }>(
     Math.max(Math.trunc(limit) || DEFAULT_PAGE_LIMIT, 1),
     MAX_PAGE_LIMIT,
   )
-  const start = cursor ? rows.findIndex((r) => r.id === cursor) + 1 : 0
-  // An unknown cursor yields findIndex === -1 → start 0. Restarting from the
-  // top beats returning a silently empty page the UI would read as "the end".
+  const start = cursorStart(rows, cursor)
   const slice = rows.slice(start, start + size)
   const last = slice[slice.length - 1]
   const hasMore = start + slice.length < rows.length
@@ -206,12 +204,19 @@ function paginate<T extends { id: string }>(
     data: slice.map((r) => ({ ...r })),
     meta: {
       limit: size,
-      nextCursor: hasMore && last ? last.id : null,
+      nextCursor: hasMore && last ? encodeMockCursor(last.id) : null,
       hasMore,
     },
   }
 }
 
+/**
+ * NOTE: this applies `allowedRoles` *before* paginating, whereas the live path
+ * post-filters what the backend already paginated (`listInternalUsers`). The
+ * mock therefore always returns full pages and structurally cannot reproduce
+ * the empty-page-with-hasMore condition that only appears against the real
+ * backend. Keep that in mind when relying on mock-mode QA for this listing.
+ */
 export async function listInternalUsersMock(
   filters: InternalUserFilters = {},
 ): Promise<Paginated<User>> {
@@ -321,7 +326,10 @@ export async function createInternalUserMock(
     businessUnitIds: input.businessUnitIds,
     isActive: true,
   }
-  STORE.push(user)
+  // Newest first: the contract fixes ordering at `createdAt desc, id desc`
+  // (§1.4). Appending would put a user created from the admin UI on the last
+  // page instead of the top of the first.
+  STORE.unshift(user)
   return { ...user }
 }
 

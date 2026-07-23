@@ -17,7 +17,15 @@
     "backendBadge": "backend",
     "backendBadgeTitle": "Real backend endpoint.",
     "search": "Search...",
-    "noResults": "No results found."
+    "noResults": "No results found.",
+    "datePicker": {
+      "empty": "Select a date",
+      "dialogLabel": "Calendar",
+      "previousMonth": "Previous month",
+      "nextMonth": "Next month",
+      "today": "Today",
+      "clear": "Clear"
+    }
   },
   "header": {
     "brand": "Nexio",
@@ -148,8 +156,14 @@
     "forbidden": "Only customers can view their orders.",
     "signInLink": "Sign in",
     "noResults": "No orders match these filters.",
+    "loadError": "Couldn't load your orders. Please try again.",
+    "loadMoreError": "Couldn't load more orders. Please try again.",
+    "retry": "Try again",
     "loadMore": "Load more",
     "loadingMore": "Loading…",
+    "dayOrderCount": "{count, plural, one {# order} other {# orders}}",
+    "showAllItems": "See all {count} items",
+    "showFewerItems": "Show fewer items",
     "filters": {
       "channel": "Channel",
       "status": "Status",
@@ -632,13 +646,16 @@
       "subtitle": "Grant AI assistant access and manage token balances.",
       "adminOnly": "Only administrators can manage AI memberships.",
       "targetUser": "Target user",
-      "targetUserPlaceholder": "User ID (UUID)",
-      "targetHint": "Pick a staff member or paste any user ID.",
+      "targetUserPlaceholder": "Select a user",
+      "targetSearchPlaceholder": "Search users by username…",
+      "targetSearching": "Searching…",
+      "targetNoResults": "No matching users.",
+      "targetHint": "Pick the staff member to grant or adjust access for.",
       "targetSelected": "Selected: {name} · {username}",
       "enrollTitle": "Enroll",
       "enrollHint": "One-time grant of an initial token balance.",
       "initialBalanceLabel": "Initial balance",
-      "initialBalancePlaceholder": "Initial token balance (e.g. 10000)",
+      "initialBalancePlaceholder": "0",
       "enrollButton": "Grant access",
       "enrollSuccess": "Enrolled. Balance is now {balance} tokens.",
       "alreadyEnrolled": "This user is already enrolled — use Adjust to change their balance.",
@@ -653,13 +670,45 @@
       "notEnrolled": "This user isn't enrolled yet — grant access first.",
       "outOfRange": "That change would drive the balance below zero or over the maximum.",
       "invalidDelta": "Enter a non-zero whole number.",
-      "increment": "Increase",
-      "decrement": "Decrease",
+      "increment": "Increase {field}",
+      "decrement": "Decrease {field}",
       "working": "Working…",
       "forbidden": "You don't have permission to do that.",
       "genericError": "Something went wrong. Please try again.",
       "networkError": "Network error. Please try again.",
-      "pickUserFirst": "Choose a target user first."
+      "pickUserFirst": "Choose a target user first.",
+      "stateActive": "Active",
+      "stateRevoked": "Revoked",
+      "stateBalance": "Balance: {balance} tokens",
+      "revokedOn": "Revoked on {date}",
+      "accessTitle": "Access",
+      "accessHint": "Revoking blocks the assistant but keeps the balance. Reinstating restores it.",
+      "revokeButton": "Revoke access",
+      "reinstateButton": "Reinstate",
+      "revokeConfirm": "This user will lose access to the AI assistant. Their token balance is kept — remove it separately if that's what you want.",
+      "revokeSuccess": "Access revoked. Balance kept at {balance} tokens.",
+      "reinstateSuccess": "Access reinstated. Balance is {balance} tokens.",
+      "revokedBlocksAdjust": "This membership is revoked — reinstate it before changing the balance."
+    },
+    "aiUsage": {
+      "title": "Usage report",
+      "period": "Period: {from} to {to}",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "applying": "Loading…",
+      "reset": "Last 30 days",
+      "invalidRange": "The start date must not be after the end date.",
+      "loadFailed": "Couldn't load the usage report. Please try again.",
+      "empty": "No memberships in this period.",
+      "tableUser": "User",
+      "tableBalance": "Balance now",
+      "tableUsed": "Used in period",
+      "tableStatus": "Status",
+      "unknownUser": "Unknown user",
+      "active": "Active",
+      "revoked": "Revoked",
+      "revokedOn": "Revoked {date}"
     },
     "pagination": {
       "loadMore": "Load more",
@@ -676,7 +725,9 @@
       "tableName": "Name",
       "tableEmail": "E-mail",
       "tablePhone": "Phone",
-      "tableStatus": "Status"
+      "tableStatus": "Status",
+      "searchLabel": "Filter customers by username",
+      "emailLabel": "Filter customers by e-mail"
     }
   },
   "errors": {
@@ -707,7 +758,12 @@
       "inventory_exists": "A stock balance already exists for this product at the unit.",
       "cancel_window_closed": "This order is past the cancellation window.",
       "invalid_transition": "This status change is not allowed from the order's current state.",
-      "invalid_cursor": "The list changed. Reset to the first page and try again."
+      "invalid_cursor": "The list changed. Reset to the first page and try again.",
+      "conversation_not_found": "That conversation is no longer available.",
+      "membership_revoked": "This AI membership is revoked. Reinstate it first.",
+      "not_enrolled": "This user has no AI membership yet.",
+      "invalid_period": "The start date must not be after the end date.",
+      "invalid_query": "Some of the filters are invalid. Please adjust them and try again."
     }
   },
   "orderStatus": {
@@ -815,7 +871,19 @@
     "tokensSpent": "{count, number} tokens spent",
     "unavailable": "The assistant is temporarily unavailable. No tokens were charged.",
     "retry": "Try again",
-    "sendFailed": "Couldn't send your message. Please try again."
+    "sendFailed": "Couldn't send your message. Please try again.",
+    "threads": "Conversations",
+    "newChat": "New chat",
+    "noThreads": "No conversations yet. Send a message to start one.",
+    "threadStarted": "Started {date}",
+    "deleteThread": "Delete conversation",
+    "deleteThreadConfirm": "This conversation will be deleted permanently — there is no undo. Your token usage is not affected and stays visible to administrators.",
+    "deleteThreadFailed": "Couldn't delete that conversation. Please try again.",
+    "threadLoadFailed": "Couldn't open that conversation. Please try again.",
+    "threadGone": "That conversation is no longer available. Starting a new one.",
+    "contextTrimmed": "Only the last {count, number} messages are part of the assistant's memory. The full transcript is still shown here.",
+    "revokedTitle": "Access revoked",
+    "revokedBody": "An administrator revoked your AI access on {date}. Your balance is preserved — contact an admin to have it reinstated."
   },
   "createOrder": {
     "itemsTitle": "Items",

@@ -92,6 +92,34 @@
     color: rgb(var(--fg));
   }
 
+  /* Chromium paints the calendar/clock glyph of native date-ish inputs in a
+     fixed near-black, which all but disappears on the dark surfaces. Date
+     fields use our own <DatePicker />; this keeps the remaining
+     `datetime-local`/`time` ones legible in both themes. */
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='datetime-local']::-webkit-calendar-picker-indicator,
+  input[type='time']::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.55;
+    transition: opacity 150ms ease;
+  }
+  input[type='date']::-webkit-calendar-picker-indicator:hover,
+  input[type='datetime-local']::-webkit-calendar-picker-indicator:hover,
+  input[type='time']::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
+  .dark input[type='date']::-webkit-calendar-picker-indicator,
+  .dark input[type='datetime-local']::-webkit-calendar-picker-indicator,
+  .dark input[type='time']::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+  /* Tells the browser to render its own dropdown chrome (the popup calendar,
+     the spin buttons) with the theme the page is actually showing. */
+  .dark input[type='datetime-local'],
+  .dark input[type='time'] {
+    color-scheme: dark;
+  }
+
   *:focus-visible {
     outline: 2px solid theme('colors.brand.500');
     outline-offset: 2px;
@@ -220,6 +248,16 @@
     background-image: theme('backgroundImage.hero-grain');
     opacity: 0.18;
     mix-blend-mode: overlay;
+  }
+  /* Hide the native number-input spinners (we style our own controls). */
+  .no-spinner {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  .no-spinner::-webkit-outer-spin-button,
+  .no-spinner::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
   }
   .scrollbar-thin {
     scrollbar-width: thin;

@@ -58,6 +58,7 @@ describe('POST /api/ai/chat', () => {
   it('returns the reply on success', async () => {
     mockedSession.mockResolvedValue(true)
     mockedSend.mockResolvedValue({
+      conversationId: 'c1',
       reply: 'hello',
       tokensSpent: 42,
       balanceRemaining: 100,
@@ -72,6 +73,52 @@ describe('POST /api/ai/chat', () => {
       message: 'hi',
       history: undefined,
     })
+  })
+
+  it('forwards conversationId so the thread continues server-side', async () => {
+    mockedSession.mockResolvedValue(true)
+    mockedSend.mockResolvedValue({
+      conversationId: '11111111-1111-4111-8111-111111111111',
+      reply: 'hello',
+      tokensSpent: 1,
+      balanceRemaining: 9,
+    })
+    const res = await POST(
+      req({
+        message: 'hi',
+        conversationId: '11111111-1111-4111-8111-111111111111',
+      }),
+    )
+    expect(res.status).toBe(200)
+    expect(mockedSend).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: '11111111-1111-4111-8111-111111111111',
+      }),
+    )
+    // The id must survive to the client, which round-trips it on the next send.
+    expect(await res.json()).toMatchObject({
+      conversationId: '11111111-1111-4111-8111-111111111111',
+    })
+  })
+
+  it('rejects a non-uuid conversationId with 400', async () => {
+    mockedSession.mockResolvedValue(true)
+    const res = await POST(req({ message: 'hi', conversationId: 'nope' }))
+    expect(res.status).toBe(400)
+    expect(mockedSend).not.toHaveBeenCalled()
+  })
+
+  it('maps a backend 404 to code conversation_not_found', async () => {
+    mockedSession.mockResolvedValue(true)
+    mockedSend.mockRejectedValue(new ApiError(404, null, 'gone'))
+    const res = await POST(
+      req({
+        message: 'hi',
+        conversationId: '11111111-1111-4111-8111-111111111111',
+      }),
+    )
+    expect(res.status).toBe(404)
+    expect(await res.json()).toMatchObject({ code: 'conversation_not_found' })
   })
 
   it('maps a backend 403 to code chat_no_access', async () => {

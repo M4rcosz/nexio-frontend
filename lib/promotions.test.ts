@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { Promotion } from '@/lib/api/types'
+import type { Promotion, PromotionOffer } from '@/lib/api/types'
 import {
   bestPromotion,
   isPromotionLive,
@@ -90,10 +90,31 @@ describe('bestPromotion', () => {
     expect(best?.discount.toFixed(2)).toBe('12.00')
   })
 
-  it('ignores promotions that are not live or not reached', () => {
-    const inactive = promo({ id: 'a', isActive: false })
+  it('ignores promotions that expired or whose minimum is not reached', () => {
+    const expired = promo({ id: 'a', endDate: '2026-07-01T00:00:00.000Z' })
     const tooHigh = promo({ id: 'b', minOrderValue: '999.00' })
-    expect(bestPromotion([inactive, tooHigh], '50.00', NOW)).toBeNull()
+    expect(bestPromotion([expired, tooHigh], '50.00', NOW)).toBeNull()
+  })
+
+  it('treats endDate as half-open — the end instant is already over', () => {
+    const ending = promo({ endDate: NOW.toISOString() })
+    expect(bestPromotion([ending], '50.00', NOW)).toBeNull()
+  })
+
+  it('accepts the public shape, which carries no isActive/startDate', () => {
+    // The public listing is pre-filtered server-side, so liveness beyond
+    // endDate is not this layer's job — and the fields to check it are absent.
+    const offer: PromotionOffer = {
+      id: 'pub',
+      name: 'Almoço executivo',
+      discountType: 'PERCENTAGE',
+      discountValue: '10.00',
+      minOrderValue: '30.00',
+      endDate: '2026-07-31T23:59:59.000Z',
+    }
+    expect(bestPromotion([offer], '50.00', NOW)?.discount.toFixed(2)).toBe(
+      '5.00',
+    )
   })
 })
 

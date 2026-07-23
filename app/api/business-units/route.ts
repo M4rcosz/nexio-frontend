@@ -6,6 +6,7 @@ import {
   listBusinessUnitsInternal,
 } from '@/lib/api/business-units'
 import { ApiError, describeError } from '@/lib/api/errors'
+import { parseLimit } from '@/lib/api/pagination'
 import { getAdminContext } from '@/lib/auth/access'
 
 // `.strict()` rejects unknown keys (isActive, id, createdAt, …) with a 400 —
@@ -99,12 +100,7 @@ export async function GET(req: Request) {
   const isActive =
     isActiveRaw === 'true' ? true : isActiveRaw === 'false' ? false : undefined
   // Contract: 1..100, integer, default 20. Truncate fractional values.
-  const limitRaw = url.searchParams.get('limit')
-  const limitNum = Number(limitRaw)
-  const limit =
-    limitRaw && Number.isFinite(limitNum)
-      ? Math.min(Math.max(Math.trunc(limitNum), 1), 100)
-      : 20
+  const limit = parseLimit(url.searchParams.get('limit'))
 
   try {
     const page = await listBusinessUnitsInternal({
@@ -117,6 +113,18 @@ export async function GET(req: Request) {
     return NextResponse.json(page)
   } catch (err) {
     const status = err instanceof ApiError ? err.status || 500 : 500
+    // A stale or malformed keyset cursor is 422, not 400. Tag it so the client
+    // drops the cursor and restarts from page 1 instead of retrying a token
+    // that can only ever fail again.
+    if (status === 422) {
+      return NextResponse.json(
+        {
+          error: 'The list changed. Reset to the first page.',
+          code: 'invalid_cursor',
+        },
+        { status: 422 },
+      )
+    }
     return NextResponse.json(
       { error: describeError(err) },
       { status: status >= 500 ? 502 : status },

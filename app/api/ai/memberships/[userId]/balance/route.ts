@@ -1,3 +1,4 @@
+import { revalidateTag } from 'next/cache'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { adjustAiMembershipBalance } from '@/lib/api/ai'
@@ -19,8 +20,17 @@ export async function PATCH(
   { params }: { params: Promise<{ userId: string }> },
 ) {
   const ctx = await getAdminContext()
-  if (!ctx || ctx.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
+  if (!ctx) {
+    return NextResponse.json(
+      { error: 'Session expired.', code: 'session_expired' },
+      { status: 401 },
+    )
+  }
+  if (ctx.role !== 'ADMIN') {
+    return NextResponse.json(
+      { error: 'Forbidden.', code: 'forbidden' },
+      { status: 403 },
+    )
   }
   const { userId } = await params
 
@@ -46,8 +56,21 @@ export async function PATCH(
         { status: 404 },
       )
     }
+    // The admin usage report is a tagged server read; without this a
+    // freshly changed membership would not show up until the tag expires.
+    revalidateTag('ai-memberships')
     return NextResponse.json(membership)
   } catch (err) {
+    if (err instanceof ApiError && err.status === 403) {
+      // The caller is already known to be ADMIN (gated above), so the only 403
+      // the contract defines on this route is "the membership is revoked" —
+      // reinstate before adjusting. Coded so the client can say exactly that
+      // instead of the generic "no permission".
+      return NextResponse.json(
+        { error: 'Membership is revoked.', code: 'membership_revoked' },
+        { status: 403 },
+      )
+    }
     if (err instanceof ApiError && err.status === 422) {
       // Below zero or overflow. Keyed by a stable code — the client shows a
       // translated message rather than echoing the raw backend text.

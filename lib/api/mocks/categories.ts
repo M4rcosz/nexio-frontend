@@ -12,6 +12,7 @@ import type {
 } from '@/lib/api/types'
 import { ApiError } from '@/lib/api/errors'
 import { mockDelay } from './_delay'
+import { cursorStart, encodeMockCursor } from './_cursor'
 
 const NOW = new Date().toISOString()
 
@@ -78,14 +79,13 @@ export async function listCategoriesMock(
     )
   }
   const limit = query.limit ?? 20
-  let start = 0
-  if (query.cursor) {
-    const idx = data.findIndex((c) => c.id === query.cursor)
-    start = idx >= 0 ? idx + 1 : 0
-  }
+  // Opaque keyset token, matching the live API — a stale or malformed one is
+  // a 422, not a silent restart (see `_cursor.ts`).
+  const start = cursorStart(data, query.cursor)
   const page = data.slice(start, start + limit).map((c) => ({ ...c }))
   const hasMore = start + limit < data.length
-  const nextCursor = hasMore ? (page[page.length - 1]?.id ?? null) : null
+  const last = page[page.length - 1]
+  const nextCursor = hasMore && last ? encodeMockCursor(last.id) : null
   return { data: page, meta: { limit, nextCursor, hasMore } }
 }
 

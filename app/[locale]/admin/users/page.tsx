@@ -1,5 +1,7 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
+import { notFound } from 'next/navigation'
 import { Link } from '@/i18n/navigation'
+import { ApiError } from '@/lib/api/errors'
 import { getAdminContext } from '@/lib/auth/access'
 import { listInternalUsers } from '@/lib/api/admin-users'
 import { listBusinessUnits } from '@/lib/api/business-units'
@@ -34,11 +36,19 @@ export default async function AdminUsersPage({
       ? (sp.role as never)
       : undefined
 
+  // A MANAGER passing a unit outside their claim is answered 404 by the
+  // backend on purpose, so units cannot be enumerated. Uncaught, that throws
+  // inside the render and produces a crash boundary; render the ordinary
+  // not-found page instead. The wording stays generic either way, so a
+  // foreign unit and a nonexistent one remain indistinguishable (docs §1.3).
   const [firstPage, unitsPage] = await Promise.all([
     listInternalUsers(ctx, {
       search: sp.search,
       role,
       businessUnitId: sp.businessUnitId,
+    }).catch((err) => {
+      if (err instanceof ApiError && err.status === 404) notFound()
+      throw err
     }),
     listBusinessUnits(),
   ])

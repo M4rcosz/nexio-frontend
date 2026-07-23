@@ -1,7 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { Paginated } from '@/lib/api/types'
+
+/** Machine `code` and HTTP status of a failed page fetch, for useErrorMessage. */
+export type CursorPageError = { code?: string; status?: number }
 
 /**
  * Drives a "Load more" control over the API's cursor envelope.
@@ -27,12 +30,19 @@ export function useCursorPages<T>({
   initialPage: Paginated<T>
 }) {
   const [extra, setExtra] = useState<T[]>([])
+  // Set only after a 422 recovery: the refetched page 1 replaces the whole
+  // visible list, server-rendered rows included, because those rows came from
+  // the same result set the dead cursor was pointing into.
+  const [restarted, setRestarted] = useState<T[] | null>(null)
   const [cursor, setCursor] = useState<string | null>(
     initialPage.meta.nextCursor,
   )
   const [hasMore, setHasMore] = useState(initialPage.meta.hasMore)
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // `{ code, status }` rather than a bare flag, so the component can render a
+  // specific message via useErrorMessage — an expired session during
+  // pagination must not read as a generic server fault.
+  const [error, setError] = useState<CursorPageError | null>(null)
 
   /**
    * Bumped on every reset. A request captures the value at send time and
@@ -47,15 +57,21 @@ export function useCursorPages<T>({
   const generation = useRef(0)
   const inFlight = useRef(false)
 
-  useEffect(() => {
+  // Resync during render rather than in an effect, matching BusinessUnitList.
+  // An effect runs after commit, so there would be one painted frame with the
+  // previous query's appended rows sitting below the fresh first page.
+  const [syncedFrom, setSyncedFrom] = useState(initialPage)
+  if (syncedFrom !== initialPage) {
     generation.current += 1
     inFlight.current = false
+    setSyncedFrom(initialPage)
     setExtra([])
+    setRestarted(null)
     setCursor(initialPage.meta.nextCursor)
     setHasMore(initialPage.meta.hasMore)
     setError(null)
     setLoading(false)
-  }, [initialPage])
+  }
 
   const serializedQuery = JSON.stringify(query)
 
@@ -78,12 +94,38 @@ export function useCursorPages<T>({
       // query the user has already navigated away from. Drop it entirely.
       if (mine !== generation.current) return
       if (!res.ok) {
-        // Only a 4xx means the cursor itself is dead; retrying it would just
+        // 422 means the keyset cursor is stale or malformed — the listing moved
+        // underneath us. The token can never be revived, but the listing can:
+        // refetch page 1 and replace what is on screen. Retrying the dead
+        // cursor, or just stopping, would strand the user mid-list.
+        if (res.status === 422) {
+          // Same filters, no cursor — that is what "page 1" means here.
+          params.delete('cursor')
+          const restart = await fetch(`${endpoint}?${params.toString()}`)
+          if (mine !== generation.current) return
+          if (restart.ok) {
+            const page = (await restart.json()) as Paginated<T>
+            if (mine !== generation.current) return
+            setRestarted(page.data)
+            setExtra([])
+            setCursor(page.meta.nextCursor)
+            setHasMore(page.meta.hasMore && Boolean(page.meta.nextCursor))
+            return
+          }
+          setHasMore(false)
+          setError({ code: 'invalid_cursor', status: 422 })
+          return
+        }
+        // Any other 4xx means the request itself is dead; retrying would just
         // fail again, so stop offering the control. A 5xx is transient, so
         // keep the button alive and let the user retry rather than forcing a
-        // full page reload.
+        // full page reload. Set this before reading the body: a stubbed or
+        // bodyless response must not divert us into the network-blip branch.
         if (res.status < 500) setHasMore(false)
-        setError('failed')
+        const body = (await Promise.resolve()
+          .then(() => res.json())
+          .catch(() => null)) as { code?: string } | null
+        setError({ code: body?.code, status: res.status })
         return
       }
       const page = (await res.json()) as Paginated<T>
@@ -93,9 +135,9 @@ export function useCursorPages<T>({
       setHasMore(page.meta.hasMore && Boolean(page.meta.nextCursor))
     } catch {
       // A thrown fetch is a network blip, not a rejected cursor — recoverable,
-      // so the control stays.
+      // so the control stays. No status to report.
       if (mine !== generation.current) return
-      setError('failed')
+      setError({})
     } finally {
       if (mine === generation.current) {
         inFlight.current = false
@@ -105,7 +147,9 @@ export function useCursorPages<T>({
   }, [cursor, endpoint, hasMore, loading, serializedQuery])
 
   return {
-    items: [...initialPage.data, ...extra],
+    items: restarted
+      ? [...restarted, ...extra]
+      : [...initialPage.data, ...extra],
     hasMore,
     loading,
     error,

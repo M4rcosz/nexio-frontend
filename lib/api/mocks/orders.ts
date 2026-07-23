@@ -17,10 +17,11 @@ import {
   multiplyMoney,
   sumMoney,
 } from '@/lib/money'
-import { bestPromotion } from '@/lib/promotions'
+import { bestPromotion, isPromotionLive } from '@/lib/promotions'
 import { VALID_TRANSITIONS } from '@/lib/orders/statusMachine'
 import { getChannelPolicy } from '@/lib/orders/channelPolicy'
 import { mockDelay } from './_delay'
+import { ApiError } from '@/lib/api/errors'
 
 const STORE: Order[] = []
 
@@ -95,8 +96,12 @@ export async function createOrderMock(
   const pointsRedeemed = body.pointsRedeemed ?? 0
   const itemsSubtotal = sumMoney(orderItems.map((i) => i.subtotal))
   // One promotion per order, applied before loyalty (backend contract).
+  // `bestPromotion` only guards the end of the window — the store also holds
+  // drafts and not-yet-started rows, so liveness is filtered here first.
   const applied = bestPromotion(
-    promotionsForUnitMockSync(body.businessUnitId),
+    promotionsForUnitMockSync(body.businessUnitId).filter((p) =>
+      isPromotionLive(p),
+    ),
     itemsSubtotal,
   )
   const total = itemsSubtotal
@@ -167,16 +172,29 @@ export async function listMyOrdersMock(
   // Match the real endpoint: createdAt desc, cursor-paginated.
   rows = [...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
   if (query.cursor) {
-    const idx = rows.findIndex((o) => o.id === query.cursor)
-    // Unknown cursor → return an empty page rather than the whole list.
-    rows = idx >= 0 ? rows.slice(idx + 1) : []
+    // `/orders/me` migrated to keyset too: its cursor is now an opaque token,
+    // not a row id, and a stale one is 422 rather than a silently short page.
+    // The old empty-page behaviour is what made the bug invisible.
+    const decoded = decodeOrdersCursor(query.cursor)
+    const idx = decoded ? rows.findIndex((o) => o.id === decoded.id) : -1
+    if (idx < 0) {
+      throw new ApiError(422, null, 'Invalid pagination cursor.')
+    }
+    rows = rows.slice(idx + 1)
   }
   const limit =
     query.limit && query.limit > 0 ? Math.min(Math.trunc(query.limit), 100) : 20
   const page = rows.slice(0, limit).map(withResolvedName)
   const hasMore = rows.length > limit
+  const last = page[page.length - 1]
   const nextCursor =
-    hasMore && page.length > 0 ? page[page.length - 1].id : null
+    hasMore && last
+      ? encodeOrdersCursor({
+          sortBy: 'createdAt',
+          sortDir: 'desc',
+          id: last.id,
+        })
+      : null
   return { data: page, meta: { limit, nextCursor, hasMore } }
 }
 
@@ -193,12 +211,14 @@ type OrderCursor = {
  * silently restarting the sort.
  */
 function encodeOrdersCursor(cursor: OrderCursor): string {
-  return Buffer.from(JSON.stringify(cursor), 'utf-8').toString('base64')
+  // base64url, no `=` padding — the charset the real tokens use, so a cursor
+  // that survives the mock also survives being put on a query string live.
+  return Buffer.from(JSON.stringify(cursor), 'utf-8').toString('base64url')
 }
 
 function decodeOrdersCursor(raw: string): OrderCursor | null {
   try {
-    const parsed = JSON.parse(Buffer.from(raw, 'base64').toString('utf-8'))
+    const parsed = JSON.parse(Buffer.from(raw, 'base64url').toString('utf-8'))
     if (
       parsed &&
       typeof parsed === 'object' &&

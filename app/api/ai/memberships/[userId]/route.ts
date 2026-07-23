@@ -1,6 +1,7 @@
+import { revalidateTag } from 'next/cache'
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { enrollAiMembership } from '@/lib/api/ai'
+import { enrollAiMembership, revokeAiMembership } from '@/lib/api/ai'
 import { ApiError, backendErrorStatus, describeError } from '@/lib/api/errors'
 import { getAdminContext } from '@/lib/auth/access'
 import { AI_TOKEN_MAX, AI_TOKEN_MIN } from '@/lib/validation/constants'
@@ -15,8 +16,17 @@ export async function POST(
   { params }: { params: Promise<{ userId: string }> },
 ) {
   const ctx = await getAdminContext()
-  if (!ctx || ctx.role !== 'ADMIN') {
-    return NextResponse.json({ error: 'Forbidden.' }, { status: 403 })
+  if (!ctx) {
+    return NextResponse.json(
+      { error: 'Session expired.', code: 'session_expired' },
+      { status: 401 },
+    )
+  }
+  if (ctx.role !== 'ADMIN') {
+    return NextResponse.json(
+      { error: 'Forbidden.', code: 'forbidden' },
+      { status: 403 },
+    )
   }
   const { userId } = await params
 
@@ -35,6 +45,9 @@ export async function POST(
 
   try {
     const membership = await enrollAiMembership(userId, parsed.initialBalance)
+    // The admin usage report is a tagged server read; without this a
+    // freshly changed membership would not show up until the tag expires.
+    revalidateTag('ai-memberships')
     return NextResponse.json(membership, { status: 201 })
   } catch (err) {
     if (err instanceof ApiError && err.status === 409) {
@@ -53,6 +66,48 @@ export async function POST(
         { status: 404 },
       )
     }
+    return NextResponse.json(
+      { error: describeError(err) },
+      { status: backendErrorStatus(err) },
+    )
+  }
+}
+
+/**
+ * Soft revoke: blocks all AI use while keeping the row and its balance. The
+ * upstream call is idempotent — re-revoking returns the same row, not an error
+ * — so the client needs no double-submit guard.
+ */
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ userId: string }> },
+) {
+  const ctx = await getAdminContext()
+  if (!ctx) {
+    return NextResponse.json(
+      { error: 'Session expired.', code: 'session_expired' },
+      { status: 401 },
+    )
+  }
+  if (ctx.role !== 'ADMIN') {
+    return NextResponse.json(
+      { error: 'Forbidden.', code: 'forbidden' },
+      { status: 403 },
+    )
+  }
+  const { userId } = await params
+
+  try {
+    const membership = await revokeAiMembership(userId)
+    if (!membership) {
+      return NextResponse.json(
+        { error: 'User is not enrolled.', code: 'not_enrolled' },
+        { status: 404 },
+      )
+    }
+    revalidateTag('ai-memberships')
+    return NextResponse.json(membership)
+  } catch (err) {
     return NextResponse.json(
       { error: describeError(err) },
       { status: backendErrorStatus(err) },

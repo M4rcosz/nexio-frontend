@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Select } from '@/components/ui/Select'
 import { clientFetch } from '@/lib/api/client'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
@@ -179,7 +180,24 @@ export function OrderBoard({
       if (id !== requestId.current) return
       setOrders((cur) => mergeUnique(cur, page.data))
       setMeta(page.meta)
-    } catch {
+    } catch (err) {
+      if (id !== requestId.current) return
+      // 422 means the cursor is stale or sort-mismatched — the board moved
+      // underneath us. The token is unrecoverable but the listing is not:
+      // restart from page 1 under the current filters. Retrying the dead
+      // cursor would fail identically, forever.
+      if ((err as { status?: number })?.status === 422) {
+        try {
+          const page = await fetchPage(filters, sortBy, sortDir)
+          if (id !== requestId.current) return
+          setOrders(page.data)
+          setMeta(page.meta)
+          setListError(errorMessage('invalid_cursor', 422) ?? t('loadFailed'))
+        } catch {
+          // the restart failed too; leave the list as-is for a manual retry
+        }
+        return
+      }
       // keep current list; the button stays available for a retry
     } finally {
       setLoadingMore(false)
@@ -631,19 +649,19 @@ function MoreFiltersPopover({
               />
             </Field>
             <Field label={t('filters.from')}>
-              <input
-                type="date"
-                className="input"
+              <DatePicker
+                ariaLabel={t('filters.from')}
                 value={filters.createdAtFrom}
-                onChange={(e) => setFilter('createdAtFrom', e.target.value)}
+                max={filters.createdAtTo || undefined}
+                onChange={(v) => setFilter('createdAtFrom', v)}
               />
             </Field>
             <Field label={t('filters.to')}>
-              <input
-                type="date"
-                className="input"
+              <DatePicker
+                ariaLabel={t('filters.to')}
                 value={filters.createdAtTo}
-                onChange={(e) => setFilter('createdAtTo', e.target.value)}
+                min={filters.createdAtFrom || undefined}
+                onChange={(v) => setFilter('createdAtTo', v)}
               />
             </Field>
             <Field label={t('filters.minTotal')}>

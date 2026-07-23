@@ -5,7 +5,7 @@ import {
   getBusinessUnitInternal,
   updateBusinessUnit,
 } from '@/lib/api/business-units'
-import { ApiError, describeError } from '@/lib/api/errors'
+import { ApiError, backendErrorStatus, describeError } from '@/lib/api/errors'
 import { getAdminContext } from '@/lib/auth/access'
 
 // `.strict()` rejects unknown keys (cnpj, isActive, id, timestamps, …) with a
@@ -46,13 +46,15 @@ export async function GET(
     }
     return NextResponse.json(unit)
   } catch (err) {
-    if (err instanceof ApiError && err.status < 500) {
-      return NextResponse.json(
-        { error: describeError(err) },
-        { status: err.status },
-      )
-    }
-    return NextResponse.json({ error: describeError(err) }, { status: 502 })
+    // `backendErrorStatus` normalizes `err.status || 500` first. A bare
+    // `err.status < 500` is wrong: `serverFetch` throws `ApiError(0, …)` on a
+    // network failure or the 4s timeout, and passing 0 to `NextResponse.json`
+    // is outside the legal 200..599 range, so it throws a RangeError and the
+    // caller gets an opaque framework 500 exactly when the backend is down.
+    return NextResponse.json(
+      { error: describeError(err) },
+      { status: backendErrorStatus(err) },
+    )
   }
 }
 

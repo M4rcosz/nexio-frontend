@@ -1,7 +1,9 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { getAdminContext } from '@/lib/auth/access'
 import { listInternalUsers } from '@/lib/api/admin-users'
+import { listAiMembershipUsage } from '@/lib/api/ai'
 import { AiMembershipManager } from '@/components/admin/AiMembershipManager'
+import { AiUsageReport } from '@/components/admin/AiUsageReport'
 import { BackendBadge } from '@/components/StubBadge'
 
 export const dynamic = 'force-dynamic'
@@ -31,12 +33,17 @@ export default async function AdminAiPage({
     )
   }
 
-  // Staff users are the convenient targets we can enumerate (there is no
-  // customer-listing endpoint); an admin can also paste any userId directly.
-  // Membership picker needs the whole roster, not a page of it — ask for the
-  // server's maximum. Unchanged from the pre-pagination behaviour, which also
-  // topped out at 100.
-  const { data: users } = await listInternalUsers(ctx, { limit: 100 })
+  // Staff users are the targets we can enumerate for the picker (there is no
+  // customer-listing endpoint). The dropdown needs the whole roster, not a page
+  // of it — ask for the server's maximum. Unchanged from the pre-pagination
+  // behaviour, which also topped out at 100.
+  // The usage report defaults to the last 30 days server-side; its own
+  // `periodFrom`/`periodTo` is what the client renders, so nothing is assumed
+  // about that window here.
+  const [{ data: users }, usage] = await Promise.all([
+    listInternalUsers(ctx, { limit: 100 }),
+    listAiMembershipUsage(),
+  ])
 
   return (
     <div className="space-y-6">
@@ -60,6 +67,8 @@ export default async function AdminAiPage({
           role: u.role,
         }))}
       />
+
+      <AiUsageReport initialReport={usage} />
     </div>
   )
 }

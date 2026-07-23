@@ -27,7 +27,7 @@ vi.mock('@/lib/auth/access', () => ({
 }))
 
 const { GET } = await import('@/app/api/admin/users/route')
-const call = () => GET(new Request('http://x/api/admin/users'))
+const call = (qs = '') => GET(new Request(`http://x/api/admin/users${qs}`))
 
 beforeEach(() => {
   thrown = null
@@ -76,5 +76,50 @@ describe('GET /api/admin/users error mapping', () => {
     const res = await call()
     expect(res.status).toBe(401)
     expect((await res.json()).code).toBe('session_expired')
+  })
+
+  it('rejects an unknown role with 400 instead of silently ignoring it', async () => {
+    // Contract §1.2. Dropping it would answer a typo with the *full*
+    // unfiltered list, which looks plausible and is wrong.
+    const res = await call('?role=ATENDANT')
+    expect(res.status).toBe(400)
+  })
+
+  it('drops a well-formed role the actor may not manage, without erroring', async () => {
+    // Distinct from the malformed case: valid input, deliberately not honoured.
+    session = {
+      ...ctx,
+      role: 'MANAGER',
+      manageableRoles: ['ATTENDANT', 'KITCHEN'],
+    }
+    const res = await call('?role=ADMIN')
+    expect(res.status).toBe(200)
+  })
+
+  // The cursor is an opaque keyset token, not a row id. Anything within the
+  // 512-char cap must be forwarded verbatim — only the backend can judge it,
+  // and it answers 422. Rejecting non-uuids here would break every real cursor.
+  it('forwards an opaque cursor token instead of validating its shape', async () => {
+    const res = await call(
+      '?cursor=eyJ0aW1lc3RhbXAiOiIyMDI2LTA3LTIyVDE5OjU3OjE0LjEyM1oiLCJpZCI6ImFiYyJ9',
+    )
+    expect(res.status).toBe(200)
+  })
+
+  it('rejects a cursor over the 512-char cap', async () => {
+    const res = await call(`?cursor=${'a'.repeat(513)}`)
+    expect(res.status).toBe(400)
+  })
+
+  it('rejects an over-long email filter', async () => {
+    const res = await call(`?email=${'a'.repeat(121)}`)
+    expect(res.status).toBe(400)
+  })
+
+  it('maps an upstream 422 to a coded invalid_cursor the client can reset on', async () => {
+    thrown = new ApiError(422, null, 'bad cursor')
+    const res = await call('?cursor=stale-token')
+    expect(res.status).toBe(422)
+    await expect(res.json()).resolves.toMatchObject({ code: 'invalid_cursor' })
   })
 })

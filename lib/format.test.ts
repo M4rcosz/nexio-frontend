@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { cnpjDigits, maskCnpj, formatDateTime } from './format'
+import {
+  cnpjDigits,
+  dayKey,
+  maskCnpj,
+  formatDateLabel,
+  formatDateTime,
+  formatTime,
+} from './format'
 
 describe('cnpjDigits', () => {
   it('strips every non-digit', () => {
@@ -57,5 +64,51 @@ describe('formatDateTime', () => {
     expect(formatDateTime('2026-07-06T15:30:00Z', '!!invalid')).toBe(
       '2026-07-06T15:30:00Z',
     )
+  })
+})
+
+describe('formatDateLabel', () => {
+  it('formats the day without a time part', () => {
+    const out = formatDateLabel('2026-07-06T15:30:00Z', 'en')
+    expect(out).toMatch(/Jul/)
+    expect(out).toMatch(/2026/)
+    expect(out).not.toMatch(/:/)
+  })
+
+  it('falls back to the raw ISO when the locale is invalid', () => {
+    expect(formatDateLabel('2026-07-06T15:30:00Z', '!!invalid')).toBe(
+      '2026-07-06T15:30:00Z',
+    )
+  })
+})
+
+describe('formatTime', () => {
+  it('formats only hour and minute', () => {
+    expect(formatTime('2026-07-06T15:30:00Z', 'en')).toMatch(/\d{1,2}:\d{2}/)
+  })
+
+  it('falls back to the raw ISO when the locale is invalid', () => {
+    expect(formatTime('2026-07-06T15:30:00Z', '!!invalid')).toBe(
+      '2026-07-06T15:30:00Z',
+    )
+  })
+})
+
+describe('dayKey', () => {
+  it('keys two instants on the same local day identically', () => {
+    const a = new Date(2026, 6, 6, 0, 5).toISOString()
+    const b = new Date(2026, 6, 6, 23, 55).toISOString()
+    expect(dayKey(a)).toBe(dayKey(b))
+    expect(dayKey(a)).toBe('2026-07-06')
+  })
+
+  it('separates adjacent local days', () => {
+    const a = new Date(2026, 6, 6, 23, 55).toISOString()
+    const b = new Date(2026, 6, 7, 0, 5).toISOString()
+    expect(dayKey(a)).not.toBe(dayKey(b))
+  })
+
+  it('returns the raw input for an unparseable date', () => {
+    expect(dayKey('not-a-date')).toBe('not-a-date')
   })
 })

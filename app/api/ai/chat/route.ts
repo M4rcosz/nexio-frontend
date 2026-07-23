@@ -14,6 +14,9 @@ const Turn = z.object({
 })
 
 const Body = z.object({
+  // Omit to open a new thread; echo the response's id back to continue one.
+  // When present the server replays its own stored turns and ignores `history`.
+  conversationId: z.string().uuid().optional(),
   message: z.string().min(1).max(CHAT_MESSAGE_MAX_LENGTH),
   history: z.array(Turn).max(CHAT_HISTORY_MAX_TURNS).optional(),
 })
@@ -46,6 +49,14 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: 'No AI access.', code: 'chat_no_access' },
         { status: 403 },
+      )
+    }
+    if (err instanceof ApiError && err.status === 404) {
+      // The thread is gone (deleted, or never the caller's — indistinguishable
+      // by design). The client drops its stored id and starts a fresh thread.
+      return NextResponse.json(
+        { error: 'Conversation not found.', code: 'conversation_not_found' },
+        { status: 404 },
       )
     }
     if (err instanceof ApiError && err.status === 503) {

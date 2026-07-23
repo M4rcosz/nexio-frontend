@@ -81,22 +81,57 @@ describe('CustomerList', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('stops offering a cursor the server rejected with a 4xx', async () => {
+  it('stops offering a cursor the server rejected with a non-422 4xx', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockResolvedValue({ ok: false, status: 404 } as Response)
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: async () => ({}),
+    } as Response)
 
     renderList(pageOf([customer('c1', 'Carla Oliveira')], 'c1'))
     await user.click(screen.getByRole('button', { name: 'Load more' }))
 
+    // No machine code in the body, so the status maps to the generic message.
     await waitFor(() =>
       expect(screen.getByRole('alert')).toHaveTextContent(
-        'Could not load more results.',
+        "We couldn't find what you're looking for.",
       ),
     )
     // Retrying a cursor the server has already refused would just fail again.
     expect(
       screen.queryByRole('button', { name: 'Load more' }),
     ).not.toBeInTheDocument()
+  })
+
+  it('restarts from page 1 when the keyset cursor is rejected with 422', async () => {
+    const user = userEvent.setup()
+    vi.mocked(fetch)
+      // The dead cursor.
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 422,
+        json: async () => ({ code: 'invalid_cursor' }),
+      } as Response)
+      // The automatic restart: same filters, no cursor.
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => pageOf([customer('c9', 'Rita Alves')], null),
+      } as Response)
+
+    renderList(pageOf([customer('c1', 'Carla Oliveira')], 'stale-token'))
+    await user.click(screen.getByRole('button', { name: 'Load more' }))
+
+    // Page 1 replaces the whole list — the server-rendered rows came from the
+    // same result set the dead cursor pointed into, so they are stale too.
+    await waitFor(() =>
+      expect(screen.getAllByText('Rita Alves').length).toBeGreaterThan(0),
+    )
+    expect(screen.queryByText('Carla Oliveira')).not.toBeInTheDocument()
+
+    const restartUrl = vi.mocked(fetch).mock.calls[1][0] as string
+    expect(restartUrl).not.toContain('cursor=')
+    expect(restartUrl).toContain('search=a')
   })
 
   // NOTE: the stale-response race guarded by the `generation` ref in
