@@ -26,27 +26,27 @@ export default function HomeLoading() {
             <Skeleton className="h-7 w-56" />
             <Skeleton className="h-3 w-20" />
           </div>
-          <Skeleton className="h-6 w-16 rounded-full" />
+          <Skeleton className="h-10 w-32 rounded-xl" />
         </div>
 
-        <ul className="grid gap-5 sm:grid-cols-2">
-          {Array.from({ length: 4 }).map((_, i) => (
+        {/* Mirrors the page's product grid (intrinsic auto-fill columns) with
+            a ProductCard-shaped item — see units/[id]/loading.tsx. */}
+        <ul className="grid gap-5 sm:grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]">
+          {Array.from({ length: 5 }).map((_, i) => (
             <li key={i}>
-              <SkeletonCard className="p-6">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-2">
-                    <Skeleton className="h-3 w-24" />
-                    <Skeleton className="h-6 w-48" />
+              <SkeletonCard className="flex h-full flex-col">
+                <Skeleton className="aspect-[16/10] w-full !rounded-none" />
+                <div className="space-y-2.5 p-5">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-3.5 w-full" />
+                  <Skeleton className="h-3.5 w-2/3" />
+                  <div className="flex items-end justify-between gap-2 pt-3">
+                    <div className="space-y-1.5">
+                      <Skeleton className="h-2.5 w-12" />
+                      <Skeleton className="h-6 w-20" />
+                    </div>
+                    <Skeleton className="h-9 w-28 rounded-xl" />
                   </div>
-                  <Skeleton className="h-5 w-14 rounded-full" />
-                </div>
-                <div className="mt-5 space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-                <div className="mt-6 flex items-center gap-2 border-t border-border pt-4">
-                  <Skeleton className="h-10 flex-1 rounded-xl" />
-                  <Skeleton className="h-10 w-28 rounded-xl" />
                 </div>
               </SkeletonCard>
             </li>

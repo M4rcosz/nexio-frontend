@@ -9,6 +9,7 @@ import { listProducts } from '@/lib/api/products'
 import { MenuManageTable } from '@/components/admin/MenuManageTable'
 import { AddMenuItemForm } from '@/components/admin/AddMenuItemForm'
 import { AdminUnitSelector } from '@/components/admin/AdminUnitSelector'
+import { AdminFormCard } from '@/components/admin/AdminFormCard'
 
 export const dynamic = 'force-dynamic'
 
@@ -102,12 +103,12 @@ export default async function AdminMenuPage({
         productNames={productNames}
       />
 
-      <div className="card p-6">
+      <AdminFormCard>
         <AddMenuItemForm
           businessUnitId={selectedUnitId}
           products={productsPage.data.map((p) => ({ id: p.id, name: p.name }))}
         />
-      </div>
+      </AdminFormCard>
     </div>
   )
 }

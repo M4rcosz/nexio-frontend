@@ -5,6 +5,7 @@ import { getAdminContext } from '@/lib/auth/access'
 import { getProduct } from '@/lib/api/products'
 import { listCategories } from '@/lib/api/categories'
 import { ProductForm } from '@/components/admin/ProductForm'
+import { AdminFormCard } from '@/components/admin/AdminFormCard'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,13 +42,13 @@ export default async function EditProductPage({
         </h1>
         <p className="mt-1 text-sm text-fg-muted">{t('editSubtitle')}</p>
       </header>
-      <div className="card p-6">
+      <AdminFormCard>
         <ProductForm
           mode="edit"
           product={product}
           categories={categoriesPage.data}
         />
-      </div>
+      </AdminFormCard>
     </div>
   )
 }

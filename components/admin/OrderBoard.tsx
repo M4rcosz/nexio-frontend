@@ -364,7 +364,7 @@ export function OrderBoard({
         </div>
       ) : (
         <div
-          className={`card overflow-hidden p-0 ${loading ? 'opacity-50' : ''}`}
+          className={`card max-w-[1400px] overflow-hidden p-0 ${loading ? 'opacity-50' : ''}`}
           aria-busy={loading}
         >
           <div className="scrollbar-thin overflow-x-auto">
@@ -441,37 +441,39 @@ export function OrderBoard({
                           {unit?.name ?? order.businessUnitId}
                         </td>
                       ) : null}
-                      <td className="max-w-[220px] px-3 py-3 text-xs text-fg-muted">
-                        {order.customerName ? (
-                          <p className="truncate font-medium text-fg">
-                            {order.customerName}
-                          </p>
-                        ) : null}
-                        {order.attendantId ? (
-                          <p
-                            title={order.attendantId}
-                            className="whitespace-nowrap"
-                          >
-                            {t('table.attendantOf', {
-                              id: shortOrderRef(order.attendantId),
-                            })}
-                          </p>
-                        ) : null}
-                        {order.customerId ? (
-                          <p
-                            title={order.customerId}
-                            className="whitespace-nowrap"
-                          >
-                            {t('table.customerOf', {
-                              id: shortOrderRef(order.customerId),
-                            })}
-                          </p>
-                        ) : null}
-                        {!order.customerName &&
-                        !order.attendantId &&
-                        !order.customerId
-                          ? '—'
-                          : null}
+                      <td className="px-3 py-3 text-xs text-fg-muted">
+                        <div className="max-w-[220px]">
+                          {order.customerName ? (
+                            <p className="truncate font-medium text-fg">
+                              {order.customerName}
+                            </p>
+                          ) : null}
+                          {order.attendantId ? (
+                            <p
+                              title={order.attendantId}
+                              className="whitespace-nowrap"
+                            >
+                              {t('table.attendantOf', {
+                                id: shortOrderRef(order.attendantId),
+                              })}
+                            </p>
+                          ) : null}
+                          {order.customerId ? (
+                            <p
+                              title={order.customerId}
+                              className="whitespace-nowrap"
+                            >
+                              {t('table.customerOf', {
+                                id: shortOrderRef(order.customerId),
+                              })}
+                            </p>
+                          ) : null}
+                          {!order.customerName &&
+                          !order.attendantId &&
+                          !order.customerId
+                            ? '—'
+                            : null}
+                        </div>
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums text-fg">
                         {formatMoney(order.totalAmount, locale)}

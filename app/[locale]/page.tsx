@@ -124,7 +124,11 @@ export default async function HomePage({
               <p className="text-sm text-fg-muted">{tMenu('empty')}</p>
             </div>
           ) : (
-            <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            // Intrinsic columns: the card keeps its size and the grid gains
+            // columns as the shell widens. The `sm:` prefix is load-bearing —
+            // unprefixed, 17rem tracks would fit two columns at ~600px where
+            // today there is one.
+            <ul className="grid gap-5 sm:grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]">
               {products.map((p) => (
                 <li key={p.id}>
                   <ProductCard

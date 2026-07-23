@@ -126,7 +126,7 @@ export function AdminSidebar({ role }: { role: AdminRole }) {
   return (
     <>
       {/* Desktop: sticky vertical rail (lg and up). */}
-      <aside className="hidden lg:sticky lg:top-24 lg:block">
+      <aside className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
         <nav className="card overflow-hidden p-0">
           <div className="border-b border-border px-4 py-3">
             <p className="font-mono text-[10px] uppercase tracking-widest text-fg-subtle">

@@ -5,6 +5,7 @@ import { getAdminContext } from '@/lib/auth/access'
 import { getInternalUser } from '@/lib/api/admin-users'
 import { listBusinessUnits } from '@/lib/api/business-units'
 import { UserForm } from '@/components/admin/UserForm'
+import { AdminFormCard } from '@/components/admin/AdminFormCard'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,7 +39,7 @@ export default async function EditUserPage({
         </h1>
         <p className="mt-1 text-sm text-fg-muted">{t('editSubtitle')}</p>
       </header>
-      <div className="card p-6">
+      <AdminFormCard>
         <UserForm
           mode="edit"
           user={user}
@@ -48,7 +49,7 @@ export default async function EditUserPage({
           }
           manageableRoles={ctx.manageableRoles}
         />
-      </div>
+      </AdminFormCard>
     </div>
   )
 }

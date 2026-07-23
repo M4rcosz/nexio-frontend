@@ -2,6 +2,8 @@ import { headers } from 'next/headers'
 import { getTranslations } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { PATHNAME_HEADER, stripLocale } from '@/lib/i18n/pathname'
+import { shellTier } from '@/lib/layout/shell'
+import { Shell } from '@/components/layout/Shell'
 import { getSession } from '@/lib/auth/session'
 import { getMyAiMembership } from '@/lib/api/ai'
 import type { Theme } from '@/lib/theme'
@@ -28,6 +30,8 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
   // physically operated by walk-up customers. Suppress the account menu and all
   // nav so a customer can't log the device out or reach staff/admin areas
   // mid-order. Interim mitigation until /totem gets its own chrome-less layout.
+  // The same pathname also picks the nav's width tier so the header lines up
+  // with the page shell — clamped, so /login never squeezes it to the prose cap.
   const pathname = stripLocale((await headers()).get(PATHNAME_HEADER) ?? '')
   const isKiosk = pathname === '/totem' || pathname.startsWith('/totem/')
   const t = await getTranslations('header')
@@ -39,7 +43,11 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-bg/70 backdrop-blur-xl">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3 lg:px-8">
+      <Shell
+        tier={shellTier(pathname)}
+        clamp
+        className="flex items-center justify-between gap-2 py-2.5 sm:gap-3 sm:py-3"
+      >
         <Link
           href="/"
           className="group flex min-w-0 items-center gap-1.5 transition-opacity hover:opacity-90 sm:gap-2"
@@ -123,7 +131,7 @@ export async function Header({ initialTheme }: { initialTheme: Theme }) {
           <ThemeToggle initial={initialTheme} />
           {showCart ? <CartBadge /> : null}
         </nav>
-      </div>
+      </Shell>
     </header>
   )
 }

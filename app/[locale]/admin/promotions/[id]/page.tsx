@@ -5,6 +5,7 @@ import { getAdminContext } from '@/lib/auth/access'
 import { getPromotion } from '@/lib/api/promotions'
 import { listBusinessUnitsInternal } from '@/lib/api/business-units'
 import { PromotionForm } from '@/components/admin/PromotionForm'
+import { AdminFormCard } from '@/components/admin/AdminFormCard'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,7 +50,7 @@ export default async function EditPromotionPage({
         </h1>
         <p className="mt-1 text-sm text-fg-muted">{t('editSubtitle')}</p>
       </header>
-      <div className="card p-6">
+      <AdminFormCard>
         <PromotionForm
           mode="edit"
           promotion={promotion}
@@ -74,7 +75,7 @@ export default async function EditPromotionPage({
               : promotion.businessUnitId
           }
         />
-      </div>
+      </AdminFormCard>
     </div>
   )
 }

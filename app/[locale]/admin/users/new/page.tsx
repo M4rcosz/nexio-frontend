@@ -3,6 +3,7 @@ import { Link } from '@/i18n/navigation'
 import { getAdminContext } from '@/lib/auth/access'
 import { listBusinessUnits } from '@/lib/api/business-units'
 import { UserForm } from '@/components/admin/UserForm'
+import { AdminFormCard } from '@/components/admin/AdminFormCard'
 
 export default async function NewUserPage({
   params,
@@ -30,7 +31,7 @@ export default async function NewUserPage({
         </h1>
         <p className="mt-1 text-sm text-fg-muted">{t('createSubtitle')}</p>
       </header>
-      <div className="card p-6">
+      <AdminFormCard>
         <UserForm
           mode="create"
           units={units}
@@ -39,7 +40,7 @@ export default async function NewUserPage({
           }
           manageableRoles={ctx.manageableRoles}
         />
-      </div>
+      </AdminFormCard>
     </div>
   )
 }

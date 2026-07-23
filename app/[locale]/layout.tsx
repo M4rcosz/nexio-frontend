@@ -1,13 +1,17 @@
 import type { Metadata } from 'next'
 import dynamic from 'next/dynamic'
 import { Inter, Space_Grotesk } from 'next/font/google'
+import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { hasLocale, NextIntlClientProvider } from 'next-intl'
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { routing } from '@/i18n/routing'
+import { PATHNAME_HEADER } from '@/lib/i18n/pathname'
+import { shellTier } from '@/lib/layout/shell'
 import { Header } from '@/components/Header'
 import { PrefetchRoutes } from '@/components/PrefetchRoutes'
 import { RouteTransition } from '@/components/RouteTransition'
+import { Shell } from '@/components/layout/Shell'
 import { TenantProvider } from '@/components/TenantProvider'
 import { getSession } from '@/lib/auth/session'
 import { getTheme } from '@/lib/theme'
@@ -73,6 +77,12 @@ export default async function LocaleLayout({
   if (!hasLocale(routing.locales, locale)) notFound()
   setRequestLocale(locale)
 
+  // Width tier for this route. The middleware stamps the pathname on the
+  // request (server components cannot read the URL); an absent header resolves
+  // to the conservative default tier. This layout is already request-dynamic
+  // (cookies + headers), so the read costs nothing extra.
+  const tier = shellTier((await headers()).get(PATHNAME_HEADER) ?? '')
+
   const t = await getTranslations({ locale, namespace: 'footer' })
   const theme = await getTheme()
   const tenant = await getTenant()
@@ -97,10 +107,14 @@ export default async function LocaleLayout({
             <PrefetchRoutes />
             <div className="relative flex min-h-screen flex-col">
               <Header initialTheme={theme} />
-              <main className="mx-auto w-full max-w-6xl flex-1 px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
+              <Shell as="main" tier={tier} className="flex-1 py-5 sm:py-8">
                 <RouteTransition>{children}</RouteTransition>
-              </main>
-              <footer className="mx-auto w-full max-w-6xl px-3 pb-8 pt-12 text-xs text-fg-subtle sm:px-6 sm:pb-10 sm:pt-16 lg:px-8">
+              </Shell>
+              <Shell
+                as="footer"
+                tier={tier}
+                className="pb-8 pt-12 text-xs text-fg-subtle sm:pb-10 sm:pt-16"
+              >
                 <div className="flex flex-col items-start justify-between gap-2 border-t border-border pt-5 sm:flex-row sm:items-center sm:pt-6">
                   <p>
                     {t('tagline', {
@@ -109,7 +123,7 @@ export default async function LocaleLayout({
                     })}
                   </p>
                 </div>
-              </footer>
+              </Shell>
             </div>
             <DevAccountSwitcher currentUsername={devUsername} />
           </TenantProvider>

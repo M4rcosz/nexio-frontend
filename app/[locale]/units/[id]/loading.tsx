@@ -38,8 +38,8 @@ export default function MenuLoading() {
           ))}
         </div>
 
-        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
+        <ul className="grid gap-5 sm:grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]">
+          {Array.from({ length: 10 }).map((_, i) => (
             <li key={i}>
               <SkeletonCard className="flex h-full flex-col">
                 <Skeleton className="aspect-[16/10] w-full !rounded-none" />
