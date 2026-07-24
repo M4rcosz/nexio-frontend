@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
 import { AiConversationList } from './AiConversationList'
+import { Markdown } from './Markdown'
 import { useCursorPages } from '@/components/admin/useCursorPages'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
 import { formatDateTime } from '@/lib/format'
@@ -71,7 +72,18 @@ export function AiAssistantView({
 
   /** The open thread. `null` means the next send opens a new one. */
   const [conversationId, setConversationId] = useState<string | null>(null)
+  /** The open thread's title — drives the chat header; `null` shows the eyebrow
+   *  fallback (`chatTitle`) when no thread is open. */
+  const [openTitle, setOpenTitle] = useState<string | null>(null)
   const [loadingThread, setLoadingThread] = useState(false)
+
+  // Title search. The box updates `search` on every keystroke; a debounced copy
+  // drives the actual fetch so we don't hit the route on each character.
+  const [search, setSearch] = useState('')
+  const [debouncedTerm, setDebouncedTerm] = useState('')
+  // True while a debounced search fetch is in flight — dims the rail and holds
+  // its empty state so results don't flash in and out.
+  const [searching, setSearching] = useState(false)
 
   const nextId = useRef(0)
   const listRef = useRef<HTMLDivElement>(null)
@@ -87,11 +99,55 @@ export function AiAssistantView({
     loading: loadingThreads,
     error: threadsError,
     loadMore,
+    updateItem,
   } = useCursorPages<AiConversationSummary>({
     endpoint: '/api/ai/conversations',
-    query: {},
+    // The title filter rides along on every follow-up page so appended pages
+    // compose it with the cursor — same query the first-page fetch below uses.
+    query: { title: debouncedTerm || undefined },
     initialPage: firstPage,
   })
+
+  // Debounce the search box; a blank/whitespace term means "unfiltered".
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedTerm(search.trim()), 300)
+    return () => clearTimeout(id)
+  }, [search])
+
+  // Skip the very first run: `initialConversations` is already the unfiltered
+  // page one, so there is nothing to refetch until the term actually moves.
+  const searchMounted = useRef(false)
+  useEffect(() => {
+    if (!searchMounted.current) {
+      searchMounted.current = true
+      return
+    }
+    // Abort a still-in-flight search so an earlier, slower response can't land
+    // after a newer one and show stale results for a query already navigated off.
+    const controller = new AbortController()
+    setSearching(true)
+    void (async () => {
+      try {
+        const params = new URLSearchParams()
+        if (debouncedTerm) params.set('title', debouncedTerm)
+        const qs = params.toString()
+        const res = await fetch(`/api/ai/conversations${qs ? `?${qs}` : ''}`, {
+          signal: controller.signal,
+        })
+        if (!res.ok) return
+        // New identity resets the paginator's cursor/appended pages, so the
+        // filtered list starts clean from page one.
+        setFirstPage((await res.json()) as Paginated<AiConversationSummary>)
+      } catch {
+        // Aborted or a network blip — leave the last good page on screen.
+      } finally {
+        // Only the request that is still current clears the flag — a superseded
+        // (aborted) one must not turn off the spinner the newer request just lit.
+        if (!controller.signal.aborted) setSearching(false)
+      }
+    })()
+    return () => controller.abort()
+  }, [debouncedTerm])
 
   const balance = membership?.tokenBalance ?? 0
   const revoked = accessBlock === 'revoked'
@@ -140,6 +196,7 @@ export function AiAssistantView({
    * send starts fresh instead of retrying a dead one, and resync the list. */
   function dropDeadThread() {
     setConversationId(null)
+    setOpenTitle(null)
     setMessages([])
     setError(t('threadGone'))
     void reloadThreads()
@@ -207,8 +264,9 @@ export function AiAssistantView({
       }
 
       const data = (await res.json()) as ChatResponse
-      // Persist the server-issued id for the rest of this conversation.
+      // Persist the server-issued id + title for the rest of this conversation.
       setConversationId(data.conversationId)
+      setOpenTitle(data.conversationTitle)
       setMessages((prev) => [
         ...prev,
         {
@@ -243,7 +301,7 @@ export function AiAssistantView({
     setError(null)
     setTransient(false)
     try {
-      const res = await fetch(`/api/ai/conversations/${id}`)
+      const res = await fetch(`/api/ai/conversations/${encodeURIComponent(id)}`)
       if (res.status === 404) {
         dropDeadThread()
         return
@@ -263,6 +321,7 @@ export function AiAssistantView({
         })),
       )
       setConversationId(detail.id)
+      setOpenTitle(detail.title)
     } catch {
       setError(errorMessage(null, 0) ?? t('threadLoadFailed'))
     } finally {
@@ -273,9 +332,45 @@ export function AiAssistantView({
   function newChat() {
     if (busy) return
     setConversationId(null)
+    setOpenTitle(null)
     setMessages([])
     setError(null)
     setTransient(false)
+  }
+
+  /**
+   * Rename a thread. The row is patched IN PLACE from the response's normalized
+   * title — no reorder, no `reloadThreads`. `updateItem` covers whichever page
+   * the row sits on (page one or an appended one) via an id-keyed overlay, so
+   * loaded pages survive. A 404 means the thread is gone; anything else surfaces
+   * a generic failure (a 422 shouldn't reach here after client validation).
+   */
+  async function renameThread(id: string, title: string) {
+    setError(null)
+    let res: Response
+    try {
+      res = await fetch(`/api/ai/conversations/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ title }),
+      })
+    } catch {
+      setError(t('renameFailed'))
+      return
+    }
+    if (res.status === 404) {
+      // The thread was deleted out from under us — drop it and resync the list.
+      if (id === conversationId) dropDeadThread()
+      else await reloadThreads()
+      return
+    }
+    if (!res.ok) {
+      setError(t('renameFailed'))
+      return
+    }
+    const summary = (await res.json()) as AiConversationSummary
+    updateItem(id, { title: summary.title })
+    if (id === conversationId) setOpenTitle(summary.title)
   }
 
   async function deleteThread(id: string) {
@@ -283,9 +378,10 @@ export function AiAssistantView({
     setError(null)
     try {
       // Idempotent upstream, so no guard against a double confirm is needed.
-      const res = await fetch(`/api/ai/conversations/${id}`, {
-        method: 'DELETE',
-      })
+      const res = await fetch(
+        `/api/ai/conversations/${encodeURIComponent(id)}`,
+        { method: 'DELETE' },
+      )
       if (!res.ok && res.status !== 404) {
         setError(errorMessage(null, res.status) ?? t('deleteThreadFailed'))
         return
@@ -295,6 +391,7 @@ export function AiAssistantView({
       // replied to.
       if (id === conversationId) {
         setConversationId(null)
+        setOpenTitle(null)
         setMessages([])
       }
     } catch {
@@ -312,7 +409,10 @@ export function AiAssistantView({
   }
 
   return (
-    <div className="grid gap-5 md:grid-cols-3">
+    // Two panes. Up to lg the chat takes two of three equal columns; from xl
+    // (where the shell goes wide) the side column is pinned so every extra
+    // pixel goes to the chat instead of inflating the balance card.
+    <div className="grid gap-5 md:grid-cols-3 xl:grid-cols-[20rem_1fr]">
       <div className="space-y-5">
         {/* Balance / status */}
         <section className="card h-max p-6">
@@ -367,7 +467,11 @@ export function AiAssistantView({
             hasMore={hasMore}
             loading={loadingThreads}
             error={threadsError}
+            searchTerm={search}
+            searching={searching}
+            onSearchChange={setSearch}
             onOpen={openThread}
+            onRename={renameThread}
             onDelete={deleteThread}
             onNewChat={newChat}
             onLoadMore={loadMore}
@@ -377,42 +481,54 @@ export function AiAssistantView({
       </div>
 
       {/* Chat */}
-      <section className="card flex min-h-[28rem] flex-col p-0 md:col-span-2">
+      <section className="card flex min-h-[28rem] flex-col p-0 md:col-span-2 xl:col-span-1">
         <div className="border-b border-border px-5 py-3">
           <p className="text-[11px] font-mono uppercase tracking-widest text-fg-subtle">
             {t('chatTitle')}
           </p>
+          {openTitle ? (
+            <p
+              className="mt-0.5 truncate text-sm font-semibold text-fg"
+              title={openTitle}
+            >
+              {openTitle}
+            </p>
+          ) : null}
         </div>
 
         <div
           ref={listRef}
-          className="scrollbar-thin flex-1 space-y-4 overflow-y-auto px-5 py-5"
+          className="scrollbar-thin flex-1 overflow-y-auto px-5 py-5"
         >
-          {messages.length === 0 && !busy ? (
-            <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-              <span className="text-4xl" aria-hidden>
-                💬
-              </span>
-              <p className="max-w-sm text-sm text-fg-muted">
-                {t('emptyState')}
-              </p>
-            </div>
-          ) : (
-            <>
-              {/* Past this length the model no longer sees the earliest turns,
-                  even though the transcript below is complete. Surfacing it
-                  beats letting the assistant look forgetful. */}
-              {messages.length > CHAT_REPLAYED_TURNS ? (
-                <p className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-center text-[11px] text-fg-subtle">
-                  {t('contextTrimmed', { count: CHAT_REPLAYED_TURNS })}
+          {/* The pane widens, the message column does not: past ~75ch the
+              bubbles turn into unreadable full-width lines. */}
+          <div className="mx-auto flex min-h-full w-full max-w-[75ch] flex-col gap-4">
+            {messages.length === 0 && !busy ? (
+              <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
+                <span className="text-4xl" aria-hidden>
+                  💬
+                </span>
+                <p className="max-w-sm text-sm text-fg-muted">
+                  {t('emptyState')}
                 </p>
-              ) : null}
-              {messages.map((m) => (
-                <Bubble key={m.id} message={m} t={t} />
-              ))}
-            </>
-          )}
-          {pending ? <TypingIndicator label={t('thinking')} /> : null}
+              </div>
+            ) : (
+              <>
+                {/* Past this length the model no longer sees the earliest
+                    turns, even though the transcript below is complete.
+                    Surfacing it beats letting the assistant look forgetful. */}
+                {messages.length > CHAT_REPLAYED_TURNS ? (
+                  <p className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-center text-[11px] text-fg-subtle">
+                    {t('contextTrimmed', { count: CHAT_REPLAYED_TURNS })}
+                  </p>
+                ) : null}
+                {messages.map((m) => (
+                  <Bubble key={m.id} message={m} t={t} />
+                ))}
+              </>
+            )}
+            {pending ? <TypingIndicator label={t('thinking')} /> : null}
+          </div>
         </div>
 
         {/* Only the latest assistant reply is announced — see `announce`. */}
@@ -449,35 +565,40 @@ export function AiAssistantView({
           </p>
         ) : null}
 
-        <form
-          className="flex items-end gap-2 border-t border-border p-3"
-          onSubmit={(e) => {
-            e.preventDefault()
-            send()
-          }}
-        >
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={onKeyDown}
-            disabled={!canChat || busy}
-            rows={1}
-            maxLength={4000}
-            placeholder={
-              canChat ? t('inputPlaceholder') : t('inputDisabledPlaceholder')
-            }
-            aria-label={t('inputPlaceholder')}
-            className="min-h-[2.75rem] max-h-40 flex-1 resize-none rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand-500/60 disabled:opacity-60"
-          />
-          <button
-            type="submit"
-            disabled={!canChat || busy || input.trim().length === 0}
-            className="btn-primary !px-3 !py-2.5"
-            aria-label={t('send')}
+        {/* The separator spans the pane; the composer inside tracks the message
+            column so the caret stays under the last bubble. `p-3` is added back
+            to the cap so the field lines up with the bubbles above. */}
+        <div className="border-t border-border">
+          <form
+            className="mx-auto flex w-full max-w-[calc(75ch+1.5rem)] items-end gap-2 p-3"
+            onSubmit={(e) => {
+              e.preventDefault()
+              send()
+            }}
           >
-            <SendIcon className="h-4 w-4" />
-          </button>
-        </form>
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={onKeyDown}
+              disabled={!canChat || busy}
+              rows={1}
+              maxLength={4000}
+              placeholder={
+                canChat ? t('inputPlaceholder') : t('inputDisabledPlaceholder')
+              }
+              aria-label={t('inputPlaceholder')}
+              className="min-h-[2.75rem] max-h-40 flex-1 resize-none rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand-500/60 disabled:opacity-60"
+            />
+            <button
+              type="submit"
+              disabled={!canChat || busy || input.trim().length === 0}
+              className="btn-primary !px-3 !py-2.5"
+              aria-label={t('send')}
+            >
+              <SendIcon className="h-4 w-4" />
+            </button>
+          </form>
+        </div>
       </section>
     </div>
   )
@@ -494,13 +615,15 @@ function Bubble({
   return (
     <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}>
       <div
-        className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm ${
+        className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${
           isUser
-            ? 'bg-brand-gradient text-white'
+            ? 'whitespace-pre-wrap bg-brand-gradient text-white'
             : 'border border-border bg-surface-2 text-fg'
         }`}
       >
-        {message.text}
+        {/* Only model turns are Markdown — what the user typed is shown
+            verbatim, so `*` in their own question stays a `*`. */}
+        {isUser ? message.text : <Markdown text={message.text} />}
       </div>
       {message.tokensSpent !== undefined ? (
         <span className="mt-1 px-1 font-mono text-[10px] text-fg-subtle">

@@ -18,7 +18,7 @@ export type CursorPageError = { code?: string; status?: number }
  * filters moved), the appended pages are dropped so stale rows from the
  * previous query cannot linger below the fresh first page.
  */
-export function useCursorPages<T>({
+export function useCursorPages<T extends { id: string }>({
   endpoint,
   query,
   initialPage,
@@ -30,6 +30,11 @@ export function useCursorPages<T>({
   initialPage: Paginated<T>
 }) {
   const [extra, setExtra] = useState<T[]>([])
+  // In-place row patches keyed by id, applied over whichever page a row lives
+  // in (server-rendered first page OR an appended one). Kept as an overlay
+  // rather than mutating `initialPage` so a rename never changes that prop's
+  // identity — doing so would trip the reset below and drop every loaded page.
+  const [patches, setPatches] = useState<Record<string, Partial<T>>>({})
   // Set only after a 422 recovery: the refetched page 1 replaces the whole
   // visible list, server-rendered rows included, because those rows came from
   // the same result set the dead cursor was pointing into.
@@ -67,6 +72,7 @@ export function useCursorPages<T>({
     setSyncedFrom(initialPage)
     setExtra([])
     setRestarted(null)
+    setPatches({})
     setCursor(initialPage.meta.nextCursor)
     setHasMore(initialPage.meta.hasMore)
     setError(null)
@@ -146,13 +152,30 @@ export function useCursorPages<T>({
     }
   }, [cursor, endpoint, hasMore, loading, serializedQuery])
 
+  /**
+   * Patch a single already-loaded row in place, wherever it sits (first page or
+   * an appended one), without reordering, refetching or resetting the cursor.
+   * Used for a rename: the new title lands on the exact row the user edited.
+   */
+  const updateItem = useCallback((id: string, patch: Partial<T>) => {
+    setPatches((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }))
+  }, [])
+
+  const base = restarted
+    ? [...restarted, ...extra]
+    : [...initialPage.data, ...extra]
+
   return {
-    items: restarted
-      ? [...restarted, ...extra]
-      : [...initialPage.data, ...extra],
+    items:
+      Object.keys(patches).length === 0
+        ? base
+        : base.map((it) =>
+            patches[it.id] ? { ...it, ...patches[it.id] } : it,
+          ),
     hasMore,
     loading,
     error,
     loadMore,
+    updateItem,
   }
 }

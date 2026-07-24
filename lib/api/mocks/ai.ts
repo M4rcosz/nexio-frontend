@@ -19,6 +19,7 @@ import {
   AI_TOKEN_MAX,
   CHAT_MESSAGE_MAX_LENGTH,
 } from '@/lib/validation/constants'
+import { deriveTitle, isValidTitle, normalizeTitle } from '@/lib/ai/title'
 import type {
   AiConversationDetail,
   AiConversationSummary,
@@ -239,6 +240,7 @@ export async function listAiMembershipUsageMock(
 function summarize(c: StoredConversation): AiConversationSummary {
   return {
     id: c.id,
+    title: c.title,
     isDeleted: c.isDeleted,
     createdAt: c.createdAt,
     updatedAt: c.updatedAt,
@@ -252,14 +254,46 @@ function visibleFor(userId: string): StoredConversation[] {
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
 }
 
-/** `GET /ai/conversations` — self-scoped, cursor-paginated. */
+/** `GET /ai/conversations` — self-scoped, cursor-paginated, optional title filter. */
 export async function listAiConversationsMock(
   userId: string,
-  query: { limit?: number; cursor?: string } = {},
+  query: { limit?: number; cursor?: string; title?: string } = {},
 ): Promise<Paginated<AiConversationSummary>> {
   await mockDelay()
-  const rows = visibleFor(userId).map(summarize)
+  let rows = visibleFor(userId).map(summarize)
+  const term = query.title?.trim()
+  if (term) {
+    // Case-insensitive substring over the title, applied BEFORE paginate so
+    // the cursor walks the filtered set. `String.includes` needs no `%`/`_`
+    // escaping — that is a real-backend/SQL concern, not something to "fix" here.
+    const needle = term.toLowerCase()
+    rows = rows.filter((r) => r.title.toLowerCase().includes(needle))
+  }
   return paginate(rows, query.limit, query.cursor)
+}
+
+/**
+ * `PATCH /ai/conversations/:id` — rename. `null` when the id is not one of the
+ * caller's live (non-deleted) threads, so the route maps it to a 404. Stores the
+ * normalized title and — deliberately — does NOT touch `updatedAt`, so a rename
+ * never reorders the last-activity list.
+ */
+export async function renameAiConversationMock(
+  userId: string,
+  conversationId: string,
+  title: string,
+): Promise<AiConversationSummary | null> {
+  await mockDelay()
+  const c = CONVERSATIONS.get(conversationId)
+  if (!c || c.userId !== userId || c.isDeleted) return null
+  // The route validates first; the mock stays honest so a direct caller can't
+  // store a blank or over-long title.
+  if (!isValidTitle(title)) {
+    throw new ApiError(422, null, 'Title must be 1–80 characters.')
+  }
+  c.title = normalizeTitle(title)
+  CONVERSATIONS.set(conversationId, c)
+  return summarize(c)
 }
 
 /**
@@ -349,9 +383,14 @@ export async function sendChatMessageMock(
     }
     conversation = existing
   } else {
+    // Title from the first user turn if `history` seeds one, else from this
+    // message. Derived once on open; later sends keep the stored title.
+    const firstUserText =
+      body.history?.find((t) => t.role === 'user')?.text ?? body.message
     conversation = {
       id: newId(),
       userId,
+      title: deriveTitle(firstUserText),
       isDeleted: false,
       createdAt: now,
       updatedAt: now,
@@ -388,6 +427,7 @@ export async function sendChatMessageMock(
 
   return {
     conversationId: conversation.id,
+    conversationTitle: conversation.title,
     reply,
     tokensSpent,
     balanceRemaining: m.tokenBalance,

@@ -56,7 +56,7 @@ resource marked "real backend + mock fallback" honours `NEXT_PUBLIC_USE_MOCKS`.
 | Staff users (admin)   | Real backend + mock fallback (`GET/POST /api/admin/users`, cursor-paginated; filters `role`, `businessUnitId`, `search`, `email`) |
 | Customers (admin)     | Real backend + mock fallback (`GET /api/admin/customers` — ADMIN only; `GET /api/users?role=CUSTOMER` upstream) |
 | Promotions            | Real backend + mock fallback — admin CRUD (`/api/promotions/...`, ADMIN/MANAGER) and the public listing (`GET /api/promotions/public/by-business-unit/:id`, no auth, only what is running now) |
-| AI assistant          | Real backend + mock fallback — metered chat with server-owned threads (`POST /api/ai/chat`, `GET /api/ai/conversations`, `GET/DELETE /api/ai/conversations/:id`), own wallet (`GET /api/ai/memberships/me`) and ADMIN management (`POST/DELETE /api/ai/memberships/:userId`, `PATCH .../balance`, `POST .../reinstate`, plus the usage report `GET /api/ai/memberships`) |
+| AI assistant          | Real backend + mock fallback — metered chat with server-owned threads (`POST /api/ai/chat`, `GET /api/ai/conversations`, `GET/PATCH/DELETE /api/ai/conversations/:id`), own wallet (`GET /api/ai/memberships/me`) and ADMIN management (`POST/DELETE /api/ai/memberships/:userId`, `PATCH .../balance`, `POST .../reinstate`, plus the usage report `GET /api/ai/memberships`) |
 
 The `NEXT_PUBLIC_USE_MOCKS=true` flag in `.env.local` forces the *menu* and
 *login* resources to use mocks too — handy when the backend is not running.

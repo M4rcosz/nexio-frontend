@@ -9,6 +9,7 @@
 //   - POST   /ai/chat                            (any enrolled user with tokens)
 //   - GET    /ai/conversations                   (self-scoped list)
 //   - GET    /ai/conversations/:id               (self-scoped transcript)
+//   - PATCH  /ai/conversations/:id               (self-scoped rename)
 //   - DELETE /ai/conversations/:id               (self-scoped soft delete)
 //
 // The server is always authoritative; these helpers translate the documented
@@ -35,6 +36,7 @@ import {
   listAiConversationsMock,
   listAiMembershipUsageMock,
   reinstateAiMembershipMock,
+  renameAiConversationMock,
   revokeAiMembershipMock,
   sendChatMessageMock,
 } from './mocks/ai'
@@ -195,13 +197,13 @@ export async function listAiMembershipUsage(
  * the list in place.
  */
 export async function listAiConversations(
-  query: { limit?: number; cursor?: string } = {},
+  query: { limit?: number; cursor?: string; title?: string } = {},
 ): Promise<Paginated<AiConversationSummary>> {
   if (USE_MOCKS) {
     return listAiConversationsMock(await currentUserId(), query)
   }
   return serverFetch<Paginated<AiConversationSummary>>('/ai/conversations', {
-    query: { limit: query.limit, cursor: query.cursor },
+    query: { limit: query.limit, cursor: query.cursor, title: query.title },
     cache: 'no-store',
   })
 }
@@ -244,7 +246,35 @@ export async function deleteAiConversation(
   try {
     return await serverFetch<AiConversationSummary>(
       `/ai/conversations/${encodeURIComponent(conversationId)}`,
-      { method: 'DELETE' },
+      { method: 'DELETE', cache: 'no-store' },
+    )
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null
+    throw err
+  }
+}
+
+/**
+ * `PATCH /ai/conversations/:id` — rename. Stores the (server-normalized) title
+ * and does not reorder the list (`updatedAt` is untouched). `null` when the
+ * thread is not the caller's live one (404 upstream). An invalid title is a
+ * 422 and is left to propagate as `ApiError` for the route to map.
+ */
+export async function renameAiConversation(
+  conversationId: string,
+  title: string,
+): Promise<AiConversationSummary | null> {
+  if (USE_MOCKS) {
+    return renameAiConversationMock(
+      await currentUserId(),
+      conversationId,
+      title,
+    )
+  }
+  try {
+    return await serverFetch<AiConversationSummary>(
+      `/ai/conversations/${encodeURIComponent(conversationId)}`,
+      { method: 'PATCH', body: { title }, cache: 'no-store' },
     )
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return null

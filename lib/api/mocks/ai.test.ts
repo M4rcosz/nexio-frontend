@@ -9,6 +9,7 @@ import {
   listAiConversationsMock,
   listAiMembershipUsageMock,
   reinstateAiMembershipMock,
+  renameAiConversationMock,
   revokeAiMembershipMock,
   sendChatMessageMock,
 } from './ai'
@@ -203,6 +204,91 @@ describe('ai mock — conversations', () => {
     expect(
       after?.messages.some((m) => m.content === 'should be discarded'),
     ).toBe(false)
+  })
+})
+
+describe('ai mock — conversation titles', () => {
+  it('derives, stores and returns a title from the first message', async () => {
+    await enrollAiMembershipMock('title-1', 100_000)
+    const res = await sendChatMessageMock('title-1', {
+      message: 'Where is my order #42?',
+    })
+    expect(res.conversationTitle).toBe('Where is my order #42?')
+
+    const detail = await getAiConversationMock('title-1', res.conversationId)
+    expect(detail?.title).toBe('Where is my order #42?')
+
+    const list = await listAiConversationsMock('title-1')
+    expect(list.data[0].title).toBe('Where is my order #42?')
+  })
+
+  it('derives a new thread title from the first user turn of history', async () => {
+    await enrollAiMembershipMock('title-h', 100_000)
+    const res = await sendChatMessageMock('title-h', {
+      message: 'now',
+      history: [{ role: 'user', text: 'earlier question' }],
+    })
+    expect(res.conversationTitle).toBe('earlier question')
+  })
+
+  it('keeps the stored title on later sends in the same thread', async () => {
+    await enrollAiMembershipMock('title-2', 100_000)
+    const first = await sendChatMessageMock('title-2', {
+      message: 'first message here',
+    })
+    const second = await sendChatMessageMock('title-2', {
+      message: 'a totally different follow up',
+      conversationId: first.conversationId,
+    })
+    expect(second.conversationTitle).toBe(first.conversationTitle)
+  })
+
+  it('renames: normalizes, leaves updatedAt untouched, 404 for others', async () => {
+    await enrollAiMembershipMock('rename-1', 100_000)
+    const { conversationId } = await sendChatMessageMock('rename-1', {
+      message: 'orig',
+    })
+    const before = await getAiConversationMock('rename-1', conversationId)
+
+    const renamed = await renameAiConversationMock(
+      'rename-1',
+      conversationId,
+      '  My   renamed  title  ',
+    )
+    expect(renamed?.title).toBe('My renamed title')
+    // A rename must not bump last-activity — the list must not reorder.
+    expect(renamed?.updatedAt).toBe(before?.updatedAt)
+
+    // Not the caller's thread → indistinguishable 404 (null).
+    expect(
+      await renameAiConversationMock('someone-else', conversationId, 'x'),
+    ).toBeNull()
+  })
+
+  it('guards a blank rename with a 422 even though the route validates first', async () => {
+    await enrollAiMembershipMock('rename-2', 100_000)
+    const { conversationId } = await sendChatMessageMock('rename-2', {
+      message: 'orig',
+    })
+    await expect(
+      renameAiConversationMock('rename-2', conversationId, '   '),
+    ).rejects.toMatchObject({ status: 422 })
+  })
+
+  it('filters the list by a case-insensitive title substring, ignoring blanks', async () => {
+    await enrollAiMembershipMock('filter-1', 100_000)
+    await sendChatMessageMock('filter-1', { message: 'Refund for my order' })
+    await sendChatMessageMock('filter-1', { message: 'Loyalty points balance' })
+
+    const refundOnly = await listAiConversationsMock('filter-1', {
+      title: 'REFUND',
+    })
+    expect(refundOnly.data).toHaveLength(1)
+    expect(refundOnly.data[0].title).toMatch(/Refund/)
+
+    // Whitespace-only term is ignored — the whole list comes back.
+    const all = await listAiConversationsMock('filter-1', { title: '   ' })
+    expect(all.data).toHaveLength(2)
   })
 })
 

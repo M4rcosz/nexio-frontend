@@ -464,6 +464,12 @@ export type ChatResponse = {
   tokensSpent: number
   /** Caller's balance after this exchange — drive the balance display from it. */
   balanceRemaining: number
+  /**
+   * The open thread's title, sent on every exchange (server-derived on the
+   * first message, unchanged thereafter). Use it as the chat header — never
+   * null/empty.
+   */
+  conversationTitle: string
 }
 
 /**
@@ -483,6 +489,12 @@ export type AiConversationMessage = {
 /** Row of `GET /ai/conversations` — self-scoped, last activity first. */
 export type AiConversationSummary = {
   id: string
+  /**
+   * Server-derived from the first user message, then user-editable via rename.
+   * Never null/empty. Render as text (never HTML) — it is user-authored. Flows
+   * unchanged into {@link AiConversationDetail}.
+   */
+  title: string
   /** Soft delete. A deleted thread can no longer be read or continued. */
   isDeleted: boolean
   createdAt: string

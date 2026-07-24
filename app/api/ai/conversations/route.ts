@@ -24,6 +24,9 @@ export async function GET(req: Request) {
       limit: parseLimit(url.searchParams.get('limit')),
       // Opaque upstream token — forwarded verbatim, never parsed or rebuilt.
       cursor: url.searchParams.get('cursor') ?? undefined,
+      // Case-insensitive title substring. A blank/whitespace param is dropped
+      // to `undefined` so it reads as "unfiltered", not "match the empty string".
+      title: url.searchParams.get('title')?.trim() || undefined,
     })
     return NextResponse.json(page)
   } catch (err) {

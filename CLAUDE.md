@@ -62,6 +62,15 @@ Mutating API route handlers **must** call `revalidateTag(...)` for the tags
 their mutation invalidates, or RSC lists render stale after the write. ~20
 handlers under `app/api/` follow this — copy the nearest one.
 
+**Exception — client-only lists never cached server-side.** When the list a
+mutation touches is fetched from the browser with `no-store` (never an RSC
+cache), there is no tag to invalidate; the client patches its own copy in
+place instead. Example: `PATCH /api/ai/conversations/:id` (rename) — the AI
+assistant fetches the thread list client-side, so the handler deliberately
+skips `revalidateTag` and the row is patched from the response via the
+`useCursorPages` `updateItem` overlay. If you add such a handler, say so in a
+comment so the omission doesn't read as a missed `revalidateTag`.
+
 ## Domain rules
 
 Order channels (`APP`/`WEB`/`TOTEM`/`COUNTER`/`PICKUP`) and the status state

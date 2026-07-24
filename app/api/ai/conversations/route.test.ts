@@ -49,6 +49,28 @@ describe('GET /api/ai/conversations', () => {
     })
   })
 
+  it('forwards a title filter', async () => {
+    mockedSession.mockResolvedValue(true)
+    mockedList.mockResolvedValue(emptyPage)
+    await GET(req('?title=refund'))
+    expect(mockedList).toHaveBeenCalledWith({
+      limit: 20,
+      cursor: undefined,
+      title: 'refund',
+    })
+  })
+
+  it('ignores a blank/whitespace title — forwarded as undefined', async () => {
+    mockedSession.mockResolvedValue(true)
+    mockedList.mockResolvedValue(emptyPage)
+    await GET(req('?title=%20%20'))
+    expect(mockedList).toHaveBeenCalledWith({
+      limit: 20,
+      cursor: undefined,
+      title: undefined,
+    })
+  })
+
   it('maps the backend 422 on a malformed cursor to code invalid_cursor', async () => {
     mockedSession.mockResolvedValue(true)
     mockedList.mockRejectedValue(new ApiError(422, null, 'bad cursor'))

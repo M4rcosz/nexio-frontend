@@ -59,6 +59,7 @@ describe('POST /api/ai/chat', () => {
     mockedSession.mockResolvedValue(true)
     mockedSend.mockResolvedValue({
       conversationId: 'c1',
+      conversationTitle: 'hi',
       reply: 'hello',
       tokensSpent: 42,
       balanceRemaining: 100,
@@ -79,6 +80,7 @@ describe('POST /api/ai/chat', () => {
     mockedSession.mockResolvedValue(true)
     mockedSend.mockResolvedValue({
       conversationId: '11111111-1111-4111-8111-111111111111',
+      conversationTitle: 'hi',
       reply: 'hello',
       tokensSpent: 1,
       balanceRemaining: 9,

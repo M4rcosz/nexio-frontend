@@ -67,6 +67,12 @@ export const CHAT_HISTORY_MAX_TURNS = 50
  */
 export const CHAT_REPLAYED_TURNS = 40
 
+/**
+ * A conversation title is capped at this length in CODE POINTS (`[...str].length`),
+ * not UTF-16 units — so an 80-emoji title is valid where `.length` would read 160.
+ */
+export const CONVERSATION_TITLE_MAX_LENGTH = 80
+
 export const EMAIL_MAX_LENGTH = 254
 export const NAME_MAX_LENGTH = 120
 export const PHONE_MAX_LENGTH = 20

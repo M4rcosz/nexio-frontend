@@ -989,6 +989,8 @@ Só os **40 turnos mais recentes** são reproduzidos ao modelo — limite de cus
 
 **Qualquer usuário autenticado.** Threads do próprio chamador (escopo vem do JWT — não existe `:userId`), atividade mais recente primeiro. Paginado por cursor.
 
+Query: `limit`, `cursor`, e filtro opcional `title` (substring case-insensitive sobre o título; `title` em branco/só espaços é ignorado — sem filtro). Continue mandando `title` em toda página: ele compõe com o cursor; largá-lo na página 2 alarga a busca silenciosamente.
+
 Response `200`: paginado de [ConversationSummary](#conversationsummary). Erro `422` (cursor malformado — é `422`, não `400`).
 
 > A ordenação é por última atividade e **muda enquanto o usuário conversa**. O cursor é keyset, então nenhuma linha é perdida ou duplicada, mas a lista pode se reordenar sob o usuário: recarregue a página 1 após enviar uma mensagem em vez de remendar a lista no lugar.
@@ -1000,6 +1002,14 @@ Response `200`: paginado de [ConversationSummary](#conversationsummary). Erro `4
 Response `200`: [ConversationDetail](#conversationdetail). Erro `404`.
 
 > Thread de outra pessoa, apagada ou inexistente respondem `404` de forma **idêntica**, de propósito. Não use o status para inferir se um id existe.
+
+### PATCH /api/ai/conversations/:conversationId
+
+**Qualquer usuário autenticado.** Renomeia a thread. Body: `{ "title": string }` — obrigatório, `1..80` **code points** (conte com `[...v].length`, não `.length` — emoji ocupa 2 unidades UTF-16). O servidor normaliza (trim + colapso de espaços internos) antes de gravar, então atualize o estado local pelo **corpo da resposta**, não pela string enviada.
+
+Response `200`: [ConversationSummary](#conversationsummary) com o título normalizado. Erros: `400` (corpo malformado — `title` não é string); `404` (não é sua thread, foi apagada ou não existe — **idêntico**, como no `GET`/`DELETE`); `422` `title_invalid` (em branco ou > 80 code points).
+
+> Renomear **não** altera `updatedAt` — não é "atividade". A lista **não** se reordena: remende a linha no lugar, não recarregue a página 1 (o oposto do que fazer após enviar uma mensagem).
 
 ### DELETE /api/ai/conversations/:conversationId
 
@@ -1077,6 +1087,7 @@ Erros: `400` `invalid_query` (shape malformado — data fora do ISO-8601 ou curs
 ```jsonc
 {
   "conversationId": "<uuid>",   // persista e reenvie na próxima mensagem
+  "conversationTitle": "Pedido #4821 — status", // título da thread; vem em TODA resposta, use como cabeçalho do chat
   "reply": "Seu pedido #4821 está em preparo.",
   "tokensSpent": 42,
   "balanceRemaining": 9638      // dirija o saldo exibido por este campo
@@ -1088,6 +1099,7 @@ Erros: `400` `invalid_query` (shape malformado — data fora do ISO-8601 ou curs
 ```jsonc
 {
   "id": "<uuid>",
+  "title": "Pedido #4821 — status",           // derivado da 1ª mensagem do usuário; editável via rename. Nunca vazio/null; renderize como TEXTO
   "isDeleted": false,
   "createdAt": "2026-07-20T21:00:00.000Z",
   "updatedAt": "2026-07-21T09:12:00.000Z"     // última atividade — a lista ordena por isto
