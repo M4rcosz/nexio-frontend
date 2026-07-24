@@ -1,7 +1,7 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { redirect } from '@/i18n/navigation'
 import { getSession } from '@/lib/auth/session'
-import { getMyAiMembership } from '@/lib/api/ai'
+import { getMyAiMembership, listAiConversations } from '@/lib/api/ai'
 import { AiAssistantView } from '@/components/ai/AiAssistantView'
 import { BackendBadge } from '@/components/StubBadge'
 
@@ -22,7 +22,12 @@ export default async function AiAssistantPage({
     redirect({ href: '/login', locale })
   }
   const t = await getTranslations('ai')
-  const membership = await getMyAiMembership()
+  // The thread list is self-scoped and cheap; fetching it alongside the wallet
+  // means the sidebar renders populated instead of flashing in after hydration.
+  const [membership, conversations] = await Promise.all([
+    getMyAiMembership(),
+    listAiConversations(),
+  ])
 
   return (
     <div className="space-y-6">
@@ -33,7 +38,10 @@ export default async function AiAssistantPage({
         <BackendBadge />
       </div>
       <p className="-mt-2 text-sm text-fg-muted">{t('subtitle')}</p>
-      <AiAssistantView initialMembership={membership} />
+      <AiAssistantView
+        initialMembership={membership}
+        initialConversations={conversations}
+      />
     </div>
   )
 }

@@ -25,11 +25,12 @@ npm install
 npm run dev
 ```
 
-The app starts on the default Next.js port. To avoid colliding with the
-backend (which runs on `:3000`), use:
+The app starts on `http://localhost:3001` — port 3001 is the default so it
+does not collide with the backend (which runs on `:3000`). To use a different
+port, override it:
 
 ```bash
-PORT=3001 npm run dev
+npm run dev -- -p 3002
 ```
 
 ## Backend status
@@ -54,7 +55,8 @@ resource marked "real backend + mock fallback" honours `NEXT_PUBLIC_USE_MOCKS`.
 | Inventory (admin)     | Real backend + mock fallback (`GET /api/inventory/:businessUnitId`, `POST /api/inventory/:businessUnitId/items`, `POST /api/inventory/:businessUnitId/adjust`)  |
 | Staff users (admin)   | Real backend + mock fallback (`GET/POST /api/admin/users`, cursor-paginated; filters `role`, `businessUnitId`, `search`, `email`) |
 | Customers (admin)     | Real backend + mock fallback (`GET /api/admin/customers` — ADMIN only; `GET /api/users?role=CUSTOMER` upstream) |
-| Promotions (admin)    | Real backend + mock fallback (`/api/promotions/...`)         |
+| Promotions            | Real backend + mock fallback — admin CRUD (`/api/promotions/...`, ADMIN/MANAGER) and the public listing (`GET /api/promotions/public/by-business-unit/:id`, no auth, only what is running now) |
+| AI assistant          | Real backend + mock fallback — metered chat with server-owned threads (`POST /api/ai/chat`, `GET /api/ai/conversations`, `GET/PATCH/DELETE /api/ai/conversations/:id`), own wallet (`GET /api/ai/memberships/me`) and ADMIN management (`POST/DELETE /api/ai/memberships/:userId`, `PATCH .../balance`, `POST .../reinstate`, plus the usage report `GET /api/ai/memberships`) |
 
 The `NEXT_PUBLIC_USE_MOCKS=true` flag in `.env.local` forces the *menu* and
 *login* resources to use mocks too — handy when the backend is not running.
@@ -131,7 +133,8 @@ app/
 │   ├── orders/                  # History + tracking (cursor pagination, channel/status filters)
 │   ├── loyalty/                 # Points and LGPD consent
 │   ├── profile/                 # Own account (GET/PATCH /users/me + change password)
-│   ├── admin/                   # Admin area: overview, users, customers, products, categories, menu, business-units, inventory, promotions
+│   ├── ai/                      # Metered assistant: balance, thread list, chat
+│   ├── admin/                   # Admin area: overview, users, customers, products, categories, menu, business-units, inventory, promotions, ai (memberships + usage report)
 │   ├── pos/                     # Attendant order entry (COUNTER/PICKUP; ADMIN/MANAGER/ATTENDANT)
 │   ├── totem/                   # Kiosk order entry (TOTEM; "attended kiosk" — see auth note in page.tsx)
 │   ├── error.tsx                # Boundary

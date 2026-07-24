@@ -37,7 +37,9 @@ export default async function AdminOverviewPage({
         <p className="mt-1 text-sm text-fg-muted">{t('subtitle')}</p>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-3">
+      {/* Intrinsic columns so the stat row keeps card size as the shell widens
+          instead of stretching three cards across 1600px. */}
+      <section className="grid gap-4 sm:grid-cols-[repeat(auto-fit,minmax(15rem,1fr))]">
         <StatCard label={t('yourRole')} value={ctx.role} />
         <StatCard
           label={t('managedUnits')}

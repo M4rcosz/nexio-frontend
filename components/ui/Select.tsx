@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useRef, useState } from 'react'
 
+const noop = () => {}
+
 export type SelectOption = {
   value: string
   label: string
@@ -33,6 +35,17 @@ type SelectProps = {
   searchPlaceholder?: string
   /** Message shown when the search filter matches no options. */
   noResultsLabel?: string
+  /**
+   * Remote search. When provided, the popover stops filtering `options`
+   * itself and instead reports each query change here (empty string when the
+   * popover opens or the box is cleared) — the parent fetches and feeds the
+   * already-filtered `options` back in. Implies `searchable`.
+   */
+  onSearch?: (query: string) => void
+  /** Show a loading row instead of the option list (for `onSearch`). */
+  loading?: boolean
+  /** Row text shown while `loading`. */
+  loadingLabel?: string
 }
 
 /**
@@ -55,6 +68,9 @@ export function Select({
   searchable = false,
   searchPlaceholder = 'Search...',
   noResultsLabel = 'No results found.',
+  onSearch,
+  loading = false,
+  loadingLabel = 'Loading…',
 }: SelectProps) {
   const [open, setOpen] = useState(false)
   const [highlight, setHighlight] = useState(0)
@@ -62,14 +78,24 @@ export function Select({
   const rootRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  // Latest onSearch, read from effects without making them a dependency (which
+  // would refire on every parent render that hands us a fresh closure).
+  const onSearchRef = useRef(onSearch)
+  onSearchRef.current = onSearch
   const reactId = useId()
   const baseId = id ?? reactId
+
+  // Remote mode: the parent owns filtering, so the search box just reports
+  // query changes and we render whatever `options` come back verbatim.
+  const remote = typeof onSearch === 'function'
+  const showSearch = searchable || remote
 
   const selectedIndex = options.findIndex((o) => o.value === value)
   const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined
 
   const filteredOptions =
-    searchable && query.trim()
+    showSearch && !remote && query.trim()
       ? options.filter((o) =>
           o.label.toLowerCase().includes(query.trim().toLowerCase()),
         )
@@ -94,14 +120,18 @@ export function Select({
     el?.scrollIntoView({ block: 'nearest' })
   }, [open, highlight])
 
-  // Reset the filter and focus it whenever the popover opens.
+  // Reset the filter and focus it whenever the popover opens. In remote mode
+  // opening asks the parent for the unfiltered page, so a reopened popover
+  // isn't stuck on a previous session's query. Closing only clears the box —
+  // it must not fire another fetch.
   useEffect(() => {
     if (!open) {
       setQuery('')
       return
     }
-    if (searchable) searchInputRef.current?.focus()
-  }, [open, searchable])
+    onSearchRef.current?.('')
+    if (showSearch) searchInputRef.current?.focus()
+  }, [open, showSearch])
 
   // Re-clamp the highlight whenever the filtered list changes.
   useEffect(() => {
@@ -114,11 +144,20 @@ export function Select({
     setOpen(true)
   }
 
+  // Close the popover. When `showSearch` is set, focus has been moved into the
+  // search input (which is about to unmount), so returning focus to the trigger
+  // is what keeps it off `<body>` — a keydown flushes the unmount synchronously,
+  // and without this the whole page's tab order restarts after a selection.
+  function close(restoreFocus = true) {
+    setOpen(false)
+    if (restoreFocus) triggerRef.current?.focus()
+  }
+
   function commit(index: number) {
     const opt = filteredOptions[index]
     if (!opt || opt.disabled) return
     onChange(opt.value)
-    setOpen(false)
+    close()
   }
 
   function moveHighlight(dir: 1 | -1) {
@@ -164,17 +203,20 @@ export function Select({
         break
       case ' ':
         // A space in the search field should filter, not select.
-        if (!searchable) {
+        if (!showSearch) {
           e.preventDefault()
           commit(highlight)
         }
         break
       case 'Escape':
         e.preventDefault()
-        setOpen(false)
+        close()
         break
       case 'Tab':
-        setOpen(false)
+        // Don't preventDefault — let the browser advance the tab order. We
+        // restore focus to the trigger first so the natural next stop follows
+        // it, rather than dropping to <body> when the search input unmounts.
+        close()
         break
     }
   }
@@ -185,16 +227,22 @@ export function Select({
       className={`relative ${fullWidth ? 'w-full' : 'inline-block'}`}
     >
       <button
+        ref={triggerRef}
         type="button"
         id={baseId}
-        role="combobox"
+        // When the search box is open it owns the combobox semantics (and the
+        // focus), so the trigger steps back to a plain button — otherwise
+        // `aria-activedescendant` would sit on an element that isn't focused.
+        role={showSearch && open ? undefined : 'combobox'}
         disabled={disabled}
         aria-controls={open ? `${baseId}-listbox` : undefined}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
-        aria-activedescendant={open ? `${baseId}-opt-${highlight}` : undefined}
-        onClick={() => (open ? setOpen(false) : openMenu())}
+        aria-activedescendant={
+          open && !showSearch ? `${baseId}-opt-${highlight}` : undefined
+        }
+        onClick={() => (open ? close() : openMenu())}
         onKeyDown={onKeyDown}
         className={`flex items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       >
@@ -213,7 +261,7 @@ export function Select({
             align === 'end' ? 'right-0' : 'left-0'
           }`}
         >
-          {searchable ? (
+          {showSearch ? (
             <div className="border-b border-border p-1.5">
               <input
                 ref={searchInputRef}
@@ -222,10 +270,14 @@ export function Select({
                 onChange={(e) => {
                   setQuery(e.target.value)
                   setHighlight(0)
+                  ;(onSearch ?? noop)(e.target.value)
                 }}
                 onKeyDown={onKeyDown}
                 placeholder={searchPlaceholder}
                 aria-label={searchPlaceholder}
+                role="combobox"
+                aria-expanded
+                aria-autocomplete="list"
                 aria-controls={`${baseId}-listbox`}
                 aria-activedescendant={
                   filteredOptions.length
@@ -244,8 +296,11 @@ export function Select({
             className="scrollbar-thin max-h-64 overflow-auto p-1"
           >
             {filteredOptions.length === 0 ? (
+              // Keep any options we already have on screen while a background
+              // search runs — only fall back to a status row when the list is
+              // genuinely empty, so an in-flight refresh never blanks the list.
               <li className="px-3 py-2 text-sm text-fg-subtle">
-                {noResultsLabel}
+                {loading ? loadingLabel : noResultsLabel}
               </li>
             ) : (
               filteredOptions.map((opt, i) => {

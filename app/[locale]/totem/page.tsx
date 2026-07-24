@@ -61,5 +61,10 @@ export default async function TotemPage({
 
   const menu = await listMenu(unit.id, { limit: 100 })
 
+  // The shell puts /totem on the `full` tier (lib/layout/shell.ts), so nothing
+  // caps this page from the outside; TotemFlow keeps its own `max-w-2xl` and
+  // self-centers. Plumbing for a future chrome-less kiosk layout — expect no
+  // visible change today. The guard states above stay `max-w-xl` on purpose:
+  // they are message cards, not a kiosk surface.
   return <TotemFlow unit={unit} products={menu.data} />
 }

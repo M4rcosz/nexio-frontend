@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { Link } from '@/i18n/navigation'
 import { getAdminContext } from '@/lib/auth/access'
 import { CategoryForm } from '@/components/admin/CategoryForm'
+import { AdminFormCard } from '@/components/admin/AdminFormCard'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,9 +35,9 @@ export default async function NewCategoryPage({
         </h1>
         <p className="mt-1 text-sm text-fg-muted">{t('createSubtitle')}</p>
       </header>
-      <div className="card p-6">
+      <AdminFormCard>
         <CategoryForm mode="create" />
-      </div>
+      </AdminFormCard>
     </div>
   )
 }

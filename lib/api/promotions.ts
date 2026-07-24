@@ -1,18 +1,20 @@
-import { serverFetch, USE_MOCKS } from './client'
+import { serverFetch, serverFetchAnonymous, USE_MOCKS } from './client'
 import { ApiError } from './errors'
 import type {
   CreatePromotionRequest,
+  DiscountType,
   Paginated,
   Promotion,
+  PublicPromotion,
   UpdatePromotionRequest,
 } from './types'
 import {
   createPromotionMock,
   getPromotionMock,
   listPromotionsByBusinessUnitMock,
+  listPublicPromotionsMock,
   updatePromotionMock,
 } from './mocks/promotions'
-import { isPromotionLive } from '@/lib/promotions'
 
 export async function listPromotionsByBusinessUnit(
   businessUnitId: string,
@@ -22,7 +24,7 @@ export async function listPromotionsByBusinessUnit(
     return listPromotionsByBusinessUnitMock(businessUnitId)
   }
   return serverFetch<Paginated<Promotion>>(
-    `/promotions/by-business-unit/${businessUnitId}`,
+    `/promotions/by-business-unit/${encodeURIComponent(businessUnitId)}`,
     {
       query: { limit: query.limit, cursor: query.cursor },
       // Mirrors menu.ts/products.ts: cheap staleness is fine since every
@@ -34,27 +36,73 @@ export async function listPromotionsByBusinessUnit(
 }
 
 /**
+ * Wire shape of the public route. `discountType` is widened to the full enum
+ * on purpose: FREE_ITEM can no longer be created, but rows predating that
+ * backend check can still exist in an older database, and an unexpected value
+ * must be a filter rather than a runtime surprise
+ * (docs/frontend-public-promotions.md §2).
+ */
+type PublicPromotionWire = Omit<PublicPromotion, 'discountType'> & {
+  discountType: DiscountType
+}
+
+/** Only these two can be priced; anything else is dropped before it renders. */
+function isRenderable(p: PublicPromotionWire): p is PublicPromotion {
+  return p.discountType === 'PERCENTAGE' || p.discountType === 'FIXED_AMOUNT'
+}
+
+/**
+ * `GET /promotions/public/by-business-unit/:businessUnitId` — the
+ * customer-facing catalogue of what is on offer at a unit *right now*. Public:
+ * no Authorization header (it is ignored upstream), so anonymous visitors and
+ * logged-in customers see the same rows. The backend filters `isActive` and the
+ * half-open `[startDate, endDate)` window in SQL, hence the narrower shape.
+ *
+ * Not the same route as {@link listPromotionsByBusinessUnit}, which is the
+ * ADMIN/MANAGER back-office listing and still returns drafts and expired rows.
+ */
+export async function listPublicPromotions(
+  businessUnitId: string,
+  query: { limit?: number; cursor?: string } = {},
+): Promise<Paginated<PublicPromotion>> {
+  if (USE_MOCKS) {
+    return listPublicPromotionsMock(businessUnitId, query.limit)
+  }
+  const page = await serverFetchAnonymous<Paginated<PublicPromotionWire>>(
+    `/promotions/public/by-business-unit/${encodeURIComponent(businessUnitId)}`,
+    {
+      // The listing is time-sensitive (a row vanishes when it expires or an
+      // admin deactivates it), so this is deliberately short-lived. The tag is
+      // the one every promotion mutation already revalidates, so an admin edit
+      // still shows up immediately instead of after the window.
+      query: { limit: query.limit, cursor: query.cursor },
+      next: { revalidate: 30, tags: [`promotions:${businessUnitId}`] },
+    },
+  )
+  // `meta` is passed through untouched: `nextCursor` is an opaque keyset token,
+  // never something to parse or rebuild.
+  return { ...page, data: page.data.filter(isRenderable) }
+}
+
+/**
  * Promotions of a unit that are running right now — customer-facing surfaces
- * (menu banner, checkout estimate). The backend currently restricts the
- * promotions endpoints to ADMIN/MANAGER, so for a customer or anonymous
- * session this fails with 401/403: promotional copy is decorative, so that
- * specific failure degrades to "no promotions" instead of breaking the page.
- * In mock mode (and once the backend exposes a public read) the data flows
- * through. Any other failure (5xx, timeout, malformed response) is logged
- * instead of swallowed — those are real bugs, not the known role gap.
+ * (menu banner, checkout estimate). One page is plenty for a banner; the
+ * offers are a catalogue, not a promise (only one is applied per order, and the
+ * backend decides which).
+ *
+ * Promotional copy is decorative, so every failure degrades to "no promotions"
+ * rather than breaking the page. A 429 is expected — the global throttle counts
+ * per IP and covers public routes, so a shared NAT can hit it — and stays
+ * quiet; anything else is logged, since it is a real bug.
  */
 export async function listActivePromotions(
   businessUnitId: string,
-): Promise<Promotion[]> {
+): Promise<PublicPromotion[]> {
   try {
-    const page = await listPromotionsByBusinessUnit(businessUnitId, {
-      limit: 50,
-    })
-    return page.data.filter((p) => isPromotionLive(p))
+    const page = await listPublicPromotions(businessUnitId, { limit: 50 })
+    return page.data
   } catch (err) {
-    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-      return []
-    }
+    if (err instanceof ApiError && err.status === 429) return []
     console.error('listActivePromotions: unexpected failure', {
       businessUnitId,
       err,
@@ -70,9 +118,10 @@ export async function getPromotion(
     return getPromotionMock(promotionId)
   }
   try {
-    return await serverFetch<Promotion>(`/promotions/${promotionId}`, {
-      next: { revalidate: 0, tags: [`promotion:${promotionId}`] },
-    })
+    return await serverFetch<Promotion>(
+      `/promotions/${encodeURIComponent(promotionId)}`,
+      { next: { revalidate: 0, tags: [`promotion:${promotionId}`] } },
+    )
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return null
     throw err
@@ -99,10 +148,10 @@ export async function updatePromotion(
     return updatePromotionMock(promotionId, patch)
   }
   try {
-    return await serverFetch<Promotion>(`/promotions/${promotionId}`, {
-      method: 'PATCH',
-      body: patch,
-    })
+    return await serverFetch<Promotion>(
+      `/promotions/${encodeURIComponent(promotionId)}`,
+      { method: 'PATCH', body: patch },
+    )
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return null
     throw err
@@ -119,7 +168,7 @@ export async function setPromotionActive(
   }
   try {
     return await serverFetch<Promotion>(
-      `/promotions/${promotionId}/${isActive ? 'activate' : 'deactivate'}`,
+      `/promotions/${encodeURIComponent(promotionId)}/${isActive ? 'activate' : 'deactivate'}`,
       { method: 'PATCH' },
     )
   } catch (err) {

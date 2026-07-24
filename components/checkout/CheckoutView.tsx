@@ -9,7 +9,7 @@ import { useIdempotencyKey } from '@/lib/orders/idempotency'
 import { formatMoney, multiplyMoney } from '@/lib/money'
 import { bestPromotion, nextPromotionNudge } from '@/lib/promotions'
 import { useDiscountLabel } from '@/lib/hooks/usePromotionLabel'
-import type { Order, Promotion } from '@/lib/api/types'
+import type { Order, PublicPromotion } from '@/lib/api/types'
 
 export function CheckoutView() {
   const router = useRouter()
@@ -22,12 +22,13 @@ export function CheckoutView() {
   const [pending, start] = useTransition()
   const [hydrated, setHydrated] = useState(false)
   useEffect(() => setHydrated(true), [])
-  const [promotions, setPromotions] = useState<Promotion[]>([])
+  const [promotions, setPromotions] = useState<PublicPromotion[]>([])
   const discountLabel = useDiscountLabel()
 
   // Live promotions inform the estimate only — the backend owns the actual
-  // discount (applied into the order's totalAmount). Any failure here just
-  // means no promotional copy.
+  // discount (applied into the order's totalAmount), and applies at most one
+  // per order. Fetched once per unit, never polled: the listing is public and
+  // therefore throttled per IP. Any failure here just means no promotional copy.
   useEffect(() => {
     if (!businessUnitId) return
     let cancelled = false
@@ -35,7 +36,7 @@ export function CheckoutView() {
       .then((res) => (res.ok ? res.json() : null))
       .then((body: { data?: unknown } | null) => {
         if (cancelled || !Array.isArray(body?.data)) return
-        setPromotions(body.data as Promotion[])
+        setPromotions(body.data as PublicPromotion[])
       })
       .catch(() => {})
     return () => {

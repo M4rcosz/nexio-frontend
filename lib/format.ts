@@ -41,3 +41,41 @@ export function formatDateTime(iso: string, locale: string = 'en'): string {
     return iso
   }
 }
+
+/** Long-form day, for the heading of a timeline group. */
+export function formatDateLabel(iso: string, locale: string = 'en'): string {
+  try {
+    return new Date(iso).toLocaleDateString(locale, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+  } catch {
+    return iso
+  }
+}
+
+export function formatTime(iso: string, locale: string = 'en'): string {
+  try {
+    return new Date(iso).toLocaleTimeString(locale, {
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return iso
+  }
+}
+
+/**
+ * Local calendar day of an instant, as `YYYY-MM-DD` — the grouping key for a
+ * day-by-day timeline. Local (not UTC) so a late-evening order groups under the
+ * day the customer placed it on.
+ */
+export function dayKey(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const month = `${d.getMonth() + 1}`.padStart(2, '0')
+  const day = `${d.getDate()}`.padStart(2, '0')
+  return `${d.getFullYear()}-${month}-${day}`
+}

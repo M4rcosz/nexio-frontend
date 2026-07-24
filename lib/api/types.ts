@@ -397,12 +397,22 @@ export type LoyaltyAccount = {
 /**
  * A per-user token wallet an ADMIN grants and tops up. `tokenBalance` is a plain
  * integer token count (not money) — format it with a thousands separator.
+ *
+ * The wallet is global (not per business unit) and is in exactly one of three
+ * states: not enrolled (`GET /me` → 404), active (`revokedAt === null`) or
+ * revoked (`revokedAt !== null`, balance preserved but all AI use blocked).
  */
 export type AiMembership = {
   id: string
   userId: string
   tokenBalance: number
   createdAt: string
+  /**
+   * ISO instant the membership was soft-revoked, `null` while active. This is
+   * the single source of truth for the revoked state — never infer it from the
+   * balance or from an error message.
+   */
+  revokedAt: string | null
 }
 
 /** `POST /ai/memberships/:userId` body — the initial grant. */
@@ -426,21 +436,108 @@ export type ChatTurn = {
   text: string
 }
 
-/** `POST /ai/chat` body. `history` is replayed context (server is stateless). */
+/**
+ * `POST /ai/chat` body. Threads live server-side: omit `conversationId` to open
+ * a new one, then echo back the id the response carries on every follow-up.
+ */
 export type SendChatMessageRequest = {
+  /**
+   * The thread to continue. Omit to start a new one. When set, the server
+   * replays its own stored turns and **ignores `history` entirely**.
+   */
+  conversationId?: string
   /** Required, non-empty, max 4000. */
   message: string
-  /** Optional prior turns, max 50. */
+  /**
+   * Legacy seed turns, max 50. Only meaningful on the first message of a
+   * thread — silently discarded whenever `conversationId` is present.
+   */
   history?: ChatTurn[]
 }
 
 export type ChatResponse = {
+  /** Server-issued thread id — persist it and send it back on the next call. */
+  conversationId: string
   /** The assistant's answer — render as the next `model` turn. */
   reply: string
   /** Tokens metered for this exchange (may span several internal model calls). */
   tokensSpent: number
   /** Caller's balance after this exchange — drive the balance display from it. */
   balanceRemaining: number
+  /**
+   * The open thread's title, sent on every exchange (server-derived on the
+   * first message, unchanged thereafter). Use it as the chat header — never
+   * null/empty.
+   */
+  conversationTitle: string
+}
+
+/**
+ * Roles on a *stored* transcript are uppercase, unlike the lowercase
+ * `'user' | 'model'` of {@link ChatTurn} used by the `history` request field.
+ * They are not interchangeable — lowercase before ever feeding one back.
+ */
+export type AiConversationRole = 'USER' | 'MODEL'
+
+export type AiConversationMessage = {
+  id: string
+  role: AiConversationRole
+  content: string
+  createdAt: string
+}
+
+/** Row of `GET /ai/conversations` — self-scoped, last activity first. */
+export type AiConversationSummary = {
+  id: string
+  /**
+   * Server-derived from the first user message, then user-editable via rename.
+   * Never null/empty. Render as text (never HTML) — it is user-authored. Flows
+   * unchanged into {@link AiConversationDetail}.
+   */
+  title: string
+  /** Soft delete. A deleted thread can no longer be read or continued. */
+  isDeleted: boolean
+  createdAt: string
+  /** Last activity — the list is ordered by this, so it reorders as they chat. */
+  updatedAt: string
+}
+
+/** `GET /ai/conversations/:id` — every stored turn, oldest first (uncapped). */
+export type AiConversationDetail = AiConversationSummary & {
+  messages: AiConversationMessage[]
+}
+
+/** Row of the ADMIN usage report. This shape carries user emails — admin only. */
+export type AiMembershipUsage = {
+  id: string
+  userId: string
+  /** `null` when the user record no longer resolves — render a placeholder. */
+  userName: string | null
+  userEmail: string | null
+  /** Balance *right now* — independent of `tokensUsedInPeriod`. */
+  tokenBalance: number
+  /** Spend strictly inside the reported window. */
+  tokensUsedInPeriod: number
+  isRevoked: boolean
+  revokedAt: string | null
+  createdAt: string
+}
+
+/**
+ * `GET /ai/memberships` (ADMIN). `periodFrom`/`periodTo` echo the window the
+ * server actually applied — render those, not the local request assumption.
+ */
+export type AiUsageReport = Paginated<AiMembershipUsage> & {
+  periodFrom: string
+  periodTo: string
+}
+
+export type AiUsageReportQuery = {
+  /** Inclusive ISO instant. Omit both bounds for the last 30 days. */
+  from?: string
+  to?: string
+  limit?: number
+  cursor?: string
 }
 
 // --- Inventory ---
@@ -497,6 +594,36 @@ export type Promotion = {
   createdAt: string
   updatedAt: string
 }
+
+/**
+ * Customer-facing view returned by
+ * `GET /promotions/public/by-business-unit/:businessUnitId`. The server only
+ * returns rows that are running right now, so `isActive` (always true here) and
+ * `startDate` (always past) are deliberately absent, as are the timestamps —
+ * asking the public route for them would be a leak, not a missing feature.
+ */
+export type PublicPromotion = {
+  id: string
+  businessUnitId: string
+  name: string
+  discountType: PromotionDiscountType
+  /** Decimal string, e.g. "10.00". For PERCENTAGE this is the percent. */
+  discountValue: string
+  /** Decimal string, e.g. "30.00". "0.00" means no minimum. */
+  minOrderValue: string
+  /** Half-open: the first instant the promotion is no longer valid. */
+  endDate: string
+}
+
+/**
+ * The fields the discount math and the promotional copy need. Both
+ * {@link Promotion} (admin) and {@link PublicPromotion} (customer) satisfy it,
+ * so `lib/promotions.ts` works with either without widening the public shape.
+ */
+export type PromotionOffer = Pick<
+  Promotion,
+  'id' | 'name' | 'discountType' | 'discountValue' | 'minOrderValue' | 'endDate'
+>
 
 export type CreatePromotionRequest = {
   businessUnitId: string

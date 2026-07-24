@@ -129,7 +129,10 @@ export default async function MenuPage({
             <p className="text-sm text-fg-muted">{t('empty')}</p>
           </div>
         ) : (
-          <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          // Intrinsic columns — see the same grid on the home page: the card
+          // size is fixed and columns are added as the shell widens. The `sm:`
+          // prefix keeps sub-640px at a single column.
+          <ul className="grid gap-5 sm:grid-cols-[repeat(auto-fill,minmax(17rem,1fr))]">
             {products.map((p) => (
               <li key={p.id}>
                 <ProductCard product={p} unitId={id} unitName={unit.name} />

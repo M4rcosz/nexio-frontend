@@ -20,6 +20,31 @@ export default function AdminAiLoading() {
           </SkeletonCard>
         ))}
       </div>
+
+      {/* Access (revoke / reinstate) */}
+      <SkeletonCard className="p-6">
+        <Skeleton className="h-4 w-20" />
+        <div className="mt-4 flex gap-3">
+          <Skeleton className="h-10 flex-1 rounded-xl" />
+          <Skeleton className="h-10 flex-1 rounded-xl" />
+        </div>
+      </SkeletonCard>
+
+      {/* Usage report: filter bar + table */}
+      <SkeletonCard className="p-6">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="mt-2 h-3 w-64" />
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Skeleton className="h-10 w-40 rounded-xl" />
+          <Skeleton className="h-10 w-40 rounded-xl" />
+          <Skeleton className="h-10 w-24 rounded-xl" />
+        </div>
+      </SkeletonCard>
+      <SkeletonCard className="p-6">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="mt-3 h-10 w-full first:mt-0" />
+        ))}
+      </SkeletonCard>
     </div>
   )
 }

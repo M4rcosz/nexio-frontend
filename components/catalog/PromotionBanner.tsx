@@ -1,16 +1,22 @@
 'use client'
 
 import { useLocale, useTranslations } from 'next-intl'
-import type { Promotion } from '@/lib/api/types'
+import type { PublicPromotion } from '@/lib/api/types'
 import { formatDateTime } from '@/lib/format'
 import { useDiscountLabel } from '@/lib/hooks/usePromotionLabel'
 
 /**
  * Strip advertising the unit's live promotions on the menu page. Renders
- * nothing when the list is empty (customer/anonymous sessions may not be
- * allowed to read promotions at all — see `listActivePromotions`).
+ * nothing when the list is empty — a unit may simply have no offer running,
+ * and the read degrades to an empty list on failure (see
+ * `listActivePromotions`). This is a catalogue: an order gets at most one of
+ * these, and only if it clears that promotion's minimum.
  */
-export function PromotionBanner({ promotions }: { promotions: Promotion[] }) {
+export function PromotionBanner({
+  promotions,
+}: {
+  promotions: PublicPromotion[]
+}) {
   const t = useTranslations('menu.promotions')
   const locale = useLocale()
   const discountLabel = useDiscountLabel()

@@ -3,6 +3,8 @@ import { ApiError } from '@/lib/api/errors'
 
 vi.mock('@/lib/auth/access')
 vi.mock('@/lib/api/ai')
+// `revalidateTag` needs a Next request scope that doesn't exist under vitest.
+vi.mock('next/cache', () => ({ revalidateTag: vi.fn() }))
 
 import { getAdminContext } from '@/lib/auth/access'
 import { adjustAiMembershipBalance } from '@/lib/api/ai'
@@ -32,10 +34,11 @@ beforeEach(() => {
 })
 
 describe('PATCH /api/ai/memberships/[userId]/balance', () => {
-  it('returns 403 without an admin context', async () => {
+  it('returns 401 without a session', async () => {
     mockedCtx.mockResolvedValue(null)
     const res = await PATCH(req({ delta: 100 }), ctx('u2'))
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(401)
+    expect(await res.json()).toMatchObject({ code: 'session_expired' })
     expect(mockedAdjust).not.toHaveBeenCalled()
   })
 
@@ -65,6 +68,7 @@ describe('PATCH /api/ai/memberships/[userId]/balance', () => {
       userId: 'u2',
       tokenBalance: 5000,
       createdAt: 'now',
+      revokedAt: null,
     })
     const res = await PATCH(req({ delta: -1000 }), ctx('u2'))
     expect(res.status).toBe(200)

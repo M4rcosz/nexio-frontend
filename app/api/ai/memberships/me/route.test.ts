@@ -30,6 +30,7 @@ describe('GET /api/ai/memberships/me', () => {
       userId: 'u1',
       tokenBalance: 9680,
       createdAt: '2026-07-14T12:00:00.000Z',
+      revokedAt: null,
     })
     const res = await GET()
     expect(res.status).toBe(200)

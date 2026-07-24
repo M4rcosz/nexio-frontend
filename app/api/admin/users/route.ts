@@ -15,6 +15,25 @@ import { passwordSchema } from '@/lib/validation/password'
 // KEEP the existing role enum (with KITCHEN) unchanged.
 const RoleEnum = z.enum(['ATTENDANT', 'KITCHEN', 'MANAGER', 'ADMIN'])
 
+// Listing filters. Validated locally so a malformed value is a 400 here rather
+// than a wasted round-trip that comes back as an unactionable generic upstream
+// 400. Bounds mirror the contract (§1.2): businessUnitId is a uuid,
+// username ≤50, email ≤120. `role` spans all five contract roles — CUSTOMER is
+// well-formed input that this route simply never honours (see below).
+//
+// `cursor` is an opaque keyset token, NOT a row id — never type it as a uuid,
+// which would reject every real cursor before it is ever sent. The only bound
+// worth enforcing is the backend's 512-char cap.
+const ListQuery = z.object({
+  role: z
+    .enum(['ADMIN', 'MANAGER', 'ATTENDANT', 'KITCHEN', 'CUSTOMER'])
+    .optional(),
+  businessUnitId: z.string().uuid().optional(),
+  search: z.string().max(50).optional(),
+  email: z.string().max(120).optional(),
+  cursor: z.string().max(512).optional(),
+})
+
 const CreateBody = z.object({
   username: usernameSchema,
   email: z.string().email().max(EMAIL_MAX_LENGTH),
@@ -47,16 +66,37 @@ export async function GET(req: Request) {
     )
   }
   const url = new URL(req.url)
-  const roleParam = url.searchParams.get('role')
-  const businessUnitId = url.searchParams.get('businessUnitId') ?? undefined
-  const search = url.searchParams.get('search') ?? undefined
-  const email = url.searchParams.get('email') ?? undefined
-  const cursor = url.searchParams.get('cursor') ?? undefined
+
+  let query: z.infer<typeof ListQuery>
+  try {
+    query = ListQuery.parse({
+      role: url.searchParams.get('role') ?? undefined,
+      businessUnitId: url.searchParams.get('businessUnitId') ?? undefined,
+      search: url.searchParams.get('search') ?? undefined,
+      email: url.searchParams.get('email') ?? undefined,
+      cursor: url.searchParams.get('cursor') ?? undefined,
+    })
+  } catch (err) {
+    return NextResponse.json(
+      {
+        error: 'Invalid query.',
+        details: err instanceof z.ZodError ? err.flatten() : undefined,
+      },
+      { status: 400 },
+    )
+  }
+
+  // Validation above answers a *malformed* role with 400 (contract §1.2). This
+  // is the separate, deliberate step: a well-formed role the actor may not
+  // manage is dropped rather than forwarded, so it cannot be used to list rows
+  // outside their level. Conflating the two would turn a typo into a silent
+  // full-list response.
   const role =
-    roleParam && ctx.manageableRoles.includes(roleParam as never)
-      ? (roleParam as 'ATTENDANT' | 'KITCHEN' | 'MANAGER' | 'ADMIN')
+    query.role && ctx.manageableRoles.includes(query.role)
+      ? query.role
       : undefined
   const limit = parseLimit(url.searchParams.get('limit'))
+  const { businessUnitId, search, email, cursor } = query
   try {
     // Returns the backend's `{ data, meta }` envelope untouched — `meta` is
     // what the Load more control needs to ask for the next cursor.
@@ -76,6 +116,18 @@ export async function GET(req: Request) {
     // error, which would leak exactly what the 404 hides (docs §1.3).
     if (err instanceof ApiError && err.status === 404) {
       return NextResponse.json({ error: 'Not found.' }, { status: 404 })
+    }
+    // A stale or malformed keyset cursor is 422, not 400. Tag it so the client
+    // drops the cursor and restarts from page 1 instead of retrying a token
+    // that can only ever fail again.
+    if (err instanceof ApiError && err.status === 422) {
+      return NextResponse.json(
+        {
+          error: 'The list changed. Reset to the first page.',
+          code: 'invalid_cursor',
+        },
+        { status: 422 },
+      )
     }
     // `backendErrorStatus` normalizes `err.status || 500` before comparing.
     // Testing `err.status < 500` directly is wrong: `serverFetch` throws

@@ -4,6 +4,7 @@ import { Link } from '@/i18n/navigation'
 import { getAdminContext } from '@/lib/auth/access'
 import { listCategories } from '@/lib/api/categories'
 import { ProductForm } from '@/components/admin/ProductForm'
+import { AdminFormCard } from '@/components/admin/AdminFormCard'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,9 +39,9 @@ export default async function NewProductPage({
         </h1>
         <p className="mt-1 text-sm text-fg-muted">{t('createSubtitle')}</p>
       </header>
-      <div className="card p-6">
+      <AdminFormCard>
         <ProductForm mode="create" categories={categoriesPage.data} />
-      </div>
+      </AdminFormCard>
     </div>
   )
 }

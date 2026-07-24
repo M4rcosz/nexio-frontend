@@ -227,6 +227,18 @@ export async function GET(req: Request) {
         { status: 403 },
       )
     }
+    // The cursor is an opaque keyset token; stale or malformed, it comes back
+    // 422. Tag it so the client restarts from page 1 rather than retrying a
+    // token that can only ever fail again.
+    if (err instanceof ApiError && err.status === 422) {
+      return NextResponse.json(
+        {
+          error: 'The list changed. Reset to the first page.',
+          code: 'invalid_cursor',
+        },
+        { status: 422 },
+      )
+    }
     return NextResponse.json(
       { error: describeError(err) },
       { status: backendErrorStatus(err) },

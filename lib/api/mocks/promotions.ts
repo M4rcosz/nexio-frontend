@@ -6,8 +6,10 @@ import type {
   CreatePromotionRequest,
   Paginated,
   Promotion,
+  PublicPromotion,
   UpdatePromotionRequest,
 } from '@/lib/api/types'
+import { isPromotionLive } from '@/lib/promotions'
 import { mockDelay } from './_delay'
 import { MOCK_BUSINESS_UNITS } from './business-units'
 
@@ -90,6 +92,50 @@ export async function listPromotionsByBusinessUnitMock(
     (p) => ({ ...p }),
   )
   return { data, meta: { limit: 20, nextCursor: null, hasMore: false } }
+}
+
+/**
+ * Mirrors `GET /promotions/public/by-business-unit/:id`: only rows that are
+ * live at this instant, narrowed to the public shape (no isActive/startDate/
+ * timestamps), newest first. An unknown unit id yields an empty page, not a
+ * 404 — a public route must not confirm which ids exist.
+ */
+export async function listPublicPromotionsMock(
+  businessUnitId: string,
+  limit = 20,
+): Promise<Paginated<PublicPromotion>> {
+  await mockDelay()
+  const data = STORE.filter(
+    (p) => p.businessUnitId === businessUnitId && isPromotionLive(p),
+  )
+    .sort((a, b) =>
+      a.createdAt === b.createdAt
+        ? b.id.localeCompare(a.id)
+        : b.createdAt.localeCompare(a.createdAt),
+    )
+    .slice(0, limit)
+    .map(
+      ({
+        id,
+        businessUnitId,
+        name,
+        discountType,
+        discountValue,
+        minOrderValue,
+        endDate,
+      }) => ({
+        id,
+        businessUnitId,
+        name,
+        discountType,
+        discountValue,
+        minOrderValue,
+        endDate,
+      }),
+    )
+  // The mock store is small enough to always fit one page, so there is never a
+  // cursor to hand back.
+  return { data, meta: { limit, nextCursor: null, hasMore: false } }
 }
 
 export async function getPromotionMock(

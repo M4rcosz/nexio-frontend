@@ -3,6 +3,7 @@ import { Link } from '@/i18n/navigation'
 import { getAdminContext } from '@/lib/auth/access'
 import { listBusinessUnitsInternal } from '@/lib/api/business-units'
 import { PromotionForm } from '@/components/admin/PromotionForm'
+import { AdminFormCard } from '@/components/admin/AdminFormCard'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,7 +44,7 @@ export default async function NewPromotionPage({
         </h1>
         <p className="mt-1 text-sm text-fg-muted">{t('createSubtitle')}</p>
       </header>
-      <div className="card p-6">
+      <AdminFormCard>
         <PromotionForm
           mode="create"
           units={units}
@@ -51,7 +52,7 @@ export default async function NewPromotionPage({
             ctx.role === 'MANAGER' ? ctx.scopedBusinessUnitId : null
           }
         />
-      </div>
+      </AdminFormCard>
     </div>
   )
 }

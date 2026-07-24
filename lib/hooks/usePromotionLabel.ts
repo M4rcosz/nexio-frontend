@@ -1,14 +1,14 @@
 'use client'
 
 import { useLocale, useTranslations } from 'next-intl'
-import type { Promotion } from '@/lib/api/types'
+import type { PromotionOffer } from '@/lib/api/types'
 import { formatMoney } from '@/lib/money'
 
 /** Human copy for what a promotion grants, e.g. "10% off orders over R$30". */
-export function useDiscountLabel(): (promotion: Promotion) => string {
+export function useDiscountLabel(): (promotion: PromotionOffer) => string {
   const t = useTranslations('menu.promotions')
   const locale = useLocale()
-  return (promotion: Promotion) => {
+  return (promotion: PromotionOffer) => {
     const hasMin = Number(promotion.minOrderValue) > 0
     const min = formatMoney(promotion.minOrderValue, locale)
     if (promotion.discountType === 'PERCENTAGE') {

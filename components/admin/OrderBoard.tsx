@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useLocale, useTranslations } from 'next-intl'
+import { DatePicker } from '@/components/ui/DatePicker'
 import { Select } from '@/components/ui/Select'
 import { clientFetch } from '@/lib/api/client'
 import { useErrorMessage } from '@/lib/errors/useErrorMessage'
@@ -179,7 +180,24 @@ export function OrderBoard({
       if (id !== requestId.current) return
       setOrders((cur) => mergeUnique(cur, page.data))
       setMeta(page.meta)
-    } catch {
+    } catch (err) {
+      if (id !== requestId.current) return
+      // 422 means the cursor is stale or sort-mismatched — the board moved
+      // underneath us. The token is unrecoverable but the listing is not:
+      // restart from page 1 under the current filters. Retrying the dead
+      // cursor would fail identically, forever.
+      if ((err as { status?: number })?.status === 422) {
+        try {
+          const page = await fetchPage(filters, sortBy, sortDir)
+          if (id !== requestId.current) return
+          setOrders(page.data)
+          setMeta(page.meta)
+          setListError(errorMessage('invalid_cursor', 422) ?? t('loadFailed'))
+        } catch {
+          // the restart failed too; leave the list as-is for a manual retry
+        }
+        return
+      }
       // keep current list; the button stays available for a retry
     } finally {
       setLoadingMore(false)
@@ -346,7 +364,7 @@ export function OrderBoard({
         </div>
       ) : (
         <div
-          className={`card overflow-hidden p-0 ${loading ? 'opacity-50' : ''}`}
+          className={`card max-w-[1400px] overflow-hidden p-0 ${loading ? 'opacity-50' : ''}`}
           aria-busy={loading}
         >
           <div className="scrollbar-thin overflow-x-auto">
@@ -423,37 +441,39 @@ export function OrderBoard({
                           {unit?.name ?? order.businessUnitId}
                         </td>
                       ) : null}
-                      <td className="max-w-[220px] px-3 py-3 text-xs text-fg-muted">
-                        {order.customerName ? (
-                          <p className="truncate font-medium text-fg">
-                            {order.customerName}
-                          </p>
-                        ) : null}
-                        {order.attendantId ? (
-                          <p
-                            title={order.attendantId}
-                            className="whitespace-nowrap"
-                          >
-                            {t('table.attendantOf', {
-                              id: shortOrderRef(order.attendantId),
-                            })}
-                          </p>
-                        ) : null}
-                        {order.customerId ? (
-                          <p
-                            title={order.customerId}
-                            className="whitespace-nowrap"
-                          >
-                            {t('table.customerOf', {
-                              id: shortOrderRef(order.customerId),
-                            })}
-                          </p>
-                        ) : null}
-                        {!order.customerName &&
-                        !order.attendantId &&
-                        !order.customerId
-                          ? '—'
-                          : null}
+                      <td className="px-3 py-3 text-xs text-fg-muted">
+                        <div className="max-w-[220px]">
+                          {order.customerName ? (
+                            <p className="truncate font-medium text-fg">
+                              {order.customerName}
+                            </p>
+                          ) : null}
+                          {order.attendantId ? (
+                            <p
+                              title={order.attendantId}
+                              className="whitespace-nowrap"
+                            >
+                              {t('table.attendantOf', {
+                                id: shortOrderRef(order.attendantId),
+                              })}
+                            </p>
+                          ) : null}
+                          {order.customerId ? (
+                            <p
+                              title={order.customerId}
+                              className="whitespace-nowrap"
+                            >
+                              {t('table.customerOf', {
+                                id: shortOrderRef(order.customerId),
+                              })}
+                            </p>
+                          ) : null}
+                          {!order.customerName &&
+                          !order.attendantId &&
+                          !order.customerId
+                            ? '—'
+                            : null}
+                        </div>
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums text-fg">
                         {formatMoney(order.totalAmount, locale)}
@@ -631,19 +651,19 @@ function MoreFiltersPopover({
               />
             </Field>
             <Field label={t('filters.from')}>
-              <input
-                type="date"
-                className="input"
+              <DatePicker
+                ariaLabel={t('filters.from')}
                 value={filters.createdAtFrom}
-                onChange={(e) => setFilter('createdAtFrom', e.target.value)}
+                max={filters.createdAtTo || undefined}
+                onChange={(v) => setFilter('createdAtFrom', v)}
               />
             </Field>
             <Field label={t('filters.to')}>
-              <input
-                type="date"
-                className="input"
+              <DatePicker
+                ariaLabel={t('filters.to')}
                 value={filters.createdAtTo}
-                onChange={(e) => setFilter('createdAtTo', e.target.value)}
+                min={filters.createdAtFrom || undefined}
+                onChange={(v) => setFilter('createdAtTo', v)}
               />
             </Field>
             <Field label={t('filters.minTotal')}>

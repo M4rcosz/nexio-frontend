@@ -191,4 +191,51 @@ describe('Select', () => {
       expect(screen.getByText('Nothing here')).toBeInTheDocument()
     })
   })
+
+  describe('remote search (onSearch)', () => {
+    it('reports an empty query on open and each keystroke, without filtering locally', async () => {
+      const user = userEvent.setup()
+      const onSearch = vi.fn()
+      renderSelect({ value: 'a', onSearch })
+      await user.click(screen.getByRole('combobox'))
+      // Opening asks the parent for the unfiltered page.
+      expect(onSearch).toHaveBeenLastCalledWith('')
+
+      // Once open, the search input owns the combobox role (the trigger steps
+      // down to a plain button), so query it by its placeholder.
+      await user.type(screen.getByPlaceholderText('Search...'), 'zz')
+      expect(onSearch).toHaveBeenLastCalledWith('zz')
+      // Options are owned by the parent, so a non-matching query still shows
+      // every option handed in rather than being filtered away.
+      expect(screen.getAllByRole('option')).toHaveLength(OPTIONS.length)
+    })
+
+    it('shows the loading row only when there are no options yet', async () => {
+      const user = userEvent.setup()
+      renderSelect({
+        value: '',
+        options: [],
+        onSearch: vi.fn(),
+        loading: true,
+        loadingLabel: 'Searching…',
+      })
+      await user.click(screen.getByRole('combobox'))
+      expect(screen.getByText('Searching…')).toBeInTheDocument()
+      expect(screen.queryByRole('option')).not.toBeInTheDocument()
+    })
+
+    it('keeps existing options visible while a background search runs', async () => {
+      const user = userEvent.setup()
+      renderSelect({
+        value: 'a',
+        onSearch: vi.fn(),
+        loading: true,
+        loadingLabel: 'Searching…',
+      })
+      await user.click(screen.getByRole('combobox'))
+      // The list must not blank out mid-refresh (the "blink" regression).
+      expect(screen.getAllByRole('option')).toHaveLength(OPTIONS.length)
+      expect(screen.queryByText('Searching…')).not.toBeInTheDocument()
+    })
+  })
 })

@@ -23,7 +23,7 @@ export function CustomerFilters({
     <FilterBar values={{ search, email }}>
       <FilterSearch
         placeholder={t('searchPlaceholder')}
-        aria-label={t('searchPlaceholder')}
+        aria-label={t('searchLabel')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
@@ -32,7 +32,7 @@ export function CustomerFilters({
           type="search"
           className="input w-full"
           placeholder={t('emailPlaceholder')}
-          aria-label={t('emailPlaceholder')}
+          aria-label={t('emailLabel')}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />

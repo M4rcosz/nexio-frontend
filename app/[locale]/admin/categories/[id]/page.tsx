@@ -4,6 +4,7 @@ import { Link } from '@/i18n/navigation'
 import { getAdminContext } from '@/lib/auth/access'
 import { getCategory } from '@/lib/api/categories'
 import { CategoryForm } from '@/components/admin/CategoryForm'
+import { AdminFormCard } from '@/components/admin/AdminFormCard'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,9 +42,9 @@ export default async function EditCategoryPage({
         </h1>
         <p className="mt-1 text-sm text-fg-muted">{t('editSubtitle')}</p>
       </header>
-      <div className="card p-6">
+      <AdminFormCard>
         <CategoryForm mode="edit" category={category} />
-      </div>
+      </AdminFormCard>
     </div>
   )
 }

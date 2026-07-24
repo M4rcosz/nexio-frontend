@@ -58,8 +58,20 @@ export const AI_TOKEN_MAX = 2147483647
 export const AI_TOKEN_MIN = 0
 /** A single chat message / history turn is capped at this many characters. */
 export const CHAT_MESSAGE_MAX_LENGTH = 4000
-/** The server keeps at most this many prior turns; cap what we replay. */
+/** The server accepts at most this many seed turns in `history`. */
 export const CHAT_HISTORY_MAX_TURNS = 50
+/**
+ * How many of a thread's stored turns the server replays to the model. A
+ * deliberate cost bound: past this the assistant no longer recalls the earliest
+ * turns, even though the transcript route still returns all of them.
+ */
+export const CHAT_REPLAYED_TURNS = 40
+
+/**
+ * A conversation title is capped at this length in CODE POINTS (`[...str].length`),
+ * not UTF-16 units — so an 80-emoji title is valid where `.length` would read 160.
+ */
+export const CONVERSATION_TITLE_MAX_LENGTH = 80
 
 export const EMAIL_MAX_LENGTH = 254
 export const NAME_MAX_LENGTH = 120

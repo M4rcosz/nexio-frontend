@@ -110,6 +110,7 @@ Para a próxima página, mande `cursor = meta.nextCursor`. Fim quando `hasMore =
 - [Payments](#payments) — `/api/payments`
 - [Loyalty](#loyalty) — `/api/loyalty`
 - [Promotions](#promotions) — `/api/promotions`
+- [AI Assistant](#ai-assistant) — `/api/ai`
 - [Audit Logs](#audit-logs) — `/api/audit-logs`
 
 ---
@@ -847,7 +848,7 @@ Response `200`: [LoyaltyAccount](#loyaltyaccount). Erro `404` (conta ainda não 
 
 ## Promotions
 
-`/api/promotions` — gestão de promoções por unidade. Todas exigem **ADMIN, MANAGER** e são unit-scoped (MANAGER só na própria unidade; ADMIN bypass). Uma promoção por pedido; aplicada antes da fidelidade.
+`/api/promotions` — gestão de promoções por unidade. Exigem **ADMIN, MANAGER** e são unit-scoped (MANAGER só na própria unidade; ADMIN bypass) — exceto a rota pública abaixo. Uma promoção por pedido; aplicada antes da fidelidade.
 
 ### POST /api/promotions
 
@@ -872,7 +873,13 @@ Response `201`: [Promotion](#promotion). Erro `404` unidade fora do escopo.
 
 ### GET /api/promotions/by-business-unit/:businessUnitId
 
-Lista promoções da unidade (paginado). Query: `limit`, `cursor`. Response `200`: paginado de [Promotion](#promotion).
+Lista promoções da unidade (paginado). Query: `limit` (clampado a `1..100` pelo proxy), `cursor` (token keyset opaco; acima de 512 chars → `400` `invalid_cursor`; válido porém defasado → `422` `invalid_cursor` — descarte-o e volte à página 1). Response `200`: paginado de [Promotion](#promotion).
+
+### GET /api/promotions/public/by-business-unit/:businessUnitId
+
+**Público** (sem `Authorization`; o header é ignorado se enviado). Catálogo do que está no ar **agora** na unidade: só `isActive === true` e instante atual dentro de `[startDate, endDate)` — filtro em SQL, então a página nunca vem curta. Query: `limit` (default `20`, clampado a `1..100`), `cursor` (token keyset opaco — repasse verbatim; malformado é `422`). Ordenação `createdAt DESC, id DESC`, sem parâmetro de sort.
+
+Response `200`: paginado de [PublicPromotion](#publicpromotion). Lista vazia (não `404`) quando não há promoções — inclusive para um `businessUnitId` inexistente, que uma rota pública não deve confirmar. `businessUnitId` fora do formato uuid é `400`. O throttle global (100 req/60s por IP) vale aqui e roda antes do auth: trate `429` e não faça polling. O proxy BFF (`GET /api/promotions/active/:businessUnitId`, consumido pela vitrine/checkout) responde com `Cache-Control: public, s-maxage=30, stale-while-revalidate=30` — CDN/browser absorvem repetições, reforçando o "não faça polling".
 
 ### GET /api/promotions/:promotionId
 
@@ -922,6 +929,220 @@ Response `200`: [Promotion](#promotion). Erro `404`.
 }
 ```
 
+### PublicPromotion
+
+Shape estreito da rota pública. `isActive` (sempre `true` ali), `startDate` (sempre passado), `createdAt` e `updatedAt` são omitidos de propósito — pedi-los numa rota pública é vazamento, não feature.
+
+```jsonc
+{
+  "id": "<uuid>",
+  "businessUnitId": "<uuid>",
+  "name": "Almoço executivo",
+  "discountType": "PERCENTAGE",   // PERCENTAGE | FIXED_AMOUNT
+  "discountValue": "10.00",       // string decimal — formate, não calcule
+  "minOrderValue": "30.00",       // "0.00" = sem mínimo (não renderize "R$ 0,00")
+  "endDate": "2026-06-30T23:59:59.000Z" // half-open: 1º instante em que já não vale
+}
+```
+
+---
+
+## AI Assistant
+
+`/api/ai` — assistente de suporte medido por tokens. Cada usuário pode ter uma **assinatura de IA**: uma carteira de tokens global (não por unidade). Um ADMIN matricula o usuário com um saldo inicial, credita/debita e pode **revogar em soft** o acesso — a revogação preserva o saldo e bloqueia todo uso até a reativação.
+
+A assinatura está em exatamente um de três estados:
+
+| Estado | Como detectar | Significado |
+| --- | --- | --- |
+| Sem matrícula | `GET .../me` → `404` | Nenhuma carteira existe. Um ADMIN precisa matricular. |
+| Ativa | `revokedAt === null` | Pode conversar e gastar tokens (se `tokenBalance > 0`). |
+| Revogada | `revokedAt !== null` | Bloqueada no chat e em ajustes de saldo. Saldo preservado. |
+
+### Cuidado: `403` é sobrecarregado
+
+Isto vale para o **`POST /api/ai/chat`**: três situações diferentes retornam `403` e o backend cru **não traz código legível por máquina** — só a `message`, que é texto humano. Não faça controle de fluxo em cima dela. Leia `GET .../me` antes e trate um `403` do chat como "sem tokens ou o estado mudou por baixo — refaça o `GET /me` e re-renderize".
+
+> **Rotas de mutação de assinatura (proxy BFF).** As rotas ADMIN abaixo (`POST`/`DELETE /:userId`, `PATCH .../balance`, `POST .../reinstate`) **já emitem código**: `401` `session_expired` (sem sessão) vs `403` `forbidden` (autenticado, mas não ADMIN), e o `balance` ainda retorna `403` `membership_revoked`. Aí dá para ramificar pelo `code`.
+
+### POST /api/ai/chat
+
+**Qualquer usuário autenticado.** Matrícula, revogação e saldo são impostos aqui, não por papel. Rate limit de **20 req/min por usuário**.
+
+```jsonc
+{
+  "conversationId": "<uuid>",   // opcional; omita para abrir uma nova thread
+  "message": "E o pedido 4821?", // obrigatório, 1..4000
+  "history": []                  // opcional, legado, ≤50 turnos {role:"user"|"model", text}
+}
+```
+
+Response `200`: [ChatResponse](#chatresponse). Erros: `403` (sem matrícula, revogado ou sem tokens), `404` (`conversationId` não é seu, foi apagado ou não existe), `503` (provedor indisponível — retry seguro, a thread continua íntegra).
+
+> **O que você não pode ignorar.** Guarde o `conversationId` da resposta e reenvie-o na mensagem seguinte. Se não fizer isso a API continua funcionando, mas **cada mensagem abre uma thread nova de um turno só**: o assistente perde a memória e a lista do usuário enche de órfãs.
+
+Com `conversationId`, o servidor recarrega os próprios turnos e **ignora `history` por completo** — `history` só tem efeito na primeira mensagem de uma thread. Um `503` no meio da troca não é totalmente limpo: os tokens daquele exchange **não** são estornados e a pergunta já ficou armazenada.
+
+Só os **40 turnos mais recentes** são reproduzidos ao modelo — limite de custo deliberado. Numa thread longa o assistente não lembra dos primeiros turnos, embora `GET /api/ai/conversations/:id` continue devolvendo a transcrição inteira.
+
+### GET /api/ai/conversations
+
+**Qualquer usuário autenticado.** Threads do próprio chamador (escopo vem do JWT — não existe `:userId`), atividade mais recente primeiro. Paginado por cursor.
+
+Query: `limit`, `cursor`, e filtro opcional `title` (substring case-insensitive sobre o título; `title` em branco/só espaços é ignorado — sem filtro). Continue mandando `title` em toda página: ele compõe com o cursor; largá-lo na página 2 alarga a busca silenciosamente.
+
+Response `200`: paginado de [ConversationSummary](#conversationsummary). Erro `422` (cursor malformado — é `422`, não `400`).
+
+> A ordenação é por última atividade e **muda enquanto o usuário conversa**. O cursor é keyset, então nenhuma linha é perdida ou duplicada, mas a lista pode se reordenar sob o usuário: recarregue a página 1 após enviar uma mensagem em vez de remendar a lista no lugar.
+
+### GET /api/ai/conversations/:conversationId
+
+**Qualquer usuário autenticado.** Transcrição completa, turno mais antigo primeiro — esta rota **não** é limitada aos 40 turnos.
+
+Response `200`: [ConversationDetail](#conversationdetail). Erro `404`.
+
+> Thread de outra pessoa, apagada ou inexistente respondem `404` de forma **idêntica**, de propósito. Não use o status para inferir se um id existe.
+
+### PATCH /api/ai/conversations/:conversationId
+
+**Qualquer usuário autenticado.** Renomeia a thread. Body: `{ "title": string }` — obrigatório, `1..80` **code points** (conte com `[...v].length`, não `.length` — emoji ocupa 2 unidades UTF-16). O servidor normaliza (trim + colapso de espaços internos) antes de gravar, então atualize o estado local pelo **corpo da resposta**, não pela string enviada.
+
+Response `200`: [ConversationSummary](#conversationsummary) com o título normalizado. Erros: `400` (corpo malformado — `title` não é string); `404` (não é sua thread, foi apagada ou não existe — **idêntico**, como no `GET`/`DELETE`); `422` `title_invalid` (em branco ou > 80 code points).
+
+> Renomear **não** altera `updatedAt` — não é "atividade". A lista **não** se reordena: remende a linha no lugar, não recarregue a página 1 (o oposto do que fazer após enviar uma mensagem).
+
+### DELETE /api/ai/conversations/:conversationId
+
+**Qualquer usuário autenticado.** Soft delete, **idempotente**: apagar o que já estava apagado devolve `200` com a mesma linha, não `404`. Retorna `200` com corpo (não `204`). A thread some das duas rotas de leitura e **não pode mais ser continuada** — mandar o id ao chat passa a dar `404`. Não existe undelete.
+
+Response `200`: [ConversationSummary](#conversationsummary) com `isDeleted: true`.
+
+> Apagar **não** reduz o consumo reportado: o gasto vive num ledger separado por usuário. Nunca apresente o delete ao usuário como forma de limpar o uso de tokens.
+
+### GET /api/ai/memberships/me
+
+**Qualquer usuário autenticado.** A própria assinatura. Response `200`: [AiMembership](#aimembership). Erro `404` (ainda sem matrícula — renderize o estado vazio "sem acesso à IA", não um erro).
+
+### POST /api/ai/memberships/:userId
+
+**ADMIN.** Matrícula (concessão única). Body: `{ "initialBalance": number }` — inteiro `0..2147483647`.
+
+Response `201`: [AiMembership](#aimembership). Erros: `401` `session_expired` (sem sessão), `403` `forbidden` (não ADMIN), `409` (já matriculado — use o ajuste), `404` (usuário inexistente).
+
+### PATCH /api/ai/memberships/:userId/balance
+
+**ADMIN.** Delta assinado. Body: `{ "delta": number }` — inteiro não-zero `-2147483647..2147483647`. Positivo credita, negativo debita.
+
+Response `200`: [AiMembership](#aimembership). Erros: `401` `session_expired` (sem sessão), `403` `forbidden` (não ADMIN), `404` (sem assinatura), `403` `membership_revoked` (assinatura revogada — reative antes), `422` (delta zero, saldo abaixo de zero ou estouro do teto).
+
+### DELETE /api/ai/memberships/:userId
+
+**ADMIN.** Revogação em soft. **Idempotente.** O saldo é preservado — se quiser zerá-lo, é um `PATCH .../balance` separado.
+
+Response `200`: [AiMembership](#aimembership) com `revokedAt` preenchido. Erros: `401` `session_expired` (sem sessão), `403` `forbidden` (não ADMIN), `404`.
+
+### POST /api/ai/memberships/:userId/reinstate
+
+**ADMIN.** Desfaz a revogação; saldo e o resto voltam intactos. **Idempotente.**
+
+Response `200`: [AiMembership](#aimembership) com `revokedAt === null`. Erros: `401` `session_expired` (sem sessão), `403` `forbidden` (não ADMIN), `404`.
+
+### GET /api/ai/memberships
+
+**ADMIN.** Relatório de uso: quem tem assinatura e quanto gastou na janela.
+
+Query: `from`, `to` (instantes ISO, inclusivos; omita ambos para os **últimos 30 dias**), `limit`, `cursor`.
+
+Response `200`:
+
+```jsonc
+{
+  "periodFrom": "2026-06-01T00:00:00.000Z", // janela realmente aplicada — renderize esta,
+  "periodTo": "2026-07-01T00:00:00.000Z",   // não a suposição local
+  "data": [ /* MembershipUsage */ ],
+  "meta": { "limit": 20, "nextCursor": "...", "hasMore": true }
+}
+```
+
+Erros: `400` `invalid_query` (shape malformado — data fora do ISO-8601 ou cursor acima de 512 chars); `422` `invalid_period` (intervalo bem-formado mas invertido: `from` depois de `to`); `422` `invalid_cursor` (cursor válido porém defasado — a lista mudou; descarte o cursor e volte à página 1).
+
+> Esta resposta contém **e-mails de usuários** — é o único endpoint de IA que os expõe, e é por isso que é ADMIN. Mantenha fora de qualquer view não-admin e fora de logs/analytics no cliente.
+
+### AiMembership
+
+```jsonc
+{
+  "id": "<uuid>",
+  "userId": "<uuid>",
+  "tokenBalance": 9680,                       // contagem inteira de tokens, não dinheiro
+  "createdAt": "2026-07-20T21:00:00.000Z",
+  "revokedAt": null                           // instante da revogação; null enquanto ativa
+}
+```
+
+`revokedAt` é a **única** fonte de verdade do estado revogado — não infira de mais nada.
+
+### ChatResponse
+
+```jsonc
+{
+  "conversationId": "<uuid>",   // persista e reenvie na próxima mensagem
+  "conversationTitle": "Pedido #4821 — status", // título da thread; vem em TODA resposta, use como cabeçalho do chat
+  "reply": "Seu pedido #4821 está em preparo.",
+  "tokensSpent": 42,
+  "balanceRemaining": 9638      // dirija o saldo exibido por este campo
+}
+```
+
+### ConversationSummary
+
+```jsonc
+{
+  "id": "<uuid>",
+  "title": "Pedido #4821 — status",           // derivado da 1ª mensagem do usuário; editável via rename. Nunca vazio/null; renderize como TEXTO
+  "isDeleted": false,
+  "createdAt": "2026-07-20T21:00:00.000Z",
+  "updatedAt": "2026-07-21T09:12:00.000Z"     // última atividade — a lista ordena por isto
+}
+```
+
+### ConversationDetail
+
+`ConversationSummary` + `messages`, do mais antigo ao mais novo:
+
+```jsonc
+{
+  "id": "<uuid>",
+  "isDeleted": false,
+  "createdAt": "...",
+  "updatedAt": "...",
+  "messages": [
+    { "id": "<uuid>", "role": "USER",  "content": "Qual o status do pedido 4821?", "createdAt": "..." },
+    { "id": "<uuid>", "role": "MODEL", "content": "Seu pedido #4821 está em preparo.", "createdAt": "..." }
+  ]
+}
+```
+
+> **Armadilha de caixa.** A transcrição armazenada usa `"USER"`/`"MODEL"` (maiúsculas). O campo `history` do chat usa `"user"`/`"model"` (minúsculas). Não são intercambiáveis — se algum dia mapear uma transcrição para `history`, minusculize antes.
+
+### MembershipUsage
+
+```jsonc
+{
+  "id": "<uuid>",
+  "userId": "<uuid>",
+  "userName": "Davi Silva",       // null quando o registro do usuário não resolve mais
+  "userEmail": "davi@example.com",// idem — renderize um placeholder
+  "tokenBalance": 9680,           // saldo AGORA
+  "tokensUsedInPeriod": 320,      // gasto DENTRO da janela
+  "isRevoked": false,
+  "revokedAt": null,
+  "createdAt": "2026-07-14T12:00:00.000Z"
+}
+```
+
+`tokenBalance` e `tokensUsedInPeriod` são independentes: um crédito no meio da janela faz com que os dois não fechem entre si. Rotule-os de forma distinta na UI ou vai parecer bug. Membros revogados continuam aparecendo, com `isRevoked: true`.
+
 ---
 
 ## Audit Logs
@@ -932,7 +1153,7 @@ Response `200`: [Promotion](#promotion). Erro `404`.
 
 **ADMIN.** Lista logs de auditoria (paginado).
 
-Query: `limit`, `cursor` (uuid), `from` (date-time), `to` (date-time), `userId` (uuid), `action` (string), `entity` (string), `entityId` (string).
+Query: `limit`, `cursor` (token keyset opaco — repasse verbatim, nunca construa a partir de um id; malformado é `422`), `from` (date-time), `to` (date-time), `userId` (uuid), `action` (string), `entity` (string), `entityId` (string).
 
 Response `200`: paginado de [AuditLog](#auditlog).
 
