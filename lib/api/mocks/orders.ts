@@ -78,14 +78,20 @@ export async function createOrderMock(
 ): Promise<Order> {
   await mockDelay()
 
+  // `productName` is snapshotted from the same product lookup that validates
+  // the line, exactly as the server does — the two can never disagree, and an
+  // off-menu id is a 404 rather than a nameless item.
   const orderItems: OrderItem[] = body.orderItems.map((it, idx) => {
     const product = MOCK_PRODUCTS.find((p) => p.id === it.productId)
+    if (!product) {
+      throw new ApiError(404, null, 'Product is not on this unit’s menu.')
+    }
     const unitPrice = asMoney(it.unitPrice)
     const subtotal = multiplyMoney(unitPrice, it.quantity)
     return {
       id: `oi_${Date.now().toString(36)}_${idx}`,
       productId: it.productId,
-      productName: product?.name,
+      productName: product.name,
       quantity: it.quantity,
       unitPrice: unitPrice.toFixed(2),
       subtotal: subtotal.toFixed(2),

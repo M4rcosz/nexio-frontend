@@ -110,7 +110,9 @@
     "checkout": "Go to checkout",
     "viewCart": "View cart",
     "previewEmpty": "Your cart is empty.",
-    "switchUnitConfirm": "You already have items from another unit. Switching will empty the cart. Continue?"
+    "switchUnitTitle": "Switch unit?",
+    "switchUnitConfirm": "You already have items from another unit. Switching will empty the cart. Continue?",
+    "switchUnitCta": "Switch and empty cart"
   },
   "checkout": {
     "title": "Checkout",

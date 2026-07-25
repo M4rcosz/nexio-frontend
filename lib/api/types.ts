@@ -259,8 +259,15 @@ export type UpdateMenuItemRequest = {
 export type OrderItem = {
   id: string
   productId: string
-  /** Front-side enrichment (mock only); the backend does not return names. */
-  productName?: string
+  /**
+   * The product's name **at the moment the order was placed** — a snapshot the
+   * server resolves from the authoritative menu read, never sent by us and
+   * never null. Render it directly: looking the name up from the catalog by
+   * `productId` shows the *current* name, so a rename would rewrite history and
+   * a retired product would render nothing at all. Safe to cache with the
+   * order; unlike `customerName`, it cannot go stale.
+   */
+  productName: string
   quantity: number
   unitPrice: string
   subtotal: string

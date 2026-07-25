@@ -110,7 +110,9 @@
     "checkout": "Ir para o checkout",
     "viewCart": "Ver carrinho",
     "previewEmpty": "Seu carrinho está vazio.",
-    "switchUnitConfirm": "Você já tem itens de outra unidade no carrinho. Trocar limpa o carrinho. Deseja continuar?"
+    "switchUnitTitle": "Trocar de unidade?",
+    "switchUnitConfirm": "Você já tem itens de outra unidade no carrinho. Trocar limpa o carrinho. Deseja continuar?",
+    "switchUnitCta": "Trocar e esvaziar carrinho"
   },
   "checkout": {
     "title": "Checkout",
