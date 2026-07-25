@@ -857,7 +857,6 @@
     "subtitle": "Pergunte sobre seus pedidos e pontos de fidelidade. Cada resposta consome tokens do seu saldo.",
     "balance": "Saldo de tokens",
     "tokens": "tokens",
-    "balanceHint": "Os tokens são consumidos por mensagem. Seu saldo é atualizado a cada resposta.",
     "notEnrolledTitle": "Sem acesso à IA ainda",
     "notEnrolledBody": "Peça a um administrador para liberar seu acesso ao assistente de IA.",
     "outOfTokensTitle": "Tokens esgotados",

@@ -857,7 +857,6 @@
     "subtitle": "Ask about your orders and loyalty points. Each reply spends tokens from your balance.",
     "balance": "Token balance",
     "tokens": "tokens",
-    "balanceHint": "Tokens are spent per message. Your balance updates after each reply.",
     "notEnrolledTitle": "No AI access yet",
     "notEnrolledBody": "Ask an admin to grant you AI assistant access.",
     "outOfTokensTitle": "Out of tokens",

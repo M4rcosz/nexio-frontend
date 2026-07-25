@@ -6,10 +6,30 @@ import { useLocale, useTranslations } from 'next-intl'
 import { LoadMore } from '@/components/admin/LoadMore'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { isValidTitle, titleLength } from '@/lib/ai/title'
-import { formatDateTime } from '@/lib/format'
+import { formatDateTime, formatRelativeTime } from '@/lib/format'
 import { CONVERSATION_TITLE_MAX_LENGTH } from '@/lib/validation/constants'
 import type { CursorPageError } from '@/components/admin/useCursorPages'
 import type { AiConversationSummary } from '@/lib/api/types'
+
+/** How often the "last activity" labels re-render. Half a minute, not a full
+ *  one, so the `now → 1 min. ago` step is never more than 30s late; every
+ *  coarser step (hours, days) has slack to spare. */
+const RELATIVE_TICK_MS = 30_000
+
+/**
+ * A clock that advances every `ms`, so relative timestamps age in place
+ * instead of freezing at whatever they said when the rail mounted. One
+ * interval drives every row — a timer per row would scale with the page size
+ * for no extra precision.
+ */
+function useNow(ms: number): number {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), ms)
+    return () => clearInterval(id)
+  }, [ms])
+  return now
+}
 
 /**
  * The caller's stored threads, most recent activity first.
@@ -56,6 +76,7 @@ export function AiConversationList({
 }) {
   const t = useTranslations('ai')
   const locale = useLocale()
+  const now = useNow(RELATIVE_TICK_MS)
 
   // Deletion is irreversible (there is no undelete endpoint), so it always
   // goes through a confirm — including from the row's inline button.
@@ -142,38 +163,60 @@ export function AiConversationList({
               )
             }
             return (
-              <li key={c.id} className="flex items-center gap-1 px-2 py-1">
-                <button
-                  type="button"
-                  onClick={() => onOpen(c.id)}
-                  disabled={busy}
-                  aria-current={active ? 'true' : undefined}
-                  className={`flex-1 overflow-hidden rounded-lg px-2 py-2 text-left text-xs transition-colors disabled:opacity-50 ${
+              <li key={c.id} className="px-2 py-1">
+                {/* Hover/active live on the row wrapper, not on the open
+                    button: the row is one target visually, and highlighting
+                    only the button left the kebab sitting in an unpainted
+                    gutter. `busy` drops the hover entirely — nothing in the
+                    row is clickable then. */}
+                <div
+                  className={`flex items-center gap-1 rounded-lg transition-colors ${
                     active
-                      ? 'bg-brand-500/10 text-fg'
-                      : 'text-fg-muted hover:bg-surface-2'
+                      ? 'bg-brand-500/10'
+                      : busy
+                        ? ''
+                        : 'hover:bg-surface-2'
                   }`}
                 >
-                  {/* Render as text — the title is user-authored. Clamp with
-                      `truncate`; the full value is on the native tooltip. */}
-                  <span
-                    className="block truncate font-medium text-fg"
-                    title={c.title}
+                  <button
+                    type="button"
+                    onClick={() => onOpen(c.id)}
+                    disabled={busy}
+                    aria-current={active ? 'true' : undefined}
+                    className={`min-w-0 flex-1 overflow-hidden rounded-lg px-2 py-2 text-left text-xs disabled:opacity-50 ${
+                      active ? 'text-fg' : 'text-fg-muted'
+                    }`}
                   >
-                    {c.title}
-                  </span>
-                  <span className="block text-[11px] text-fg-subtle">
-                    {formatDateTime(c.updatedAt, locale)}
-                  </span>
-                </button>
-                <ThreadMenu
-                  label={t('threadActions')}
-                  renameLabel={t('renameThread')}
-                  deleteLabel={t('deleteThread')}
-                  disabled={busy}
-                  onRename={() => setEditing(c.id)}
-                  onDelete={() => setConfirming(c.id)}
-                />
+                    {/* Render as text — the title is user-authored. Clamp with
+                        `truncate`; the full value is on the native tooltip. */}
+                    <span
+                      className="block truncate font-medium text-fg"
+                      title={c.title}
+                    >
+                      {c.title}
+                    </span>
+                    {/* Age of the last activity, not the wall-clock stamp —
+                        the exact instant stays on the tooltip. Server and
+                        client render it a tick apart, hence the suppressed
+                        hydration warning. */}
+                    <time
+                      dateTime={c.updatedAt}
+                      title={formatDateTime(c.updatedAt, locale)}
+                      suppressHydrationWarning
+                      className="block text-[11px] text-fg-subtle"
+                    >
+                      {formatRelativeTime(c.updatedAt, locale, now)}
+                    </time>
+                  </button>
+                  <ThreadMenu
+                    label={t('threadActions')}
+                    renameLabel={t('renameThread')}
+                    deleteLabel={t('deleteThread')}
+                    disabled={busy}
+                    onRename={() => setEditing(c.id)}
+                    onDelete={() => setConfirming(c.id)}
+                  />
+                </div>
               </li>
             )
           })}
@@ -441,7 +484,11 @@ function ThreadMenu({
         aria-expanded={open}
         aria-label={label}
         title={label}
-        className="rounded-lg p-2 text-fg-subtle transition-colors hover:bg-surface-2 hover:text-fg disabled:opacity-50"
+        // Not `surface-2`: the row it sits on is already painted with that on
+        // hover, so the trigger's own hover would vanish exactly when it's
+        // reachable. `border` is one visible step from `surface-2` in both
+        // themes (darker in light, lighter in dark).
+        className="flex-none rounded-lg p-2 text-fg-subtle transition-colors hover:bg-border hover:text-fg disabled:opacity-50"
       >
         <KebabIcon className="h-4 w-4" />
       </button>

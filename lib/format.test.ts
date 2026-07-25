@@ -5,6 +5,7 @@ import {
   maskCnpj,
   formatDateLabel,
   formatDateTime,
+  formatRelativeTime,
   formatTime,
 } from './format'
 
@@ -91,6 +92,56 @@ describe('formatTime', () => {
     expect(formatTime('2026-07-06T15:30:00Z', '!!invalid')).toBe(
       '2026-07-06T15:30:00Z',
     )
+  })
+})
+
+describe('formatRelativeTime', () => {
+  const now = Date.parse('2026-07-24T12:00:00Z')
+  const ago = (ms: number) => new Date(now - ms).toISOString()
+  const MINUTE = 60_000
+  const HOUR = 60 * MINUTE
+  const DAY = 24 * HOUR
+
+  it('reads as "now" below a minute', () => {
+    expect(formatRelativeTime(ago(0), 'en', now)).toBe('now')
+    expect(formatRelativeTime(ago(59_000), 'en', now)).toBe('now')
+  })
+
+  it('escalates minutes to hours to days', () => {
+    expect(formatRelativeTime(ago(MINUTE), 'en', now)).toBe('1 min. ago')
+    expect(formatRelativeTime(ago(59 * MINUTE), 'en', now)).toBe('59 min. ago')
+    expect(formatRelativeTime(ago(HOUR), 'en', now)).toBe('1 hr. ago')
+    expect(formatRelativeTime(ago(23 * HOUR), 'en', now)).toBe('23 hr. ago')
+    expect(formatRelativeTime(ago(DAY), 'en', now)).toBe('1 day ago')
+    expect(formatRelativeTime(ago(30 * DAY), 'en', now)).toBe('30 days ago')
+  })
+
+  it('truncates rather than rounds, so a label never runs ahead', () => {
+    expect(formatRelativeTime(ago(119_000), 'en', now)).toBe('1 min. ago')
+  })
+
+  it('never counts calendar days — 30 hours is one elapsed day, not "yesterday"', () => {
+    expect(formatRelativeTime(ago(30 * HOUR), 'en', now)).toBe('1 day ago')
+  })
+
+  it('localizes the unit', () => {
+    expect(formatRelativeTime(ago(5 * MINUTE), 'pt-BR', now)).toBe('há 5 min.')
+  })
+
+  it('falls back to the absolute stamp past a month of days', () => {
+    expect(formatRelativeTime(ago(31 * DAY), 'en', now)).toBe(
+      formatDateTime(ago(31 * DAY), 'en'),
+    )
+  })
+
+  it('clamps a future instant to "now" instead of counting up', () => {
+    expect(
+      formatRelativeTime(new Date(now + 3 * MINUTE).toISOString(), 'en', now),
+    ).toBe('now')
+  })
+
+  it('returns the raw input for an unparseable date', () => {
+    expect(formatRelativeTime('not-a-date', 'en', now)).toBe('not-a-date')
   })
 })
 
