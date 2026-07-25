@@ -1,4 +1,5 @@
 import { Skeleton, SkeletonCard } from '@/components/Skeleton'
+import { ProductFormFieldsSkeleton } from '@/components/admin/ProductFormFieldsSkeleton'
 
 export default function NewProductLoading() {
   return (
@@ -8,13 +9,8 @@ export default function NewProductLoading() {
         <Skeleton className="h-9 w-48" />
         <Skeleton className="h-4 w-72" />
       </div>
-      <SkeletonCard className="space-y-4 p-6">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="space-y-1.5">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-10 w-full rounded-xl" />
-          </div>
-        ))}
+      <SkeletonCard className="max-w-3xl space-y-4 p-6">
+        <ProductFormFieldsSkeleton />
         <div className="flex justify-end">
           <Skeleton className="h-10 w-40 rounded-xl" />
         </div>

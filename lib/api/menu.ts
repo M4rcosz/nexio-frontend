@@ -41,7 +41,11 @@ export async function listMenu(
     `/business-units/${businessUnitId}/menu`,
     {
       query: { limit: query.limit, cursor: query.cursor },
-      next: { revalidate: 30, tags: [`menu:${businessUnitId}`] },
+      // The coarse `menu` tag exists for writes that change a menu-visible
+      // field without knowing which units carry the product — a product image
+      // being the case in point. Mirrors the `business-units` +
+      // `business-units:${id}` pairing.
+      next: { revalidate: 30, tags: ['menu', `menu:${businessUnitId}`] },
     },
   )
 }
@@ -61,7 +65,7 @@ export async function getMenuItem(
   try {
     return await serverFetchAnonymous<PublicMenuItem>(
       `/business-units/${businessUnitId}/menu/${menuItemId}`,
-      { next: { revalidate: 30, tags: [`menu:${businessUnitId}`] } },
+      { next: { revalidate: 30, tags: ['menu', `menu:${businessUnitId}`] } },
     )
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return null

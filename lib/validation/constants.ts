@@ -1,6 +1,7 @@
 // Single source of truth for the field constraints shared between the browser
 // forms and the BFF route handlers. Keeping the numbers/patterns here means the
 // client-side instant feedback and the server-side zod schemas can never drift.
+import type { ProductImageContentType } from '@/lib/api/types'
 
 /**
  * Allowed username shape: lowercase letters/digits, with `.`, `_` or `-` only in
@@ -72,6 +73,30 @@ export const CHAT_REPLAYED_TURNS = 40
  * not UTF-16 units — so an 80-emoji title is valid where `.length` would read 160.
  */
 export const CONVERSATION_TITLE_MAX_LENGTH = 80
+
+// --- Product images ---
+
+/**
+ * Content types the storage bucket accepts. The bucket and the API both
+ * enforce this server-side; checking locally turns a round trip into an
+ * instant message. `image/svg+xml` is absent on purpose — an SVG is a script
+ * host, so it must be rejected even when the file picker offers it.
+ */
+export const PRODUCT_IMAGE_CONTENT_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+] as const satisfies readonly ProductImageContentType[]
+
+/** `accept` hint for the file input. A hint, not a guarantee — users can still
+ * pick anything through "all files", so the checks above stay. */
+export const PRODUCT_IMAGE_ACCEPT = PRODUCT_IMAGE_CONTENT_TYPES.join(',')
+
+/** Mirrors the backend's SUPABASE_IMAGE_MAX_BYTES (5 MB). */
+export const PRODUCT_IMAGE_MAX_BYTES = 5 * 1024 * 1024
+
+/** `path` is capped at 300 chars by the confirm endpoint. */
+export const PRODUCT_IMAGE_PATH_MAX_LENGTH = 300
 
 export const EMAIL_MAX_LENGTH = 254
 export const NAME_MAX_LENGTH = 120

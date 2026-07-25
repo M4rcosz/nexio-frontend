@@ -415,9 +415,14 @@ Request:
   "description": "Bolinho de feijão-fradinho...",    // opcional, ≤255
   "price": "12.50",                                  // decimal positivo, ≤2 casas
   "categoryId": "<uuid>",
-  "imageUrl": "https://example.com/acaraje.jpg"      // URL válida, ≤2000
+  "imageUrl": "https://example.com/acaraje.jpg"      // OPCIONAL, URL válida, ≤2000
 }
 ```
+
+`imageUrl` é opcional desde o backend 5.0.0: crie o produto sem imagem e anexe-a
+depois com o par [upload-url](#post-apiproductsproductidimageupload-url) +
+[confirm](#post-apiproductsproductidimageconfirm). O campo continua aceito aqui
+para imagens hospedadas fora do bucket.
 
 Response `201`: [Product](#product). Erros: `409` nome duplicado; `404` categoria inexistente.
 
@@ -433,11 +438,70 @@ Request (ao menos um):
   "description": "…",                                 // ≤255, não pode ser limpo com null
   "price": "13.50",                                   // decimal positivo, ≤2 casas
   "categoryId": "<uuid>",
-  "imageUrl": "https://example.com/acaraje-2.jpg"     // URL http(s) válida, ≤2000
+  "imageUrl": "https://example.com/acaraje-2.jpg"     // URL http(s) válida ≤2000, ou null
 }
 ```
 
+`imageUrl: null` **limpa a referência** da imagem (o objeto no bucket não é
+apagado — isso é problema do backend). Este é o único caminho de limpeza, e ele
+é **ADMIN**, enquanto as duas rotas de imagem abaixo são ADMIN+MANAGER: um
+MANAGER substitui uma imagem mas não remove nenhuma, então esconda o controle
+em vez de deixar dar `403`.
+
 Response `200`: [Product](#product). Erros: `400` validação (body vazio, campo desconhecido, valor inválido); `403` role ≠ ADMIN; `404` produto ou `categoryId` inexistente; `409` nome duplicado.
+
+### POST /api/products/:productId/image/upload-url
+
+**ADMIN, MANAGER.** Passo 1 de 3 do upload de imagem. Emite uma credencial
+assinada de escrita direta no bucket; os bytes vão do navegador para o
+armazenamento e **não passam por esta API**.
+
+Request:
+
+```jsonc
+{ "contentType": "image/jpeg" } // image/png | image/jpeg | image/webp
+```
+
+Response `201`:
+
+```jsonc
+{
+  "signedUrl": "https://<projeto>.supabase.co/storage/v1/object/upload/sign/...",
+  "token": "eyJhbGciOi...",
+  "path": "products/<uuid>/<uuid>.jpg", // opaco — devolva verbatim no confirm
+  "expiresInSeconds": 7200              // fixo pelo provedor
+}
+```
+
+O `201` não significa "a imagem existe": nada é persistido aqui. Erros: `400`
+`contentType` fora da allowlist; `401` sem sessão; `404` produto inexistente;
+`429` mais de 10 emissões por minuto (`code: rate_limited`).
+
+**Passo 2** é um `PUT` direto para `signedUrl` com o `Content-Type` real do
+arquivo e **sem** o header `Authorization` desta app — a credencial já está na
+URL, e o destino é o provedor de armazenamento.
+
+### POST /api/products/:productId/image/confirm
+
+**ADMIN, MANAGER.** Passo 3 de 3: publica o objeto recém-enviado e apaga o que
+ele substituiu.
+
+Request:
+
+```jsonc
+{ "path": "products/<uuid>/<uuid>.jpg" } // verbatim do passo 1, ≤300 chars
+```
+
+Response `200`: [Product](#product) completo, já com o novo `imageUrl` — use
+essa resposta direto, sem refetch (um refetch pode correr com a CDN e devolver
+a linha antiga). A URL muda a cada substituição, então nunca a cacheie nem a
+use como React key.
+
+Erros: `400` `path` ausente/grande demais; `401` sem sessão;
+`404` (`code: upload_incomplete`)
+não há objeto nesse caminho — recomece do passo 1; `422`
+(`code: image_rejected`) o arquivo armazenado foi recusado (vazio, grande
+demais, tipo não permitido) — escolha outro arquivo.
 
 ### PATCH /api/products/:productId/activate
 
@@ -459,9 +523,14 @@ Response `200`: [Product](#product). Erros: `400` validação (body vazio, campo
   "categoryId": "<uuid>",
   "createdAt": "2026-05-18T10:30:00.000Z",
   "updatedAt": "2026-05-18T10:30:00.000Z",
-  "imageUrl": "https://example.com/acaraje.jpg"
+  "imageUrl": "https://example.com/acaraje.jpg" // ou null — um produto pode não ter imagem
 }
 ```
+
+A chave está sempre presente; só o valor pode ser `null`. O mesmo vale para
+`imageUrl` no [item de cardápio público](#publicmenuitem). Todo render passa por
+`components/ui/ProductImage.tsx`, que cobre tanto o `null` quanto uma URL que
+responde 404.
 
 ---
 
@@ -533,7 +602,7 @@ Response `200`: [MenuItem](#menuitem). Erro `404`.
   "productId": "<uuid>",
   "name": "Moqueca de peixe",
   "description": "…",                 // ou null
-  "imageUrl": "https://…",
+  "imageUrl": "https://…",            // ou null
   "price": "18.50"                    // preço efetivo na unidade (string decimal)
 }
 ```

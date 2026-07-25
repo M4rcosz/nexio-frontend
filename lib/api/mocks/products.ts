@@ -6,11 +6,14 @@
 import type {
   CreateProductRequest,
   Paginated,
+  ProductImageContentType,
+  ProductImageUploadUrl,
   ProductResponseDto,
   ProductUpdateDto,
 } from '@/lib/api/types'
 import { ApiError } from '@/lib/api/errors'
 import { mockDelay } from './_delay'
+import { getUpload } from './uploadStore'
 
 const NOW = new Date().toISOString()
 
@@ -132,7 +135,7 @@ export async function createProductMock(
     price: input.price,
     isActive: true,
     categoryId: input.categoryId,
-    imageUrl: input.imageUrl,
+    imageUrl: input.imageUrl ?? null,
     createdAt: now,
     updatedAt: now,
   }
@@ -164,6 +167,76 @@ export async function updateProductMock(
   if (patch.price !== undefined) product.price = patch.price
   if (patch.categoryId !== undefined) product.categoryId = patch.categoryId
   if (patch.imageUrl !== undefined) product.imageUrl = patch.imageUrl
+  product.updatedAt = new Date().toISOString()
+  return { ...product }
+}
+
+const IMAGE_EXTENSION: Record<ProductImageContentType, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+}
+
+/**
+ * Mints a fake credential. `signedUrl` points at the in-app absorber
+ * (`PUT /api/dev/mock-upload`) instead of a storage host so the browser's real
+ * three-call flow — including progress and cancel — can be exercised offline.
+ */
+export async function mintProductImageUploadUrlMock(
+  productId: string,
+  contentType: ProductImageContentType,
+): Promise<ProductImageUploadUrl> {
+  await mockDelay()
+  if (!MOCK_PRODUCTS.some((p) => p.id === productId)) {
+    throw new ApiError(404, { code: 'not_found' }, 'Product not found.')
+  }
+  const path = `products/${productId}/${crypto.randomUUID()}.${IMAGE_EXTENSION[contentType]}`
+  return {
+    signedUrl: `/api/dev/mock-upload?path=${encodeURIComponent(path)}`,
+    token: 'mock-upload-token',
+    path,
+    expiresInSeconds: 7200,
+  }
+}
+
+/**
+ * Publishes the mocked upload, mirroring the real endpoint's three outcomes so
+ * that mock-mode development exercises the recovery paths and not just the
+ * happy one. The URL is regenerated on every confirm — same as the real bucket,
+ * where each upload gets a new random object name — so the UI cannot get away
+ * with caching it.
+ */
+export async function confirmProductImageMock(
+  productId: string,
+  path: string,
+): Promise<ProductResponseDto> {
+  await mockDelay()
+  const product = MOCK_PRODUCTS.find((p) => p.id === productId)
+  if (!product) {
+    throw new ApiError(404, { code: 'not_found' }, 'Product not found.')
+  }
+  // The real server re-parses the path against the product and answers 422 on
+  // a mismatch. The client always echoes `path` verbatim, so this only fires
+  // for a hand-crafted request — but leaving it out would make the mock more
+  // permissive than production.
+  if (!path.startsWith(`products/${productId}/`)) {
+    throw new ApiError(
+      422,
+      { code: 'unprocessable_entity' },
+      'Path does not belong to this product.',
+    )
+  }
+  // No object at that path: the upload never landed, or it was cancelled
+  // mid-flight. This is the branch the uploader recovers from with a fresh
+  // mint, and it is only reachable because the absorber's store is shared.
+  const stored = getUpload(path)
+  if (!stored) {
+    throw new ApiError(404, { code: 'not_found' }, 'No object at that path.')
+  }
+  if (stored.body.byteLength === 0) {
+    throw new ApiError(422, { code: 'unprocessable_entity' }, 'Empty file.')
+  }
+  product.imageUrl = `/api/dev/mock-upload?path=${encodeURIComponent(path)}`
   product.updatedAt = new Date().toISOString()
   return { ...product }
 }

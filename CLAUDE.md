@@ -71,6 +71,36 @@ skips `revalidateTag` and the row is patched from the response via the
 `useCursorPages` `updateItem` overlay. If you add such a handler, say so in a
 comment so the omission doesn't read as a missed `revalidateTag`.
 
+**Coarse tags — when the writer can't know which readers to bust.** Some
+fields are mirrored into per-unit reads: `PublicMenuItem` carries the
+product's `name` and `imageUrl`, so a product write invalidates every unit
+menu that lists it — and the handler has no way to know which ones those are.
+Menu fetches in `lib/api/menu.ts` and `lib/api/products.ts` therefore carry a
+coarse `'menu'` tag *alongside* `menu:${businessUnitId}` (mirroring the
+`business-units` + `business-units:${id}` pairing), and product writes —
+`PATCH /api/products/:productId` and
+`POST /api/products/:productId/image/confirm` — call `revalidateTag('menu')`
+on top of `products` + `product:<id>`. Images are why it isn't optional:
+confirm deletes the object it replaced, so a stale menu cache doesn't serve an
+old picture, it serves a URL to bytes that no longer exist. **If you add a
+fetch of a menu-visible field, tag it with both** — a per-unit-only tag is
+invisible to those writes.
+
+## Dev-only routes
+
+`NEXT_PUBLIC_USE_MOCKS` is a supported **build** mode, not a dev-only flag —
+`lib/env.ts` deliberately allows mocks in production for demo deploys, and
+preview builds run with `NODE_ENV=production`. A route that must never exist
+outside local development therefore needs **both** guards:
+`USE_MOCKS && process.env.NODE_ENV !== 'production'`. See
+`app/api/dev/mock-upload/route.ts` (the stand-in for the image bucket) and the
+`DevAccountSwitcher` mount in `app/[locale]/layout.tsx`.
+
+Behind the guards, a dev route still enforces what the real service enforces.
+The upload absorber keeps the staff-session check, the content-type allowlist
+and the size cap: an unauthenticated absorber that serves back whatever it was
+handed is a stored-XSS sink on our own origin, not a test fixture.
+
 ## Domain rules
 
 Order channels (`APP`/`WEB`/`TOTEM`/`COUNTER`/`PICKUP`) and the status state

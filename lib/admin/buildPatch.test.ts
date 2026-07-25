@@ -156,7 +156,6 @@ describe('buildProductPatch', () => {
     description: 'Beef',
     price: '25.00',
     categoryId: '11111111-1111-1111-1111-111111111111',
-    imageUrl: 'https://cdn.example.com/a.png',
   }
 
   it('returns noChanges when identical', () => {
@@ -192,15 +191,12 @@ describe('buildProductPatch', () => {
     )
   })
 
-  it('never clears description or imageUrl when emptied', () => {
-    // Emptying these is a no-op (they cannot be cleared here), so nothing else
+  it('never clears the description when emptied', () => {
+    // Emptying it is a no-op (it cannot be cleared here), so nothing else
     // changed -> noChanges.
-    expect(
-      buildProductPatch(
-        { ...base, description: '  ', imageUrl: '   ' },
-        product,
-      ),
-    ).toEqual({ error: 'noChanges' })
+    expect(buildProductPatch({ ...base, description: '  ' }, product)).toEqual({
+      error: 'noChanges',
+    })
   })
 
   it('adds a description that changed', () => {
@@ -218,13 +214,12 @@ describe('buildProductPatch', () => {
     ).toEqual({ patch: { categoryId: '22222222-2222-2222-2222-222222222222' } })
   })
 
-  it('includes a new imageUrl', () => {
+  it('never touches the image — it is not a field of this form', () => {
+    // The image is attached with the upload/confirm pair and cleared with an
+    // explicit `imageUrl: null` patch, so it must never ride along here.
     expect(
-      buildProductPatch(
-        { ...base, imageUrl: 'https://cdn.example.com/b.png' },
-        product,
-      ),
-    ).toEqual({ patch: { imageUrl: 'https://cdn.example.com/b.png' } })
+      buildProductPatch({ ...base, name: 'Cheeseburger' }, product),
+    ).toEqual({ patch: { name: 'Cheeseburger' } })
   })
 
   it('treats whitespace-equal values as unchanged', () => {
@@ -235,7 +230,6 @@ describe('buildProductPatch', () => {
           description: ' Beef ',
           price: '25.00',
           categoryId: '11111111-1111-1111-1111-111111111111',
-          imageUrl: 'https://cdn.example.com/a.png',
         },
         product,
       ),

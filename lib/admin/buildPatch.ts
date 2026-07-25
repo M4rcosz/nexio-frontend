@@ -117,12 +117,16 @@ export function buildBusinessUnitPatch(
 
 // --- Product ---
 
+/**
+ * Text fields only — the image is not edited through this patch. It is
+ * attached with the upload/confirm pair and cleared with an explicit
+ * `imageUrl: null` patch from `ProductImageManager`.
+ */
 export type ProductFormValues = {
   name: string
   description: string
   price: string
   categoryId: string
-  imageUrl: string
 }
 
 export type ProductPatchError =
@@ -160,11 +164,6 @@ export function buildProductPatch(
       return { error: 'invalidCategory' }
     }
     patch.categoryId = categoryId
-  }
-
-  const imageUrl = form.imageUrl.trim()
-  if (imageUrl && imageUrl !== (product.imageUrl ?? '')) {
-    patch.imageUrl = imageUrl
   }
 
   if (Object.keys(patch).length === 0) return { error: 'noChanges' }

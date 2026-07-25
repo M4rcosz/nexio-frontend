@@ -15,8 +15,9 @@ export default function AdminProductsLoading() {
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
-            className="grid grid-cols-[2fr_1fr_1fr_1fr] items-center gap-2 border-t border-border px-4 py-3"
+            className="grid grid-cols-[2.5rem_2fr_1fr_1fr_1fr] items-center gap-2 border-t border-border px-4 py-3"
           >
+            <Skeleton className="h-10 w-10 rounded-lg" />
             <Skeleton className="h-4 w-3/4" />
             <Skeleton className="h-4 w-16" />
             <Skeleton className="h-5 w-16 rounded-full" />
@@ -30,11 +31,13 @@ export default function AdminProductsLoading() {
       <div className="grid gap-3 md:hidden">
         {Array.from({ length: 4 }).map((_, i) => (
           <SkeletonCard key={i} className="space-y-3 p-4">
-            <div className="flex items-center justify-between gap-3">
-              <Skeleton className="h-4 w-1/2" />
+            <div className="flex items-start gap-3">
+              <Skeleton className="h-12 w-12 flex-none rounded-lg" />
+              <Skeleton className="h-4 flex-1" />
               <Skeleton className="h-5 w-16" />
             </div>
-            <Skeleton className="h-9 w-full rounded-xl" />
+            {/* h-11 = the real link's min-h-[44px] tap target. */}
+            <Skeleton className="h-11 w-full rounded-xl" />
           </SkeletonCard>
         ))}
       </div>
