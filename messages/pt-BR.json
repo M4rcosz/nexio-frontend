@@ -788,7 +788,10 @@
       "membership_revoked": "Esta assinatura de IA está revogada. Reative-a primeiro.",
       "not_enrolled": "Este usuário ainda não possui assinatura de IA.",
       "invalid_period": "A data inicial não pode ser posterior à data final.",
-      "invalid_query": "Alguns filtros são inválidos. Ajuste-os e tente novamente."
+      "invalid_query": "Alguns filtros são inválidos. Ajuste-os e tente novamente.",
+      "insufficient_stock": "Um dos itens está sem estoque nesta unidade. Remova-o ou reduza a quantidade para continuar.",
+      "profile_edit_unsupported": "Nome, e-mail, telefone e papel da equipe ainda não podem ser alterados — por enquanto esses campos são somente leitura.",
+      "unit_change_forbidden": "Apenas um administrador pode alterar as unidades vinculadas a um membro da equipe."
     }
   },
   "orderStatus": {

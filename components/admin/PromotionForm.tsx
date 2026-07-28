@@ -134,7 +134,13 @@ export function PromotionForm({
         return
       }
       router.refresh()
-      router.push('/admin/promotions')
+      // Land on the unit the promotion belongs to. The list defaults to
+      // `units[0]`, so a bare push dropped the user on some other unit's
+      // (often empty) board — the promotion they had just created was nowhere
+      // in sight and looked like it had failed to save.
+      router.push(
+        `/admin/promotions?businessUnitId=${encodeURIComponent(form.businessUnitId)}`,
+      )
     })
   }
 

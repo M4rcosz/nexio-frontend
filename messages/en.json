@@ -788,7 +788,10 @@
       "membership_revoked": "This AI membership is revoked. Reinstate it first.",
       "not_enrolled": "This user has no AI membership yet.",
       "invalid_period": "The start date must not be after the end date.",
-      "invalid_query": "Some of the filters are invalid. Please adjust them and try again."
+      "invalid_query": "Some of the filters are invalid. Please adjust them and try again.",
+      "insufficient_stock": "One of the items is out of stock at this unit. Remove it or lower the quantity to continue.",
+      "profile_edit_unsupported": "Staff name, e-mail, phone and role can't be changed yet — these fields are read-only for now.",
+      "unit_change_forbidden": "Only an administrator can change which units a staff member is assigned to."
     }
   },
   "orderStatus": {

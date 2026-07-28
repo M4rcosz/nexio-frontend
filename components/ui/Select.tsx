@@ -224,7 +224,11 @@ export function Select({
   return (
     <div
       ref={rootRef}
-      className={`relative ${fullWidth ? 'w-full' : 'inline-block'}`}
+      // `max-w-full` on the shrink-to-fit variant: an `inline-block` sized to a
+      // long option label will happily exceed its container and scroll the page
+      // sideways. Capping here (never widening) is what lets the trigger's
+      // inner `truncate` engage.
+      className={`relative ${fullWidth ? 'w-full' : 'inline-block max-w-full'}`}
     >
       <button
         ref={triggerRef}
@@ -247,7 +251,13 @@ export function Select({
         className={`flex items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-60 ${className}`}
       >
         {leading}
-        <span className={`flex-1 truncate ${selected ? '' : 'text-fg-subtle'}`}>
+        {/* `title` so a label the cap ellipsizes is still readable on hover —
+            truncation is visual only, so this is for sighted users; the full
+            string is already in the DOM for assistive tech. */}
+        <span
+          title={selected?.label}
+          className={`flex-1 truncate ${selected ? '' : 'text-fg-subtle'}`}
+        >
           {selected?.label ?? placeholder ?? ''}
         </span>
         <ChevronDown
@@ -323,7 +333,9 @@ export function Select({
                         : 'text-fg'
                     } ${isActive ? 'bg-surface-2' : ''}`}
                   >
-                    <span className="truncate">{opt.label}</span>
+                    <span className="truncate" title={opt.label}>
+                      {opt.label}
+                    </span>
                     {isSelected ? (
                       <CheckIcon className="h-4 w-4 flex-none text-brand-500" />
                     ) : null}

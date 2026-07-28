@@ -126,7 +126,13 @@ describe('PromotionForm (create)', () => {
     // Dates are serialized to ISO 8601.
     expect(body.startDate).toMatch(/^\d{4}-\d{2}-\d{2}T.*Z$/)
     expect(new Date(body.endDate) > new Date(body.startDate)).toBe(true)
-    await waitFor(() => expect(push).toHaveBeenCalledWith('/admin/promotions'))
+    // Carries the unit through, so the list opens on the board the promotion
+    // was just added to rather than defaulting to `units[0]`.
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith(
+        '/admin/promotions?businessUnitId=bu-1',
+      ),
+    )
   })
 
   it('forces the scoped unit for a MANAGER regardless of the field', async () => {

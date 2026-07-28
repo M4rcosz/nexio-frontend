@@ -8,6 +8,7 @@ import { PasswordStrengthMeter } from '@/components/ui/PasswordStrengthMeter'
 import { Select } from '@/components/ui/Select'
 import { useRouter } from '@/i18n/navigation'
 import { useUsernameError } from '@/lib/validation/useUsernameError'
+import { buildUserPatch } from '@/lib/admin/buildPatch'
 import {
   PASSWORD_MIN_LENGTH,
   USERNAME_MAX_LENGTH,
@@ -43,6 +44,7 @@ export function UserForm({
 }) {
   const router = useRouter()
   const t = useTranslations('admin.form')
+  const tErrors = useTranslations('errors.codes')
   const errorMessage = useErrorMessage()
   const usernameError = useUsernameError()
   const [pending, start] = useTransition()
@@ -86,6 +88,23 @@ export function UserForm({
   const isAdminRole = form.role === 'ADMIN'
   // ADMIN role has no unit; for everyone else at least one is required.
   const unitFieldVisible = !isAdminRole
+
+  /**
+   * The backend has no update endpoint for staff profile fields, so on edit
+   * these controls could never save. They used to stay enabled and fail on
+   * submit, which cost the actor a round-trip to be told "not supported yet" —
+   * so the constraint is shown up front instead, the way `username` already is.
+   */
+  const profileLocked = mode === 'edit'
+
+  /**
+   * Only an ADMIN may move a user between units: `updateInternalUser` discards
+   * a MANAGER's `businessUnitIds` outright. Leaving the boxes tickable meant a
+   * MANAGER got an error about an *empty* unit set while looking at the units
+   * they had just ticked.
+   */
+  const unitsEditable = mode === 'create' || scopedBusinessUnitIds === null
+
   // A MANAGER may only assign units within their own scope; an ADMIN sees all.
   const selectableUnits = useMemo(
     () =>
@@ -107,23 +126,29 @@ export function UserForm({
       const url = isCreate ? '/api/admin/users' : `/api/admin/users/${user!.id}`
       const method = isCreate ? 'POST' : 'PATCH'
       const businessUnitIds = isAdminRole ? [] : form.businessUnitIds
-      const body = isCreate
-        ? {
-            name: form.name,
-            email: form.email,
-            username: form.username,
-            phone: form.phone || undefined,
-            password: form.password,
-            role: form.role,
-            businessUnitIds,
-          }
-        : {
-            name: form.name,
-            email: form.email,
-            phone: form.phone || null,
-            role: form.role,
-            businessUnitIds,
-          }
+      let body: object
+      if (isCreate) {
+        body = {
+          name: form.name,
+          email: form.email,
+          username: form.username,
+          phone: form.phone || undefined,
+          password: form.password,
+          role: form.role,
+          businessUnitIds,
+        }
+      } else {
+        // Only the fields the actor actually changed — see `buildUserPatch`.
+        const result = buildUserPatch(form, user!, unitsEditable)
+        if ('error' in result) {
+          // `noChanges` is the only error this diff can produce. Skip the
+          // round-trip rather than sending an empty patch, which the backend
+          // answers with a confusing "the unit set is empty".
+          router.push('/admin/users')
+          return
+        }
+        body = result.patch
+      }
       const res = await fetch(url, {
         method,
         headers: { 'content-type': 'application/json' },
@@ -148,6 +173,12 @@ export function UserForm({
 
   return (
     <form onSubmit={submit} className="space-y-4">
+      {profileLocked ? (
+        <p className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-xs text-fg-muted">
+          {tErrors('profile_edit_unsupported')}
+        </p>
+      ) : null}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <label className="label" htmlFor="name">
@@ -157,6 +188,7 @@ export function UserForm({
             id="name"
             className="input"
             required
+            disabled={profileLocked}
             minLength={2}
             value={form.name}
             onChange={(e) => update('name', e.target.value)}
@@ -199,7 +231,8 @@ export function UserForm({
             type="email"
             className="input"
             required
-            value={form.email ?? ''}
+            disabled={profileLocked}
+            value={form.email}
             onChange={(e) => update('email', e.target.value)}
           />
         </div>
@@ -210,7 +243,8 @@ export function UserForm({
           <input
             id="phone"
             className="input"
-            value={form.phone ?? ''}
+            disabled={profileLocked}
+            value={form.phone}
             onChange={(e) => update('phone', e.target.value)}
           />
         </div>
@@ -241,6 +275,7 @@ export function UserForm({
           <Select
             id="role"
             value={form.role}
+            disabled={profileLocked}
             onChange={(v) => update('role', v as Role)}
             ariaLabel={t('role')}
             options={manageableRoles.map((r) => ({
@@ -261,6 +296,7 @@ export function UserForm({
                   <input
                     type="checkbox"
                     className="h-4 w-4 accent-brand-500"
+                    disabled={!unitsEditable}
                     checked={form.businessUnitIds.includes(u.id)}
                     onChange={() => toggleUnit(u.id)}
                   />
