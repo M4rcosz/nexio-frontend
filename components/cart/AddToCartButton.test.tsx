@@ -50,19 +50,17 @@ describe('AddToCartButton', () => {
     expect(screen.getByRole('button')).toHaveTextContent(/added/i)
   })
 
-  it('adds directly (no confirm) when the cart is empty or the unit matches', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm')
+  it('adds directly (no dialog) when the cart is empty or the unit matches', async () => {
     const user = userEvent.setup()
     useCartStore.getState().setBusinessUnit('bu-1', 'Downtown')
     renderButton('bu-1')
     await user.click(screen.getByRole('button', { name: /add to cart/i }))
 
-    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
     expect(useCartStore.getState().items).toHaveLength(1)
   })
 
   it('prompts before switching units and adds when confirmed', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     const user = userEvent.setup()
     useCartStore.getState().setBusinessUnit('bu-OTHER', 'Airport')
     useCartStore.getState().addItem({
@@ -74,16 +72,21 @@ describe('AddToCartButton', () => {
     renderButton('bu-1')
     await user.click(screen.getByRole('button', { name: /add to cart/i }))
 
+    // In-app dialog, not window.confirm — nothing is added until it's accepted.
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+    expect(useCartStore.getState().businessUnitId).toBe('bu-OTHER')
+
+    await user.click(screen.getByRole('button', { name: /switch and empty/i }))
+
     const state = useCartStore.getState()
-    expect(window.confirm).toHaveBeenCalled()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
     // Switching units clears the old item, then adds the new one.
     expect(state.businessUnitId).toBe('bu-1')
     expect(state.items).toHaveLength(1)
     expect(state.items[0].productId).toBe('p1')
   })
 
-  it('does nothing when the unit-switch prompt is declined', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(false)
+  it('does nothing when the unit-switch dialog is cancelled', async () => {
     const user = userEvent.setup()
     useCartStore.getState().setBusinessUnit('bu-OTHER', 'Airport')
     useCartStore.getState().addItem({
@@ -94,8 +97,10 @@ describe('AddToCartButton', () => {
     })
     renderButton('bu-1')
     await user.click(screen.getByRole('button', { name: /add to cart/i }))
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
 
     const state = useCartStore.getState()
+    expect(screen.queryByRole('alertdialog')).toBeNull()
     expect(state.businessUnitId).toBe('bu-OTHER')
     expect(state.items).toHaveLength(1)
     expect(state.items[0].productId).toBe('old')

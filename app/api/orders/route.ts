@@ -18,6 +18,31 @@ import type { OrderChannel, OrderStatus } from '@/lib/api/types'
  */
 const POS_ACTOR_ROLES = ['ADMIN', 'MANAGER', 'ATTENDANT']
 
+/**
+ * Whether a 422 from order creation is a stock shortfall.
+ *
+ * The backend sends no machine code for this — only prose ("Not enough stock
+ * of product <id> at this business unit.") — so matching the text is the only
+ * signal available. Deliberately loose, and only ever used to *add* a code:
+ * if the wording drifts we fall back to the generic message rather than
+ * mislabelling some other 422. Drop this the moment the backend sends a code.
+ */
+function isInsufficientStock(err: ApiError): boolean {
+  // `err.message` already mirrors `body.message` for a JSON error body, but a
+  // non-JSON 422 leaves the prose in `body` as a raw string and `message` as
+  // "HTTP error 422" — so both shapes are checked.
+  const fromBody =
+    typeof err.body === 'string'
+      ? err.body
+      : typeof err.body === 'object' &&
+          err.body !== null &&
+          'message' in err.body &&
+          typeof (err.body as { message: unknown }).message === 'string'
+        ? (err.body as { message: string }).message
+        : ''
+  return /not enough stock/i.test(`${fromBody} ${err.message}`)
+}
+
 const ORDER_CHANNELS: OrderChannel[] = [
   'APP',
   'WEB',
@@ -171,10 +196,19 @@ export async function POST(req: Request) {
     return NextResponse.json(order, { status: 201 })
   } catch (err) {
     if (err instanceof ApiError && err.status === 422) {
+      // The backend folds several distinct refusals into 422, and the most
+      // common one by far is a stock shortfall. Left untagged it reached the
+      // user as "review the items and try again", which names neither the
+      // cause nor a fix — the attendant re-clicks Place order and it fails
+      // again. Sniff the shortfall out and give the client a stable code to
+      // translate; the raw backend text is never forwarded (it carries the
+      // internal product id, and may not be in the user's language).
+      const code = isInsufficientStock(err) ? 'insufficient_stock' : undefined
       return NextResponse.json(
         {
           error:
             'The order could not be created. Review the items and try again.',
+          ...(code ? { code } : {}),
         },
         { status: 422 },
       )

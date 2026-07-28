@@ -3,11 +3,13 @@ import type {
   BusinessUnit,
   Category,
   ProductResponseDto,
+  User,
 } from '@/lib/api/types'
 import {
   buildCategoryPatch,
   buildBusinessUnitPatch,
   buildProductPatch,
+  buildUserPatch,
 } from './buildPatch'
 
 const category: Category = {
@@ -156,7 +158,6 @@ describe('buildProductPatch', () => {
     description: 'Beef',
     price: '25.00',
     categoryId: '11111111-1111-1111-1111-111111111111',
-    imageUrl: 'https://cdn.example.com/a.png',
   }
 
   it('returns noChanges when identical', () => {
@@ -192,15 +193,12 @@ describe('buildProductPatch', () => {
     )
   })
 
-  it('never clears description or imageUrl when emptied', () => {
-    // Emptying these is a no-op (they cannot be cleared here), so nothing else
+  it('never clears the description when emptied', () => {
+    // Emptying it is a no-op (it cannot be cleared here), so nothing else
     // changed -> noChanges.
-    expect(
-      buildProductPatch(
-        { ...base, description: '  ', imageUrl: '   ' },
-        product,
-      ),
-    ).toEqual({ error: 'noChanges' })
+    expect(buildProductPatch({ ...base, description: '  ' }, product)).toEqual({
+      error: 'noChanges',
+    })
   })
 
   it('adds a description that changed', () => {
@@ -218,13 +216,12 @@ describe('buildProductPatch', () => {
     ).toEqual({ patch: { categoryId: '22222222-2222-2222-2222-222222222222' } })
   })
 
-  it('includes a new imageUrl', () => {
+  it('never touches the image — it is not a field of this form', () => {
+    // The image is attached with the upload/confirm pair and cleared with an
+    // explicit `imageUrl: null` patch, so it must never ride along here.
     expect(
-      buildProductPatch(
-        { ...base, imageUrl: 'https://cdn.example.com/b.png' },
-        product,
-      ),
-    ).toEqual({ patch: { imageUrl: 'https://cdn.example.com/b.png' } })
+      buildProductPatch({ ...base, name: 'Cheeseburger' }, product),
+    ).toEqual({ patch: { name: 'Cheeseburger' } })
   })
 
   it('treats whitespace-equal values as unchanged', () => {
@@ -235,10 +232,116 @@ describe('buildProductPatch', () => {
           description: ' Beef ',
           price: '25.00',
           categoryId: '11111111-1111-1111-1111-111111111111',
-          imageUrl: 'https://cdn.example.com/a.png',
         },
         product,
       ),
     ).toEqual({ error: 'noChanges' })
+  })
+})
+
+const staff: User = {
+  id: 'u1',
+  username: 'bob.staff',
+  name: 'Bob Staff',
+  email: 'bob@example.com',
+  phone: null,
+  role: 'ATTENDANT',
+  businessUnitIds: ['bu-1'],
+  isActive: true,
+}
+
+const staffForm = {
+  name: 'Bob Staff',
+  email: 'bob@example.com',
+  phone: '',
+  role: 'ATTENDANT' as const,
+  businessUnitIds: ['bu-1'],
+}
+
+describe('buildUserPatch', () => {
+  it('returns noChanges when nothing changed', () => {
+    expect(buildUserPatch(staffForm, staff, true)).toEqual({
+      error: 'noChanges',
+    })
+  })
+
+  it('sends only the changed units', () => {
+    const res = buildUserPatch(
+      { ...staffForm, businessUnitIds: ['bu-1', 'bu-2'] },
+      staff,
+      true,
+    )
+    expect(res).toEqual({ patch: { businessUnitIds: ['bu-1', 'bu-2'] } })
+  })
+
+  it('treats a reordered unit set as unchanged', () => {
+    const user = { ...staff, businessUnitIds: ['bu-1', 'bu-2'] }
+    const res = buildUserPatch(
+      { ...staffForm, businessUnitIds: ['bu-2', 'bu-1'] },
+      user,
+      true,
+    )
+    expect(res).toEqual({ error: 'noChanges' })
+  })
+
+  // Mixing `||` on one side with `??` on the other made a stored empty phone
+  // read as changed, which put `phone` in the patch and 501'd an untouched form.
+  it('does not treat a stored empty phone as a change', () => {
+    const user = { ...staff, phone: '' }
+    expect(buildUserPatch(staffForm, user, true)).toEqual({
+      error: 'noChanges',
+    })
+  })
+
+  it('does not treat a stored null email as a change', () => {
+    const user = { ...staff, email: null }
+    const res = buildUserPatch({ ...staffForm, email: '' }, user, true)
+    expect(res).toEqual({ error: 'noChanges' })
+  })
+
+  // The picker is hidden at ADMIN, so a stale unit binding on the stored row is
+  // not something the actor can see or act on — diffing it would emit an empty
+  // unit set for a form nobody touched.
+  it('ignores stale units on an ADMIN row when the role is unchanged', () => {
+    const admin = {
+      ...staff,
+      role: 'ADMIN' as const,
+      businessUnitIds: ['bu-1'],
+    }
+    const res = buildUserPatch(
+      { ...staffForm, role: 'ADMIN' as const, businessUnitIds: [] },
+      admin,
+      true,
+    )
+    expect(res).toEqual({ error: 'noChanges' })
+  })
+
+  it('clears the units when the role is actually changing to ADMIN', () => {
+    const res = buildUserPatch(
+      { ...staffForm, role: 'ADMIN' as const },
+      staff,
+      true,
+    )
+    expect(res).toEqual({ patch: { role: 'ADMIN', businessUnitIds: [] } })
+  })
+
+  // A MANAGER's units are discarded server-side, so diffing them could only
+  // produce an error naming units the actor is looking at.
+  it('omits units entirely when the actor may not edit them', () => {
+    const res = buildUserPatch(
+      { ...staffForm, businessUnitIds: ['bu-1', 'bu-2'] },
+      staff,
+      false,
+    )
+    expect(res).toEqual({ error: 'noChanges' })
+  })
+
+  it('trims profile fields before comparing', () => {
+    const res = buildUserPatch(
+      { ...staffForm, name: '  Bob Staff  ' },
+      staff,
+      true,
+    )
+    expect(res).toEqual({ error: 'noChanges' })
   })
 })

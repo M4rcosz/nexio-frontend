@@ -22,9 +22,32 @@ const imageHostnames = (
   .filter(Boolean)
 
 /**
+ * `img-src` sources, derived from the same allowlist as the optimizer above.
+ *
+ * Product images render through a plain `<img>` (see `ProductImage`), which the
+ * `remotePatterns` allowlist does not cover — so without this a stored
+ * `imageUrl` pointing at a third party would fire a request from every visitor
+ * of a public menu page, beaconing their IP and UA. `ProductImage` already
+ * refuses such URLs at render; this is the browser-level backstop for anything
+ * that slips past it (or any other `<img>` added later).
+ *
+ * `data:`/`blob:` are permitted for locally-produced previews. `**` (the dev
+ * fallback) widens to any http(s) host so local fixtures keep working.
+ */
+const imgSrc = [
+  "'self'",
+  'data:',
+  'blob:',
+  ...(imageHostnames.includes('**')
+    ? ['https:', 'http:']
+    : imageHostnames.map((h) => `https://${h}`)),
+].join(' ')
+
+/**
  * Baseline security headers applied to every response. Intentionally omits a
  * full Content-Security-Policy for scripts/styles — that needs per-app tuning
- * (sources, nonces) and is tracked separately; only frame-ancestors is set here.
+ * (sources, nonces) and is tracked separately; only frame-ancestors and img-src
+ * are set here.
  */
 const securityHeaders = [
   // Force HTTPS for two years incl. subdomains. Harmless over plain HTTP
@@ -35,7 +58,10 @@ const securityHeaders = [
   },
   // Disallow framing entirely — this app is never meant to be embedded.
   { key: 'X-Frame-Options', value: 'DENY' },
-  { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+  {
+    key: 'Content-Security-Policy',
+    value: `frame-ancestors 'none'; img-src ${imgSrc}`,
+  },
   // Stop browsers from MIME-sniffing responses away from their declared type.
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   // Don't leak full URLs (which may carry ids) to third-party origins.

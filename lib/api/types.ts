@@ -52,7 +52,12 @@ export type CreateProductRequest = {
   /** Decimal string, positive, ≤2 decimal places. */
   price: string
   categoryId: string
-  imageUrl: string
+  /**
+   * Optional since backend 5.0.0. The intended flow is create the product,
+   * then attach the image to the product that now exists — see
+   * {@link ProductImageUploadUrl}.
+   */
+  imageUrl?: string
 }
 
 /**
@@ -66,7 +71,40 @@ export type ProductUpdateDto = {
   /** Decimal string, positive, ≤2 decimal places. */
   price?: string
   categoryId?: string
-  imageUrl?: string
+  /**
+   * `null` clears the reference only — the stored object stays in the bucket
+   * (a backend concern). Note this route is ADMIN-only while the image
+   * upload/confirm pair below is ADMIN+MANAGER, so a MANAGER may replace an
+   * image but not clear one.
+   */
+  imageUrl?: string | null
+}
+
+/**
+ * Content types the bucket accepts. `image/svg+xml` is deliberately absent.
+ * The runtime allowlist lives in `lib/validation/constants.ts` so the browser
+ * pre-check and the route handler's zod schema read the same array.
+ */
+export type ProductImageContentType = 'image/png' | 'image/jpeg' | 'image/webp'
+
+/**
+ * `POST /products/:productId/image/upload-url` (ADMIN/MANAGER) — mints a
+ * short-lived credential for a direct browser→storage PUT. Answers `201`, but
+ * nothing is persisted: a mint that is never used changes nothing, and a mint
+ * is never reused after a failure.
+ */
+export type ProductImageUploadUrl = {
+  /** Absolute storage URL; the credential is in the query string. */
+  signedUrl: string
+  token: string
+  /**
+   * Opaque, server-shaped. Echo it back to `/image/confirm` verbatim — the
+   * server re-parses it against the product and answers 422 on anything it did
+   * not shape itself.
+   */
+  path: string
+  /** Fixed at 7200 by the provider; treat expiry as "start over at step 1". */
+  expiresInSeconds: number
 }
 
 // --- Categories ---
@@ -259,8 +297,15 @@ export type UpdateMenuItemRequest = {
 export type OrderItem = {
   id: string
   productId: string
-  /** Front-side enrichment (mock only); the backend does not return names. */
-  productName?: string
+  /**
+   * The product's name **at the moment the order was placed** — a snapshot the
+   * server resolves from the authoritative menu read, never sent by us and
+   * never null. Render it directly: looking the name up from the catalog by
+   * `productId` shows the *current* name, so a rename would rewrite history and
+   * a retired product would render nothing at all. Safe to cache with the
+   * order; unlike `customerName`, it cannot go stale.
+   */
+  productName: string
   quantity: number
   unitPrice: string
   subtotal: string

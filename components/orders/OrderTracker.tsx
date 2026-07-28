@@ -129,7 +129,7 @@ export function OrderTracker({ initialOrder }: { initialOrder: Order }) {
                 <span className="font-mono text-xs text-fg-subtle">
                   {item.quantity}×
                 </span>{' '}
-                {item.productName ?? item.productId}
+                {item.productName}
               </span>
               <span className="font-semibold text-fg">
                 {formatMoney(item.subtotal, locale)}

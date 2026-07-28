@@ -110,7 +110,9 @@
     "checkout": "Ir para o checkout",
     "viewCart": "Ver carrinho",
     "previewEmpty": "Seu carrinho está vazio.",
-    "switchUnitConfirm": "Você já tem itens de outra unidade no carrinho. Trocar limpa o carrinho. Deseja continuar?"
+    "switchUnitTitle": "Trocar de unidade?",
+    "switchUnitConfirm": "Você já tem itens de outra unidade no carrinho. Trocar limpa o carrinho. Deseja continuar?",
+    "switchUnitCta": "Trocar e esvaziar carrinho"
   },
   "checkout": {
     "title": "Checkout",
@@ -503,18 +505,41 @@
         "categoryId": "Categoria",
         "categoryHint": "Escolha a categoria à qual este produto pertence.",
         "categoryInactiveOption": "Categoria atual (inativa)",
-        "imageUrl": "URL da imagem",
-        "imageUrlHint": "Deixe como está para manter a imagem atual — não é possível limpá-la por aqui.",
-        "imageUrlCreateHint": "Obrigatório. URL pública http(s) da imagem do produto.",
         "invalidMoney": "Use um valor decimal positivo como 58.90.",
         "invalidCategory": "Informe um UUID de categoria válido.",
         "invalidName": "O nome deve ter ao menos 2 caracteres.",
-        "invalidImageUrl": "Informe uma URL de imagem http(s) válida.",
         "noChanges": "Altere ao menos um campo antes de salvar.",
         "submitCreate": "Criar produto",
         "submitEdit": "Salvar alterações",
         "submitting": "Salvando…",
-        "failed": "Não foi possível salvar o produto."
+        "failed": "Não foi possível salvar o produto.",
+        "imageOnlySubtitle": "Você pode atualizar a imagem deste produto. Editar os dados do catálogo é restrito a administradores."
+      },
+      "manageImage": "Imagem",
+      "tableImage": "Imagem",
+      "image": {
+        "title": "Imagem do produto",
+        "hint": "PNG, JPEG ou WebP, até {megabytes} MB. A imagem vai direto para o armazenamento — ela é salva assim que termina.",
+        "upload": "Enviar imagem",
+        "replace": "Substituir imagem",
+        "clear": "Remover imagem",
+        "clearConfirm": "Remover a imagem deste produto? O produto continua, só volta para o espaço reservado.",
+        "cancel": "Cancelar envio",
+        "statusPreparing": "Preparando o envio…",
+        "statusUploading": "Enviando… {percent}%",
+        "statusFinishing": "Finalizando…",
+        "success": "Imagem atualizada.",
+        "failed": "Não foi possível atualizar a imagem.",
+        "invalid_type": "Escolha um arquivo PNG, JPEG ou WebP.",
+        "too_large": "Esse arquivo é muito grande. O limite é {megabytes} MB.",
+        "rate_limited": "Muitas tentativas de envio. Aguarde um momento e tente de novo.",
+        "upload_failed": "O envio falhou. Verifique a conexão e tente de novo.",
+        "upload_incomplete": "O envio não foi concluído. Tente de novo.",
+        "image_rejected": "Esse arquivo foi recusado. Escolha outra imagem.",
+        "statusUploadingPhase": "Enviando…",
+        "statusRemoving": "Removendo a imagem…",
+        "progressLabel": "Progresso do envio",
+        "noImage": "Sem imagem definida."
       }
     },
     "menu": {
@@ -763,7 +788,10 @@
       "membership_revoked": "Esta assinatura de IA está revogada. Reative-a primeiro.",
       "not_enrolled": "Este usuário ainda não possui assinatura de IA.",
       "invalid_period": "A data inicial não pode ser posterior à data final.",
-      "invalid_query": "Alguns filtros são inválidos. Ajuste-os e tente novamente."
+      "invalid_query": "Alguns filtros são inválidos. Ajuste-os e tente novamente.",
+      "insufficient_stock": "Um dos itens está sem estoque nesta unidade. Remova-o ou reduza a quantidade para continuar.",
+      "profile_edit_unsupported": "Nome, e-mail, telefone e papel da equipe ainda não podem ser alterados — por enquanto esses campos são somente leitura.",
+      "unit_change_forbidden": "Apenas um administrador pode alterar as unidades vinculadas a um membro da equipe."
     }
   },
   "orderStatus": {
@@ -857,7 +885,6 @@
     "subtitle": "Pergunte sobre seus pedidos e pontos de fidelidade. Cada resposta consome tokens do seu saldo.",
     "balance": "Saldo de tokens",
     "tokens": "tokens",
-    "balanceHint": "Os tokens são consumidos por mensagem. Seu saldo é atualizado a cada resposta.",
     "notEnrolledTitle": "Sem acesso à IA ainda",
     "notEnrolledBody": "Peça a um administrador para liberar seu acesso ao assistente de IA.",
     "outOfTokensTitle": "Tokens esgotados",

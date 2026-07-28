@@ -33,7 +33,12 @@ const MONEY = z
   .refine((v) => Number(v) > 0, 'Must be greater than zero.')
 
 // `.strict()` rejects unknown keys (isActive, id, createdAt, …) with a 400 —
-// products are born active and `imageUrl` is required on create (unlike PATCH).
+// products are born active.
+//
+// `imageUrl` is optional since backend 5.0.0: the product is created without an
+// image and the image is attached afterwards through
+// `/api/products/:id/image/upload-url` + `/confirm`. It is still accepted here
+// for externally hosted images, which that upload flow does not cover.
 const CreateBody = z
   .object({
     name: z.string().min(2).max(100),
@@ -44,7 +49,8 @@ const CreateBody = z
       .string()
       .url()
       .max(2000)
-      .refine((v) => /^https?:\/\//i.test(v), 'Only http(s) URLs are allowed.'),
+      .refine((v) => /^https?:\/\//i.test(v), 'Only http(s) URLs are allowed.')
+      .optional(),
   })
   .strict()
 

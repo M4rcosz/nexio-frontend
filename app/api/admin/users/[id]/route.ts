@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { getInternalUser, updateInternalUser } from '@/lib/api/admin-users'
-import { ApiError, describeError } from '@/lib/api/errors'
+import { backendErrorStatus, describeError } from '@/lib/api/errors'
 import { canManageRole, getAdminContext } from '@/lib/auth/access'
 
+/**
+ * No `revalidateTag` in this handler, deliberately: the staff list is fetched
+ * with `cache: 'no-store'` (`fetchUsersPage`), so there is no RSC cache entry
+ * to bust — `UserForm` calls `router.refresh()` instead. See the client-only
+ * exception in CLAUDE.md.
+ */
 const PatchBody = z.object({
   email: z.string().email().optional(),
   name: z.string().min(2).optional(),
@@ -91,9 +97,34 @@ export async function PATCH(
         { status: 403 },
       )
     }
-    if (err instanceof ApiError && (err.status === 501 || err.status === 422)) {
-      return NextResponse.json({ error: err.message }, { status: err.status })
+    if (code === 'unit_change_forbidden') {
+      return NextResponse.json(
+        { error: describeError(err), code },
+        { status: 403 },
+      )
     }
-    return NextResponse.json({ error: describeError(err) }, { status: 500 })
+    // Not-yet-built is a permanent product state, not a server fault. A 5xx
+    // would both count against the error SLO and land the client on
+    // `useErrorMessage`'s `status >= 500` branch — "the server is unavailable,
+    // try again shortly" — which is the opposite of the truth here.
+    if (code === 'profile_edit_unsupported') {
+      return NextResponse.json(
+        { error: describeError(err), code },
+        { status: 409 },
+      )
+    }
+    // Same rule (and same code) the create handler enforces at 400.
+    if (code === 'unit_required') {
+      return NextResponse.json(
+        { error: describeError(err), code },
+        { status: 400 },
+      )
+    }
+    // `backendErrorStatus` so a genuine upstream 4xx keeps its status instead
+    // of being flattened to 500 and reported as "the server is unavailable".
+    return NextResponse.json(
+      { error: describeError(err) },
+      { status: backendErrorStatus(err) },
+    )
   }
 }

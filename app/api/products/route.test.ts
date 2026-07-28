@@ -75,6 +75,24 @@ describe('POST /api/products', () => {
     )
   })
 
+  it('creates a product with no image at all', async () => {
+    // `imageUrl` is optional since backend 5.0.0 — the image is attached
+    // afterwards through the upload/confirm pair.
+    mockedGetAdminContext.mockResolvedValue(ADMIN)
+    mockedCreateProduct.mockResolvedValue({ id: 'p1', imageUrl: null } as never)
+    const res = await POST(
+      postReq({
+        name: validBody.name,
+        price: validBody.price,
+        categoryId: validBody.categoryId,
+      }),
+    )
+    expect(res.status).toBe(201)
+    expect(mockedCreateProduct).toHaveBeenCalledWith(
+      expect.not.objectContaining({ imageUrl: expect.anything() }),
+    )
+  })
+
   it('returns 400 when the body carries an unknown key (.strict)', async () => {
     mockedGetAdminContext.mockResolvedValue(ADMIN)
     const res = await POST(postReq({ ...validBody, isActive: true }))

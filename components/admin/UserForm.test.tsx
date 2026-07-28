@@ -154,10 +154,8 @@ describe('UserForm (edit)', () => {
     isActive: true,
   }
 
-  it('PATCHes without a password and locks the username', async () => {
-    const fetchFn = mockFetch(200, {})
-    const user = userEvent.setup()
-    renderWithIntl(
+  function renderEdit() {
+    return renderWithIntl(
       <UserForm
         mode="edit"
         user={staff}
@@ -166,11 +164,18 @@ describe('UserForm (edit)', () => {
         manageableRoles={ADMIN_ROLES}
       />,
     )
+  }
+
+  it('PATCHes without a password and locks the username', async () => {
+    const fetchFn = mockFetch(200, {})
+    const user = userEvent.setup()
+    renderEdit()
     // Username is immutable on edit.
     expect(screen.getByLabelText('Username')).toBeDisabled()
     // No password field in edit mode.
     expect(screen.queryByLabelText(/^Password/)).not.toBeInTheDocument()
 
+    await user.click(screen.getByLabelText('Airport'))
     await user.click(screen.getByRole('button', { name: /save changes/i }))
     await waitFor(() => expect(fetchFn).toHaveBeenCalled())
     const [url, init] = fetchFn.mock.calls[0]
@@ -179,6 +184,90 @@ describe('UserForm (edit)', () => {
     const body = JSON.parse(init.body)
     expect(body).not.toHaveProperty('password')
     expect(body).not.toHaveProperty('username')
-    expect(body).toMatchObject({ role: 'ATTENDANT', businessUnitIds: ['bu-1'] })
+    expect(body.businessUnitIds).toEqual(['bu-1', 'bu-2'])
+  })
+
+  // The backend has no update endpoint for profile fields, and rejects any
+  // patch that so much as mentions one — so an untouched `name` riding along
+  // used to 501 the whole save. Only dirty fields may be sent.
+  it('sends only the fields that changed', async () => {
+    const fetchFn = mockFetch(200, {})
+    const user = userEvent.setup()
+    renderEdit()
+
+    await user.click(screen.getByLabelText('Airport'))
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+    await waitFor(() => expect(fetchFn).toHaveBeenCalled())
+    const body = JSON.parse(fetchFn.mock.calls[0][1].body)
+    expect(Object.keys(body)).toEqual(['businessUnitIds'])
+  })
+
+  it('skips the request entirely when nothing was touched', async () => {
+    const fetchFn = mockFetch(200, {})
+    const user = userEvent.setup()
+    renderEdit()
+
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/admin/users'))
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
+
+  it('re-ticking the same units in a different order is not a change', async () => {
+    const fetchFn = mockFetch(200, {})
+    const user = userEvent.setup()
+    renderEdit()
+
+    // Off then on again — same set, so nothing to send.
+    await user.click(screen.getByLabelText('Airport'))
+    await user.click(screen.getByLabelText('Airport'))
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/admin/users'))
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
+
+  // The backend cannot save these at all, so offering them only buys the actor
+  // a round-trip that ends in "not supported yet".
+  it('locks the profile fields and says why', () => {
+    renderEdit()
+    expect(screen.getByLabelText('Full name')).toBeDisabled()
+    expect(screen.getByLabelText('E-mail')).toBeDisabled()
+    expect(screen.getByLabelText('Phone (optional)')).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: 'Role' })).toBeDisabled()
+    expect(screen.getByText(/can't be changed yet/i)).toBeInTheDocument()
+  })
+
+  it('leaves the profile fields editable on create', () => {
+    renderWithIntl(
+      <UserForm
+        mode="create"
+        units={units}
+        scopedBusinessUnitIds={null}
+        manageableRoles={ADMIN_ROLES}
+      />,
+    )
+    expect(screen.getByLabelText('Full name')).toBeEnabled()
+    expect(screen.getByRole('combobox', { name: 'Role' })).toBeEnabled()
+  })
+
+  // A MANAGER's businessUnitIds are discarded server-side; leaving the boxes
+  // tickable produced an error about an empty unit set naming the very units
+  // the manager had just ticked.
+  it('locks the unit picker for a scoped (MANAGER) actor', () => {
+    renderWithIntl(
+      <UserForm
+        mode="edit"
+        user={staff}
+        units={units}
+        scopedBusinessUnitIds={['bu-1']}
+        manageableRoles={['ATTENDANT', 'KITCHEN']}
+      />,
+    )
+    expect(screen.getByLabelText('Downtown')).toBeDisabled()
+  })
+
+  it('keeps the unit picker usable for an unscoped (ADMIN) actor', () => {
+    renderEdit()
+    expect(screen.getByLabelText('Downtown')).toBeEnabled()
+    expect(screen.getByLabelText('Airport')).toBeEnabled()
   })
 })

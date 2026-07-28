@@ -49,7 +49,7 @@ resource marked "real backend + mock fallback" honours `NEXT_PUBLIC_USE_MOCKS`.
 | Categories (public list + admin CRUD) | Real backend + mock fallback (`GET/POST /api/categories`, `GET/PATCH /api/categories/:id`) |
 | User profile          | Real backend + mock fallback (`GET /api/users/me`, `PATCH /api/users/me`, `PATCH /api/users/me/password`) |
 | Orders / Payment      | Real backend + mock fallback (`GET /api/orders/me`, `POST/GET /api/orders`, `/api/payments/...`) |
-| Products (admin CRUD) | Real backend + mock fallback (`POST /api/products`, `PATCH /api/products/:id`) |
+| Products (admin CRUD) | Real backend + mock fallback (`POST /api/products`, `PATCH /api/products/:id` — ADMIN; image upload `POST /api/products/:id/image/upload-url` + `POST /api/products/:id/image/confirm` — ADMIN/MANAGER) |
 | Menu (business unit)  | Real backend + mock fallback (`GET /api/business-units/:id/menu` — public, used by POS/kiosk; `POST /api/business-units/:id/menu`, `PATCH /api/business-units/:id/menu/:itemId`, `POST /api/business-units/:id/menu/:itemId/available` — admin) |
 | Loyalty               | Mock                                            |
 | Inventory (admin)     | Real backend + mock fallback (`GET /api/inventory/:businessUnitId`, `POST /api/inventory/:businessUnitId/items`, `POST /api/inventory/:businessUnitId/adjust`)  |
@@ -61,6 +61,12 @@ resource marked "real backend + mock fallback" honours `NEXT_PUBLIC_USE_MOCKS`.
 The `NEXT_PUBLIC_USE_MOCKS=true` flag in `.env.local` forces the *menu* and
 *login* resources to use mocks too — handy when the backend is not running.
 Switch it to `false` to point at the local NestJS instance.
+
+With mocks on, product-image uploads are absorbed in-process by
+`PUT /api/dev/mock-upload` instead of going to the storage bucket, so the whole
+three-call flow — progress, cancel, `upload_incomplete` — is exercisable
+offline. That route is dev-only: it 404s in a production build even with mocks
+enabled, and its store is bounded and cleared on restart.
 
 ## Environment variables
 
@@ -94,6 +100,13 @@ See `.env.example`. The relevant ones:
   backend has no WebSocket yet.
 - **No OpenAPI**: types are typed manually in `lib/api/types.ts`. Route
   handler input is validated with Zod.
+- **Product images upload direct to storage.** `POST /api/products/:id/image/upload-url`
+  mints a short-lived signed credential, the browser `PUT`s the file straight
+  to the bucket (`XMLHttpRequest` rather than `fetch`, purely for upload
+  progress), and `POST .../image/confirm` publishes it and returns the updated
+  product. The bytes never pass through this app and no storage SDK or key
+  ships to the client, so **there is no new environment variable**. Driver in
+  `lib/products/imageUpload.ts`.
 - **Order channels** (`APP`/`WEB`/`TOTEM`/`COUNTER`/`PICKUP`) and the order
   status state machine are centralized in `lib/orders/channelPolicy.ts` and
   `lib/orders/statusMachine.ts` — derive form/board behaviour from those

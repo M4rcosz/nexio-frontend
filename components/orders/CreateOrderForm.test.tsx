@@ -92,6 +92,51 @@ describe('CreateOrderForm — TOTEM', () => {
     })
     expect(body.customerId).toBeUndefined()
   })
+
+  // A stock shortfall is the most common 422 here. It used to surface as the
+  // generic "couldn't place the order, try again", which names neither the
+  // cause nor a fix — so the attendant just re-clicks and fails again.
+  it('names the cause when an item is out of stock', async () => {
+    mockFetch(422, {
+      error: 'The order could not be created. Review the items and try again.',
+      code: 'insufficient_stock',
+    })
+    const user = userEvent.setup()
+    renderWithIntl(
+      <CreateOrderForm
+        channel="TOTEM"
+        businessUnitId="bu-1"
+        products={products}
+        onPlaced={vi.fn()}
+      />,
+    )
+    await addOneItem(user)
+    await user.type(screen.getByLabelText('Name to call the order'), 'Maria')
+    await user.click(screen.getByRole('button', { name: 'Place order' }))
+    expect(
+      await screen.findByText(/out of stock at this unit/i),
+    ).toBeInTheDocument()
+  })
+
+  // An untagged 422 must still fall back to the form's own copy.
+  it('falls back to the generic message for an untagged 422', async () => {
+    mockFetch(422, { error: 'nope' })
+    const user = userEvent.setup()
+    renderWithIntl(
+      <CreateOrderForm
+        channel="TOTEM"
+        businessUnitId="bu-1"
+        products={products}
+        onPlaced={vi.fn()}
+      />,
+    )
+    await addOneItem(user)
+    await user.type(screen.getByLabelText('Name to call the order'), 'Maria')
+    await user.click(screen.getByRole('button', { name: 'Place order' }))
+    expect(
+      await screen.findByText(/could not place the order/i),
+    ).toBeInTheDocument()
+  })
 })
 
 describe('CreateOrderForm — COUNTER', () => {

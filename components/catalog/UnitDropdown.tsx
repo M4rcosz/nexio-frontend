@@ -34,7 +34,12 @@ export function UnitDropdown({
   }
 
   return (
-    <div className="inline-flex flex-col gap-1.5">
+    // `max-w-full` is load-bearing: the column and the (non-fullWidth) trigger
+    // below are both shrink-to-fit, so without a cap they size to the longest
+    // unit label — "Ark Drinks - Patos de Minas · Patos de Minas" renders ~402px
+    // and pushes the whole page into horizontal scroll on phones. The cap is
+    // what gives the trigger's inner `truncate` something to bite on.
+    <div className="inline-flex max-w-full flex-col gap-1.5">
       <span className="pl-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/75">
         {t('yourUnit')}
       </span>

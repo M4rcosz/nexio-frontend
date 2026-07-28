@@ -368,6 +368,27 @@ export async function updateInternalUserMock(
       code: 'email_taken',
     })
   }
+  // Mirror the real backend's gap: it has no update endpoint for profile
+  // fields, only `PUT /users/:id/business-units`. Without this the mock saved
+  // them happily, so a demo deploy (mocks is a supported build mode) advertised
+  // staff-profile editing that production refuses.
+  const wantsProfileEdit =
+    patch.name !== undefined ||
+    patch.email !== undefined ||
+    patch.phone !== undefined ||
+    patch.role !== undefined
+  if (wantsProfileEdit) {
+    throw Object.assign(
+      new Error('Editing staff profile fields is not supported yet.'),
+      { code: 'profile_edit_unsupported' },
+    )
+  }
+  if (!patch.businessUnitIds || patch.businessUnitIds.length === 0) {
+    throw Object.assign(
+      new Error('A staff user must be bound to at least one unit.'),
+      { code: 'unit_required' },
+    )
+  }
   STORE[idx] = {
     ...STORE[idx],
     ...patch,

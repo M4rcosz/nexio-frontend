@@ -59,6 +59,63 @@ describe('POST /api/orders', () => {
     expect(await res.json()).toMatchObject({ id: 'o1' })
   })
 
+  // The backend sends no machine code for a stock shortfall, only prose. Tag
+  // it so the client can say *why* the order failed instead of "try again".
+  // The fixture mirrors what `rawFetch` actually builds: `message` is copied
+  // from `body.message`, so both carry the prose.
+  it('tags a stock-shortfall 422 with insufficient_stock', async () => {
+    const prose = `Not enough stock of product ${P_ID} at this business unit.`
+    mockedGate.mockResolvedValue(true)
+    mockedCreateOrder.mockRejectedValue(
+      new ApiError(422, { message: prose }, prose),
+    )
+    const res = await POST(postReq(validBody))
+    expect(res.status).toBe(422)
+    expect(await res.json()).toMatchObject({ code: 'insufficient_stock' })
+  })
+
+  // A non-JSON 422 leaves the prose in `body` as a raw string, with `message`
+  // reduced to "HTTP error 422".
+  it('tags a stock shortfall delivered as a non-JSON body', async () => {
+    mockedGate.mockResolvedValue(true)
+    mockedCreateOrder.mockRejectedValue(
+      new ApiError(
+        422,
+        `Not enough stock of product ${P_ID} at this business unit.`,
+        'HTTP error 422',
+      ),
+    )
+    const res = await POST(postReq(validBody))
+    expect(await res.json()).toMatchObject({ code: 'insufficient_stock' })
+  })
+
+  // The internal product id must never reach the browser.
+  it('never forwards the backend prose', async () => {
+    const prose = `Not enough stock of product ${P_ID} at this business unit.`
+    mockedGate.mockResolvedValue(true)
+    mockedCreateOrder.mockRejectedValue(
+      new ApiError(422, { message: prose }, prose),
+    )
+    const body = await (await POST(postReq(validBody))).json()
+    expect(JSON.stringify(body)).not.toContain(P_ID)
+    expect(JSON.stringify(body)).not.toMatch(/not enough stock/i)
+  })
+
+  // Any other 422 stays untagged, so a wording drift can never mislabel it.
+  it('leaves an unrelated 422 untagged', async () => {
+    mockedGate.mockResolvedValue(true)
+    mockedCreateOrder.mockRejectedValue(
+      new ApiError(
+        422,
+        { message: 'The unit is closed right now.' },
+        'Invalid request.',
+      ),
+    )
+    const res = await POST(postReq(validBody))
+    expect(res.status).toBe(422)
+    expect(await res.json()).not.toHaveProperty('code')
+  })
+
   it('forwards a client idempotency-key header to the service', async () => {
     mockedGate.mockResolvedValue(true)
     mockedCreateOrder.mockResolvedValue({ id: 'o1' } as never)

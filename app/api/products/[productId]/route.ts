@@ -19,11 +19,22 @@ const PatchBody = z
     description: z.string().min(1).max(255).optional(),
     price: MONEY.optional(),
     categoryId: z.string().uuid().optional(),
+    // `null` clears the image reference (the stored object is not deleted).
+    // This is the only clear path: the upload/confirm pair can replace an image
+    // but never remove one, which is why clearing is ADMIN-only while
+    // uploading is ADMIN+MANAGER.
     imageUrl: z
-      .string()
-      .url()
-      .max(2000)
-      .refine((v) => /^https?:\/\//i.test(v), 'Only http(s) URLs are allowed.')
+      .union([
+        z
+          .string()
+          .url()
+          .max(2000)
+          .refine(
+            (v) => /^https?:\/\//i.test(v),
+            'Only http(s) URLs are allowed.',
+          ),
+        z.null(),
+      ])
       .optional(),
   })
   .strict()
@@ -36,8 +47,17 @@ export async function PATCH(
   ctx: { params: Promise<{ productId: string }> },
 ) {
   const admin = await getAdminContext()
+  // Separated from the role check so an expired session reads as "log in
+  // again" rather than "you may not do this". This is the image-clear path as
+  // well as the edit path, and `useErrorMessage` keys off the status.
+  if (!admin) {
+    return NextResponse.json(
+      { error: 'Session expired.', code: 'session_expired' },
+      { status: 401 },
+    )
+  }
   // ADMIN only: MANAGER may neither create nor edit catalog products.
-  if (!admin || admin.role !== 'ADMIN') {
+  if (admin.role !== 'ADMIN') {
     return NextResponse.json(
       { error: 'Forbidden.', code: 'forbidden' },
       { status: 403 },
@@ -69,9 +89,14 @@ export async function PATCH(
     if (!product) {
       return NextResponse.json({ error: 'Product not found.' }, { status: 404 })
     }
-    // Bust both the list cache and this product's detail cache.
+    // Bust the list cache, this product's detail cache, and the per-unit menus
+    // — `PublicMenuItem` mirrors `name`/`imageUrl`, so a patch here (including
+    // an `imageUrl: null` clear) is visible on the customer menu, POS and
+    // totem. The coarse `menu` tag covers every unit, since this route has no
+    // way to know which ones list the product.
     revalidateTag('products')
     revalidateTag(`product:${productId}`)
+    revalidateTag('menu')
     return NextResponse.json(product)
   } catch (err) {
     const status = err instanceof ApiError ? err.status || 500 : 500

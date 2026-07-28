@@ -377,7 +377,7 @@ function OrderCard({ order }: { order: Order }) {
                   <span className="font-mono text-xs text-fg-subtle">
                     {item.quantity}×
                   </span>{' '}
-                  {item.productName ?? item.productId}
+                  {item.productName}
                 </span>
                 <span className="shrink-0 text-xs text-fg-muted">
                   {formatMoney(item.subtotal, locale)}

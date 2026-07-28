@@ -210,7 +210,16 @@ export async function updateInternalUser(
   id: string,
   patch: UpdateInternalUserInput,
 ): Promise<User | null> {
-  // MANAGER cannot move a user to a different unit.
+  // MANAGER cannot move a user to a different unit. Refusing outright beats
+  // silently discarding the field: dropping it left the request looking like an
+  // empty unit set, so the actor was told to assign a unit while staring at the
+  // units they had just ticked.
+  if (ctx.role === 'MANAGER' && patch.businessUnitIds !== undefined) {
+    throw Object.assign(
+      new Error('Only an administrator can change unit assignments.'),
+      { code: 'unit_change_forbidden' },
+    )
+  }
   const safePatch: UpdateInternalUserInput =
     ctx.role === 'MANAGER' ? { ...patch, businessUnitIds: undefined } : patch
   // Promoting to ADMIN drops the unit bindings on the target.
@@ -227,23 +236,26 @@ export async function updateInternalUser(
   // [stub] the backend only supports replacing the unit set
   // (`PUT /users/:id/business-units`, ADMIN, non-empty). Profile fields
   // (name/email/phone/role) have no update endpoint yet.
+  //
+  // These carry a `code` rather than a status, so the route can dispatch them
+  // through the same ladder as `email_taken`/`role_forbidden` instead of
+  // sniffing `err.status` — which could not tell our own refusal apart from a
+  // genuine upstream error of the same status.
   const wantsProfileEdit =
     safePatch.name !== undefined ||
     safePatch.email !== undefined ||
     safePatch.phone !== undefined ||
     safePatch.role !== undefined
   if (wantsProfileEdit) {
-    throw new ApiError(
-      501,
-      null,
-      'Editing staff profile fields is not supported by the backend yet.',
+    throw Object.assign(
+      new Error('Editing staff profile fields is not supported yet.'),
+      { code: 'profile_edit_unsupported' },
     )
   }
   if (!safePatch.businessUnitIds || safePatch.businessUnitIds.length === 0) {
-    throw new ApiError(
-      422,
-      null,
-      'The business unit set cannot be empty — deactivate the user instead.',
+    throw Object.assign(
+      new Error('A staff user must be bound to at least one unit.'),
+      { code: 'unit_required' },
     )
   }
   try {

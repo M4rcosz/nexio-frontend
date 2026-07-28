@@ -30,18 +30,22 @@ export default async function AiAssistantPage({
   ])
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg sm:text-3xl">
-          {t('title')}
-        </h1>
-        <BackendBadge />
-      </div>
-      <p className="-mt-2 text-sm text-fg-muted">{t('subtitle')}</p>
-      <AiAssistantView
-        initialMembership={membership}
-        initialConversations={conversations}
-      />
-    </div>
+    // The title block is handed to the view rather than rendered around it:
+    // the token balance shares this row and only the client component knows it.
+    <AiAssistantView
+      initialMembership={membership}
+      initialConversations={conversations}
+      heading={
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-2xl font-extrabold tracking-tight text-fg sm:text-3xl">
+              {t('title')}
+            </h1>
+            <BackendBadge />
+          </div>
+          <p className="mt-1 text-sm text-fg-muted">{t('subtitle')}</p>
+        </div>
+      }
+    />
   )
 }

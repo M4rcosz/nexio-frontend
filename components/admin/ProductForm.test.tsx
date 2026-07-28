@@ -65,10 +65,6 @@ describe('ProductForm (create)', () => {
 
     await user.type(screen.getByLabelText('Name'), 'Fries')
     await user.type(screen.getByLabelText('Price'), '0')
-    await user.type(
-      screen.getByLabelText('Image URL'),
-      'https://cdn.example.com/f.png',
-    )
     await user.click(screen.getByRole('button', { name: /create product/i }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -77,44 +73,33 @@ describe('ProductForm (create)', () => {
     expect(fetchFn).not.toHaveBeenCalled()
   })
 
-  it('rejects a non-http image URL', async () => {
-    const fetchFn = mockFetch(201)
-    const user = userEvent.setup()
+  it('has no image field — the image is attached after creation', () => {
     renderWithIntl(<ProductForm mode="create" categories={categories} />)
-
-    await user.type(screen.getByLabelText('Name'), 'Fries')
-    await user.type(screen.getByLabelText('Price'), '9.90')
-    await user.type(screen.getByLabelText('Image URL'), 'ftp://cdn/f.png')
-    await user.click(screen.getByRole('button', { name: /create product/i }))
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(/valid http/i)
-    expect(fetchFn).not.toHaveBeenCalled()
+    expect(screen.queryByLabelText(/image/i)).toBeNull()
   })
 
-  it('POSTs a valid product and redirects to the list', async () => {
+  it('POSTs a product with no image and lands on its detail page', async () => {
     const fetchFn = mockFetch(201, { id: 'p9' })
     const user = userEvent.setup()
     renderWithIntl(<ProductForm mode="create" categories={categories} />)
 
     await user.type(screen.getByLabelText('Name'), 'Fries')
     await user.type(screen.getByLabelText('Price'), '9.90')
-    await user.type(
-      screen.getByLabelText('Image URL'),
-      'https://cdn.example.com/f.png',
-    )
     await user.click(screen.getByRole('button', { name: /create product/i }))
 
     await waitFor(() => expect(fetchFn).toHaveBeenCalled())
     const [url, init] = fetchFn.mock.calls[0]
     expect(url).toBe('/api/products')
     expect(init.method).toBe('POST')
-    expect(JSON.parse(init.body)).toMatchObject({
+    const body = JSON.parse(init.body)
+    expect(body).toEqual({
       name: 'Fries',
       price: '9.90',
       categoryId: CAT_ID,
-      imageUrl: 'https://cdn.example.com/f.png',
     })
-    await waitFor(() => expect(push).toHaveBeenCalledWith('/admin/products'))
+    expect('imageUrl' in body).toBe(false)
+    // Straight to the product that now exists, where the image is attached.
+    await waitFor(() => expect(push).toHaveBeenCalledWith('/admin/products/p9'))
   })
 
   it('surfaces a mapped server error (e.g. 409 name_taken)', async () => {
@@ -124,10 +109,6 @@ describe('ProductForm (create)', () => {
 
     await user.type(screen.getByLabelText('Name'), 'Fries')
     await user.type(screen.getByLabelText('Price'), '9.90')
-    await user.type(
-      screen.getByLabelText('Image URL'),
-      'https://cdn.example.com/f.png',
-    )
     await user.click(screen.getByRole('button', { name: /create product/i }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/name already/i)

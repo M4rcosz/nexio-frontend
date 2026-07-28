@@ -110,7 +110,9 @@
     "checkout": "Go to checkout",
     "viewCart": "View cart",
     "previewEmpty": "Your cart is empty.",
-    "switchUnitConfirm": "You already have items from another unit. Switching will empty the cart. Continue?"
+    "switchUnitTitle": "Switch unit?",
+    "switchUnitConfirm": "You already have items from another unit. Switching will empty the cart. Continue?",
+    "switchUnitCta": "Switch and empty cart"
   },
   "checkout": {
     "title": "Checkout",
@@ -503,18 +505,41 @@
         "categoryId": "Category",
         "categoryHint": "Pick the category this product belongs to.",
         "categoryInactiveOption": "Current category (inactive)",
-        "imageUrl": "Image URL",
-        "imageUrlHint": "Leave it unchanged to keep the current image — it cannot be cleared here.",
-        "imageUrlCreateHint": "Required. Public http(s) URL of the product image.",
         "invalidMoney": "Use a positive decimal amount like 58.90.",
         "invalidCategory": "Enter a valid category UUID.",
         "invalidName": "Name must be at least 2 characters.",
-        "invalidImageUrl": "Enter a valid http(s) image URL.",
         "noChanges": "Change at least one field before saving.",
         "submitCreate": "Create product",
         "submitEdit": "Save changes",
         "submitting": "Saving…",
-        "failed": "Could not save the product."
+        "failed": "Could not save the product.",
+        "imageOnlySubtitle": "You can update this product’s image. Editing the catalog details is restricted to administrators."
+      },
+      "manageImage": "Image",
+      "tableImage": "Image",
+      "image": {
+        "title": "Product image",
+        "hint": "PNG, JPEG or WebP, up to {megabytes} MB. The image is uploaded straight to storage — it is saved as soon as it finishes.",
+        "upload": "Upload image",
+        "replace": "Replace image",
+        "clear": "Remove image",
+        "clearConfirm": "Remove this product’s image? The product stays, it just goes back to the placeholder.",
+        "cancel": "Cancel upload",
+        "statusPreparing": "Preparing upload…",
+        "statusUploading": "Uploading… {percent}%",
+        "statusFinishing": "Finishing…",
+        "success": "Image updated.",
+        "failed": "Could not update the image.",
+        "invalid_type": "Choose a PNG, JPEG or WebP file.",
+        "too_large": "That file is too large. The limit is {megabytes} MB.",
+        "rate_limited": "Too many upload attempts. Wait a moment and try again.",
+        "upload_failed": "The upload did not go through. Try again.",
+        "upload_incomplete": "The upload did not complete. Try again.",
+        "image_rejected": "That file was rejected. Pick a different image.",
+        "statusUploadingPhase": "Uploading…",
+        "statusRemoving": "Removing image…",
+        "progressLabel": "Upload progress",
+        "noImage": "No image set."
       }
     },
     "menu": {
@@ -763,7 +788,10 @@
       "membership_revoked": "This AI membership is revoked. Reinstate it first.",
       "not_enrolled": "This user has no AI membership yet.",
       "invalid_period": "The start date must not be after the end date.",
-      "invalid_query": "Some of the filters are invalid. Please adjust them and try again."
+      "invalid_query": "Some of the filters are invalid. Please adjust them and try again.",
+      "insufficient_stock": "One of the items is out of stock at this unit. Remove it or lower the quantity to continue.",
+      "profile_edit_unsupported": "Staff name, e-mail, phone and role can't be changed yet — these fields are read-only for now.",
+      "unit_change_forbidden": "Only an administrator can change which units a staff member is assigned to."
     }
   },
   "orderStatus": {
@@ -857,7 +885,6 @@
     "subtitle": "Ask about your orders and loyalty points. Each reply spends tokens from your balance.",
     "balance": "Token balance",
     "tokens": "tokens",
-    "balanceHint": "Tokens are spent per message. Your balance updates after each reply.",
     "notEnrolledTitle": "No AI access yet",
     "notEnrolledBody": "Ask an admin to grant you AI assistant access.",
     "outOfTokensTitle": "Out of tokens",

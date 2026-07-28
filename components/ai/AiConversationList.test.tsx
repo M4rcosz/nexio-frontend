@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { cleanup, screen, within } from '@testing-library/react'
+import { act, cleanup, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderWithIntl } from '@/lib/test/intl'
+import { formatDateTime } from '@/lib/format'
 import { AiConversationList } from './AiConversationList'
 import type { AiConversationSummary } from '@/lib/api/types'
 
@@ -158,10 +159,13 @@ describe('AiConversationList row content', () => {
     expect(title).toHaveAttribute('title', 'Refund for order #42')
   })
 
-  it('shows the last-activity date as the secondary line', () => {
+  it('shows the last activity as an age, keeping the date on the tooltip', () => {
     setup({ threads: [thread({ updatedAt: '2026-07-23T18:16:00Z' })] })
-    // Some localized rendering of the year is present under the title.
-    expect(screen.getByText(/2026/)).toBeInTheDocument()
+    const stamp = screen.getByTitle(/2026/)
+    // The absolute stamp is the tooltip; the secondary line itself is relative.
+    expect(stamp.tagName).toBe('TIME')
+    expect(stamp).toHaveTextContent(/ago|now/i)
+    expect(screen.queryByText(/2026/)).toBeNull()
   })
 })
 
@@ -297,5 +301,54 @@ describe('AiConversationList inline rename', () => {
       screen.queryByRole('textbox', { name: /conversation title/i }),
     ).toBeNull()
     expect(screen.getByText('keep me')).toBeInTheDocument()
+  })
+})
+
+describe('AiConversationList last activity', () => {
+  const NOW = '2026-07-24T12:00:00Z'
+
+  afterEach(() => vi.useRealTimers())
+
+  function freeze() {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    vi.setSystemTime(new Date(NOW))
+  }
+
+  it('shows how long ago the thread was last used, not the wall-clock stamp', () => {
+    freeze()
+    setup({ threads: [thread({ updatedAt: '2026-07-24T11:55:00Z' })] })
+
+    const stamp = screen.getByText('5 min. ago')
+    expect(stamp.tagName).toBe('TIME')
+    // The exact instant is still reachable, on the tooltip.
+    expect(stamp).toHaveAttribute(
+      'title',
+      formatDateTime('2026-07-24T11:55:00Z', 'en'),
+    )
+    expect(stamp).toHaveAttribute('datetime', '2026-07-24T11:55:00Z')
+  })
+
+  it('ages in place while the rail sits idle', () => {
+    freeze()
+    setup({ threads: [thread({ updatedAt: '2026-07-24T11:59:30Z' })] })
+    expect(screen.getByText('now')).toBeInTheDocument()
+
+    act(() => {
+      vi.advanceTimersByTime(60_000)
+    })
+    expect(screen.getByText('1 min. ago')).toBeInTheDocument()
+
+    act(() => {
+      vi.advanceTimersByTime(60 * 60_000)
+    })
+    expect(screen.getByText('1 hr. ago')).toBeInTheDocument()
+  })
+
+  it('stops ticking once unmounted', () => {
+    freeze()
+    setup()
+    const timers = vi.getTimerCount()
+    cleanup()
+    expect(vi.getTimerCount()).toBeLessThan(timers)
   })
 })

@@ -43,13 +43,19 @@ function blockFor(membership: AiMembership | null): AccessBlock | null {
  * previous reply issued, so the assistant keeps its context. Dropping that id
  * would still "work", but each message would open a fresh single-turn thread
  * and the user's list would fill with orphans.
+ *
+ * `heading` is the page's own title block, passed down rather than rendered by
+ * the page: the balance sits on that same row and is client state (it changes
+ * after every reply), so the row has to be owned by this component.
  */
 export function AiAssistantView({
   initialMembership,
   initialConversations,
+  heading,
 }: {
   initialMembership: AiMembership | null
   initialConversations: Paginated<AiConversationSummary>
+  heading?: React.ReactNode
 }) {
   const t = useTranslations('ai')
   const locale = useLocale()
@@ -87,6 +93,14 @@ export function AiAssistantView({
 
   const nextId = useRef(0)
   const listRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
+  /** Set when a send starts, so focus can return to the composer once it
+   *  settles. The textarea is disabled while the request is in flight, and
+   *  disabling the focused element blurs it to `<body>` — without this the
+   *  caret is lost after every message and has to be clicked back. Only sends
+   *  set it: opening a thread from the rail also flips `busy`, and stealing
+   *  focus from the row the user just activated would be worse. */
+  const refocusInput = useRef(false)
 
   // The thread list is client-owned because it reorders on every send. Holding
   // page one in state lets a reload reset `useCursorPages` (it drops appended
@@ -160,6 +174,17 @@ export function AiAssistantView({
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight })
   }, [messages, pending])
 
+  // Give the composer its focus back when a send settles — see `refocusInput`.
+  // Runs for the send button too: it disables itself the moment the draft is
+  // cleared, so a mouse user would otherwise also end up focused on nothing.
+  useEffect(() => {
+    if (busy || !refocusInput.current) return
+    refocusInput.current = false
+    // A send that ended in a block (out of tokens, revoked) leaves the field
+    // disabled — don't fight the browser over focusing it.
+    if (canChat) inputRef.current?.focus()
+  }, [busy, canChat])
+
   const reloadThreads = useCallback(async () => {
     try {
       const res = await fetch('/api/ai/conversations')
@@ -207,6 +232,7 @@ export function AiAssistantView({
     if (!text || busy || !canChat) return
     setError(null)
     setTransient(false)
+    refocusInput.current = true
 
     const userMessage: ChatMessage = {
       id: nextId.current++,
@@ -408,198 +434,229 @@ export function AiAssistantView({
     }
   }
 
+  const outOfTokens = accessBlock === 'out_of_tokens' || balance <= 0
+
   return (
-    // Two panes. Up to lg the chat takes two of three equal columns; from xl
-    // (where the shell goes wide) the side column is pinned so every extra
-    // pixel goes to the chat instead of inflating the balance card.
-    <div className="grid gap-5 md:grid-cols-3 xl:grid-cols-[20rem_1fr]">
-      <div className="space-y-5">
-        {/* Balance / status */}
-        <section className="card h-max p-6">
-          <p className="text-[11px] font-mono uppercase tracking-widest text-fg-subtle">
-            {t('balance')}
-          </p>
-          <p className="mt-3 flex items-baseline gap-2">
-            <span className="font-display text-5xl font-extrabold text-gradient-brand">
+    <div className="space-y-6">
+      {/* The balance rides the page header instead of a card in the rail: it is
+          one number, it belongs next to the title it qualifies, and the space
+          it used to occupy is worth more to the thread list. */}
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        {heading}
+        {enrolled ? (
+          /* Centred, not baseline-aligned: the unit sits at the digits' mid
+             height. `leading-none` on both spans is what makes that exact —
+             each span's box then hugs its glyphs, so centring the boxes centres
+             what you actually see. */
+          <p
+            className={`flex flex-none items-center gap-2 whitespace-nowrap rounded-2xl border bg-surface px-4 py-2.5 shadow-sm ${
+              outOfTokens ? 'border-accent-500/40' : 'border-border'
+            }`}
+          >
+            <span className="font-display text-2xl font-extrabold leading-none text-gradient-brand">
               {balance.toLocaleString(locale)}
             </span>
-            <span className="text-sm font-medium text-fg-muted">
+            {/* The unit carries the label — a bare number next to the title
+                would need the eyebrow the old card had. */}
+            <span className="text-xs font-medium uppercase leading-none tracking-wide text-fg-muted">
               {t('tokens')}
             </span>
           </p>
+        ) : null}
+      </div>
 
+      {/* Two panes. Up to lg the chat takes two of three equal columns; from xl
+          (where the shell goes wide) the side column is pinned so every extra
+          pixel goes to the chat instead of inflating the rail. */}
+      <div className="grid gap-5 md:grid-cols-3 xl:grid-cols-[20rem_1fr]">
+        <div className="space-y-5">
+          {/* Access state. Only rendered when there is something to say — with
+              the balance moved to the header, a healthy wallet needs no card
+              here at all. */}
           {accessBlock === 'not_enrolled' ? (
-            <div className="mt-5 rounded-xl border border-border bg-surface-2 p-3 text-sm text-fg-muted">
+            <section className="card h-max p-4 text-sm">
               <p className="font-medium text-fg">{t('notEnrolledTitle')}</p>
               <p className="mt-1 text-fg-muted">{t('notEnrolledBody')}</p>
-            </div>
+            </section>
           ) : revoked ? (
-            <div className="mt-5 rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm">
+            <section className="card h-max border-accent-500/30 bg-accent-500/10 p-4 text-sm">
               <p className="font-medium text-accent-700 dark:text-accent-300">
                 {t('revokedTitle')}
               </p>
-              {/* The balance above is real and preserved — say so, or it reads
-                  like a display bug next to a blocked chat. */}
+              {/* The balance in the header is real and preserved — say so, or
+                  it reads like a display bug next to a blocked chat. */}
               <p className="mt-1 text-fg-muted">
                 {t('revokedBody', {
                   date: formatDateTime(membership?.revokedAt ?? '', locale),
                 })}
               </p>
-            </div>
-          ) : accessBlock === 'out_of_tokens' || balance <= 0 ? (
-            <div className="mt-5 rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-sm">
+            </section>
+          ) : outOfTokens ? (
+            <section className="card h-max border-accent-500/30 bg-accent-500/10 p-4 text-sm">
               <p className="font-medium text-accent-700 dark:text-accent-300">
                 {t('outOfTokensTitle')}
               </p>
               <p className="mt-1 text-fg-muted">{t('outOfTokensBody')}</p>
-            </div>
-          ) : (
-            <p className="mt-5 text-sm leading-relaxed text-fg-muted">
-              {t('balanceHint')}
-            </p>
-          )}
-        </section>
+            </section>
+          ) : null}
 
-        {enrolled ? (
-          <AiConversationList
-            threads={threads}
-            activeId={conversationId}
-            hasMore={hasMore}
-            loading={loadingThreads}
-            error={threadsError}
-            searchTerm={search}
-            searching={searching}
-            onSearchChange={setSearch}
-            onOpen={openThread}
-            onRename={renameThread}
-            onDelete={deleteThread}
-            onNewChat={newChat}
-            onLoadMore={loadMore}
-            busy={busy}
-          />
-        ) : null}
-      </div>
-
-      {/* Chat */}
-      <section className="card flex min-h-[28rem] flex-col p-0 md:col-span-2 xl:col-span-1">
-        <div className="border-b border-border px-5 py-3">
-          <p className="text-[11px] font-mono uppercase tracking-widest text-fg-subtle">
-            {t('chatTitle')}
-          </p>
-          {openTitle ? (
-            <p
-              className="mt-0.5 truncate text-sm font-semibold text-fg"
-              title={openTitle}
-            >
-              {openTitle}
-            </p>
+          {enrolled ? (
+            <AiConversationList
+              threads={threads}
+              activeId={conversationId}
+              hasMore={hasMore}
+              loading={loadingThreads}
+              error={threadsError}
+              searchTerm={search}
+              searching={searching}
+              onSearchChange={setSearch}
+              onOpen={openThread}
+              onRename={renameThread}
+              onDelete={deleteThread}
+              onNewChat={newChat}
+              onLoadMore={loadMore}
+              busy={busy}
+            />
           ) : null}
         </div>
 
-        <div
-          ref={listRef}
-          className="scrollbar-thin flex-1 overflow-y-auto px-5 py-5"
-        >
-          {/* The pane widens, the message column does not: past ~75ch the
+        {/* Chat */}
+        <section className="card flex min-h-[28rem] flex-col p-0 md:col-span-2 xl:col-span-1">
+          <div className="border-b border-border px-5 py-3">
+            <p className="text-[11px] font-mono uppercase tracking-widest text-fg-subtle">
+              {t('chatTitle')}
+            </p>
+            {openTitle ? (
+              <p
+                className="mt-0.5 truncate text-sm font-semibold text-fg"
+                title={openTitle}
+              >
+                {openTitle}
+              </p>
+            ) : null}
+          </div>
+
+          <div
+            ref={listRef}
+            className="scrollbar-thin flex-1 overflow-y-auto px-5 py-5"
+          >
+            {/* The pane widens, the message column does not: past ~75ch the
               bubbles turn into unreadable full-width lines. */}
-          <div className="mx-auto flex min-h-full w-full max-w-[75ch] flex-col gap-4">
-            {messages.length === 0 && !busy ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
-                <span className="text-4xl" aria-hidden>
-                  💬
-                </span>
-                <p className="max-w-sm text-sm text-fg-muted">
-                  {t('emptyState')}
-                </p>
-              </div>
-            ) : (
-              <>
-                {/* Past this length the model no longer sees the earliest
+            <div className="mx-auto flex min-h-full w-full max-w-[75ch] flex-col gap-4">
+              {messages.length === 0 && !busy ? (
+                <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center">
+                  <span className="text-4xl" aria-hidden>
+                    💬
+                  </span>
+                  <p className="max-w-sm text-sm text-fg-muted">
+                    {t('emptyState')}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Past this length the model no longer sees the earliest
                     turns, even though the transcript below is complete.
                     Surfacing it beats letting the assistant look forgetful. */}
-                {messages.length > CHAT_REPLAYED_TURNS ? (
-                  <p className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-center text-[11px] text-fg-subtle">
-                    {t('contextTrimmed', { count: CHAT_REPLAYED_TURNS })}
-                  </p>
-                ) : null}
-                {messages.map((m) => (
-                  <Bubble key={m.id} message={m} t={t} />
-                ))}
-              </>
-            )}
-            {pending ? <TypingIndicator label={t('thinking')} /> : null}
+                  {messages.length > CHAT_REPLAYED_TURNS ? (
+                    <p className="rounded-xl border border-border bg-surface-2 px-3 py-2 text-center text-[11px] text-fg-subtle">
+                      {t('contextTrimmed', { count: CHAT_REPLAYED_TURNS })}
+                    </p>
+                  ) : null}
+                  {messages.map((m) => (
+                    <Bubble key={m.id} message={m} t={t} />
+                  ))}
+                </>
+              )}
+              {pending ? <TypingIndicator label={t('thinking')} /> : null}
+            </div>
           </div>
-        </div>
 
-        {/* Only the latest assistant reply is announced — see `announce`. */}
-        <p
-          className="sr-only"
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          {announce}
-        </p>
-
-        {transient ? (
-          <div className="mx-5 mb-3 flex items-center justify-between gap-3 rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-xs">
-            <span className="text-accent-700 dark:text-accent-300">
-              {t('unavailable')}
-            </span>
-            <button
-              type="button"
-              onClick={send}
-              className="font-semibold text-accent-700 hover:underline dark:text-accent-300"
-            >
-              {t('retry')}
-            </button>
-          </div>
-        ) : null}
-
-        {error ? (
+          {/* Only the latest assistant reply is announced — see `announce`. */}
           <p
-            role="alert"
-            className="mx-5 mb-3 rounded-xl border border-accent-500/30 bg-accent-500/10 p-2 text-xs text-accent-700 dark:text-accent-300"
+            className="sr-only"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
           >
-            {error}
+            {announce}
           </p>
-        ) : null}
 
-        {/* The separator spans the pane; the composer inside tracks the message
-            column so the caret stays under the last bubble. `p-3` is added back
-            to the cap so the field lines up with the bubbles above. */}
-        <div className="border-t border-border">
-          <form
-            className="mx-auto flex w-full max-w-[calc(75ch+1.5rem)] items-end gap-2 p-3"
-            onSubmit={(e) => {
-              e.preventDefault()
-              send()
-            }}
-          >
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={onKeyDown}
-              disabled={!canChat || busy}
-              rows={1}
-              maxLength={4000}
-              placeholder={
-                canChat ? t('inputPlaceholder') : t('inputDisabledPlaceholder')
-              }
-              aria-label={t('inputPlaceholder')}
-              className="min-h-[2.75rem] max-h-40 flex-1 resize-none rounded-xl border border-border bg-bg px-3 py-2.5 text-sm text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand-500/60 disabled:opacity-60"
-            />
-            <button
-              type="submit"
-              disabled={!canChat || busy || input.trim().length === 0}
-              className="btn-primary !px-3 !py-2.5"
-              aria-label={t('send')}
+          {transient ? (
+            <div className="mx-5 mb-3 flex items-center justify-between gap-3 rounded-xl border border-accent-500/30 bg-accent-500/10 p-3 text-xs">
+              <span className="text-accent-700 dark:text-accent-300">
+                {t('unavailable')}
+              </span>
+              <button
+                type="button"
+                onClick={send}
+                className="font-semibold text-accent-700 hover:underline dark:text-accent-300"
+              >
+                {t('retry')}
+              </button>
+            </div>
+          ) : null}
+
+          {error ? (
+            <p
+              role="alert"
+              className="mx-5 mb-3 rounded-xl border border-accent-500/30 bg-accent-500/10 p-2 text-xs text-accent-700 dark:text-accent-300"
             >
-              <SendIcon className="h-4 w-4" />
-            </button>
-          </form>
-        </div>
-      </section>
+              {error}
+            </p>
+          ) : null}
+
+          {/* The composer spans the pane rather than tracking the 75ch message
+            column: the cap is there to keep prose readable, and applying it to
+            a single-line field just left dead gutters either side of it. */}
+          <div className="border-t border-border">
+            <form
+              className="px-5 py-3"
+              onSubmit={(e) => {
+                e.preventDefault()
+                send()
+              }}
+            >
+              {/* The send button rides inside the field, pinned to its bottom
+                  right so it stays put as the textarea grows. `pr-12` reserves
+                  its lane — without it, long text runs under the button.
+                  The wrapper is `flex` and the textarea `block`: as an inline
+                  element the textarea sat on a text baseline, leaving a few px
+                  of line-box below it that pushed the button past the field's
+                  bottom edge. */}
+              <div className="relative flex">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={onKeyDown}
+                  disabled={!canChat || busy}
+                  rows={1}
+                  maxLength={4000}
+                  placeholder={
+                    canChat
+                      ? t('inputPlaceholder')
+                      : t('inputDisabledPlaceholder')
+                  }
+                  aria-label={t('inputPlaceholder')}
+                  className="block max-h-40 min-h-[2.75rem] w-full resize-none rounded-3xl border border-border bg-bg py-2.5 pl-4 pr-12 text-sm text-fg outline-none transition-colors placeholder:text-fg-subtle focus:border-brand-500/60 disabled:opacity-60"
+                />
+                {/* `fg` on `bg` — the inverted pair, so the button reads white
+                    on the dark theme and near-black on the light one. A literal
+                    `white` would vanish on light backgrounds and break the
+                    per-tenant palette. */}
+                <button
+                  type="submit"
+                  disabled={!canChat || busy || input.trim().length === 0}
+                  className="absolute bottom-1.5 right-1.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-fg text-bg shadow-sm transition-opacity hover:opacity-80 disabled:opacity-40"
+                  aria-label={t('send')}
+                >
+                  <SendIcon className="h-4 w-4" />
+                </button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
     </div>
   )
 }

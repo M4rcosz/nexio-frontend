@@ -19,10 +19,15 @@ const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
- * Create/edit form for a product (ADMIN only). On create, every field is sent
- * and `imageUrl` is required (unlike edit). On edit, a partial update carries
- * only the fields that changed; `isActive` is managed elsewhere (activate/
- * deactivate) and `description`/`imageUrl` cannot be cleared to null here.
+ * Create/edit form for a product's *text* fields (ADMIN only). On edit, a
+ * partial update carries only the fields that changed; `isActive` is managed
+ * elsewhere (activate/deactivate) and `description` cannot be cleared to null.
+ *
+ * The image is deliberately not a field here. A product is created without one
+ * and the image is attached afterwards through `ProductImageManager`, which
+ * uploads the bytes straight to storage. `PATCH /products/:id` still accepts a
+ * free-text `imageUrl` for externally hosted images, but exposing it next to
+ * the uploader would give the screen two competing image paths.
  */
 export function ProductForm({
   mode,
@@ -44,7 +49,6 @@ export function ProductForm({
     description: product?.description ?? '',
     price: product?.price ?? '',
     categoryId: product?.categoryId ?? categories[0]?.id ?? '',
-    imageUrl: product?.imageUrl ?? '',
   })
 
   // Only active categories are listed, so a product tied to a deactivated
@@ -78,17 +82,12 @@ export function ProductForm({
     const categoryId = form.categoryId.trim()
     if (!UUID_RE.test(categoryId)) return { error: t('invalidCategory') }
 
-    const imageUrl = form.imageUrl.trim()
-    if (!/^https?:\/\/.+/i.test(imageUrl))
-      return { error: t('invalidImageUrl') }
-
     const description = form.description.trim()
     return {
       body: {
         name,
         price,
         categoryId,
-        imageUrl,
         ...(description ? { description } : {}),
       },
     }
@@ -110,15 +109,19 @@ export function ProductForm({
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify(result.body),
         })
+        const data = (await res.json().catch(() => null)) as {
+          id?: string
+          code?: string
+        } | null
         if (!res.ok) {
-          const data = (await res.json().catch(() => null)) as {
-            code?: string
-          } | null
           setError(errorMessage(data?.code, res.status) ?? t('failed'))
           return
         }
         router.refresh()
-        router.push('/admin/products')
+        // Land on the edit screen of the product that now exists rather than
+        // the list: a product is created without an image, and attaching one is
+        // the natural next step.
+        router.push(data?.id ? `/admin/products/${data.id}` : '/admin/products')
       })
       return
     }
@@ -204,24 +207,6 @@ export function ProductForm({
           />
           <p className="mt-1 text-xs text-fg-subtle">{t('categoryHint')}</p>
         </div>
-      </div>
-
-      <div>
-        <label className="label" htmlFor="product-image">
-          {t('imageUrl')}
-        </label>
-        <input
-          id="product-image"
-          className="input"
-          type="url"
-          required={mode === 'create'}
-          placeholder="https://…"
-          value={form.imageUrl}
-          onChange={(e) => update('imageUrl', e.target.value)}
-        />
-        <p className="mt-1 text-xs text-fg-subtle">
-          {mode === 'create' ? t('imageUrlCreateHint') : t('imageUrlHint')}
-        </p>
       </div>
 
       {error ? (
