@@ -1,3 +1,7 @@
+// Types for the nexio-core contract. The workflow engine is a separate service
+// with its own error model and paging shape — its types live in
+// `lib/api/workflow/types.ts`, not here.
+
 export type Role = 'ADMIN' | 'MANAGER' | 'ATTENDANT' | 'KITCHEN' | 'CUSTOMER'
 
 export type OrderChannel = 'APP' | 'WEB' | 'TOTEM' | 'COUNTER' | 'PICKUP'

@@ -66,6 +66,16 @@ async function parseBody(res: Response): Promise<unknown> {
   return text || null
 }
 
+/**
+ * The single outbound path to nexio-core. It maps **HTTP status → ApiError**,
+ * which is why the workflow engine does NOT go through it: nexio-workflow speaks
+ * GraphQL and answers **HTTP 200 with an `errors[]` array**, so every failure
+ * there would arrive here as a success carrying an error body (and the
+ * 401→refresh→retry path below would never fire). That service has its own
+ * sibling transport in `lib/api/workflow/graphql.ts` — see the long note at the
+ * top of that file. Module-private on purpose; go through `serverFetch`,
+ * `serverFetchAnonymous` or `clientFetch`.
+ */
 async function rawFetch<T>(
   url: string,
   init: FetchInit,
