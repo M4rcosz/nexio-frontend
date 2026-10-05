@@ -755,6 +755,15 @@
       "emailLabel": "Filter customers by e-mail"
     }
   },
+  "backendStatus": {
+    "wakingTitle": "Waking up the server…",
+    "wakingBody": "Our server sleeps when nobody is using it, so the first visit can take up to a minute. This page will update on its own once it's ready.",
+    "errorWaking": "The server was asleep and is starting up now — this can take up to a minute. We'll reload this page automatically as soon as it's ready.",
+    "unavailableTitle": "The server isn't responding",
+    "unavailableBody": "It's taking longer than usual to start. Please try again in a moment.",
+    "readyTitle": "All set — the server is ready.",
+    "retry": "Try again"
+  },
   "errors": {
     "title": "Something went wrong",
     "fallback": "We couldn't complete the operation. Please try again shortly.",

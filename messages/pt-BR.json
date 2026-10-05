@@ -755,6 +755,15 @@
       "emailLabel": "Filtrar clientes por e-mail"
     }
   },
+  "backendStatus": {
+    "wakingTitle": "Acordando o servidor…",
+    "wakingBody": "Nosso servidor entra em repouso quando ninguém está usando, então o primeiro acesso pode levar até um minuto. Esta página se atualiza sozinha assim que ele estiver pronto.",
+    "errorWaking": "O servidor estava em repouso e está iniciando agora — isso pode levar até um minuto. Vamos recarregar esta página automaticamente assim que ele estiver pronto.",
+    "unavailableTitle": "O servidor não está respondendo",
+    "unavailableBody": "Está demorando mais do que o normal para iniciar. Tente novamente em instantes.",
+    "readyTitle": "Tudo pronto — o servidor está no ar.",
+    "retry": "Tentar novamente"
+  },
   "errors": {
     "title": "Algo deu errado",
     "fallback": "Não foi possível concluir a operação. Tente novamente em instantes.",

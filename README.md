@@ -98,6 +98,14 @@ See `.env.example`. The relevant ones:
   cookie/localStorage.
 - **Polling** on order tracking (5s) and on payment status (4s) — the
   backend has no WebSocket yet.
+- **Backend cold starts.** nexio-core runs on Render's free tier, which sleeps
+  after ~15 min idle and takes up to a minute to wake. On each hard load (and on
+  refocus of a stale tab) the browser probes `GET /api/backend-status`, which
+  checks the backend's `/health` with a 3s timeout. While it's down, a toast
+  (`components/BackendWakeBanner.tsx`) says the server is waking. The page
+  re-renders on its own once it answers, and `app/[locale]/error.tsx` retries a
+  render that timed out. After 2 min it says the server isn't responding and
+  shows a retry button. Always `up` with mocks on.
 - **No OpenAPI**: types are typed manually in `lib/api/types.ts`. Route
   handler input is validated with Zod.
 - **Product images upload direct to storage.** `POST /api/products/:id/image/upload-url`
