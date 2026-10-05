@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl'
 import { Link, usePathname } from '@/i18n/navigation'
 import type { AdminRole } from '@/lib/auth/access'
 
-const NAV: Array<{
+type NavItem = {
   href: string
   key:
     | 'overview'
@@ -20,47 +20,93 @@ const NAV: Array<{
     | 'inventory'
     | 'promotions'
     | 'ai'
+    | 'workflows'
   icon: React.FC<{ className?: string }>
   /** When true, the entry is only shown to ADMIN. */
   adminOnly?: boolean
+}
+
+/**
+ * Nav entries grouped by what the operator is doing, not by resource name —
+ * eleven flat rows read as a wall. `group` keys live under `admin.nav.groups`.
+ *
+ * A group whose entries are all `adminOnly` disappears wholesale for a
+ * MANAGER; `visibleGroups` drops the heading with it rather than leaving a
+ * label over nothing.
+ */
+const NAV_GROUPS: Array<{
+  group: 'operation' | 'catalog' | 'management'
+  items: NavItem[]
 }> = [
-  { href: '/admin', key: 'overview', icon: GridIcon },
-  { href: '/admin/orders', key: 'orders', icon: OrdersIcon },
-  { href: '/admin/users', key: 'users', icon: UsersIcon },
-  // Customers are unreachable for a MANAGER (no unit links to scope by), so
-  // the entry would only ever open an empty screen for them.
   {
-    href: '/admin/customers',
-    key: 'customers',
-    icon: UsersIcon,
-    adminOnly: true,
+    group: 'operation',
+    items: [
+      { href: '/admin', key: 'overview', icon: GridIcon },
+      { href: '/admin/orders', key: 'orders', icon: OrdersIcon },
+      { href: '/admin/menu', key: 'menu', icon: MenuIcon },
+      { href: '/admin/inventory', key: 'inventory', icon: BoxIcon },
+      // A workflow fires HTTP calls at third parties with stored credentials,
+      // so it is ADMIN-only — the pages and the toggle's route handler enforce
+      // that independently; this only hides the door.
+      {
+        href: '/admin/workflows',
+        key: 'workflows',
+        icon: FlowIcon,
+        adminOnly: true,
+      },
+    ],
   },
-  { href: '/admin/products', key: 'products', icon: DishIcon },
   {
-    href: '/admin/categories',
-    key: 'categories',
-    icon: LayersIcon,
-    adminOnly: true,
+    group: 'catalog',
+    items: [
+      { href: '/admin/products', key: 'products', icon: DishIcon },
+      {
+        href: '/admin/categories',
+        key: 'categories',
+        icon: LayersIcon,
+        adminOnly: true,
+      },
+      { href: '/admin/promotions', key: 'promotions', icon: TagIcon },
+    ],
   },
-  { href: '/admin/menu', key: 'menu', icon: MenuIcon },
   {
-    href: '/admin/business-units',
-    key: 'businessUnits',
-    icon: StoreIcon,
-    adminOnly: true,
+    group: 'management',
+    items: [
+      { href: '/admin/users', key: 'users', icon: UsersIcon },
+      // Customers are unreachable for a MANAGER (no unit links to scope by),
+      // so the entry would only ever open an empty screen for them.
+      {
+        href: '/admin/customers',
+        key: 'customers',
+        icon: UserRoundIcon,
+        adminOnly: true,
+      },
+      {
+        href: '/admin/business-units',
+        key: 'businessUnits',
+        icon: StoreIcon,
+        adminOnly: true,
+      },
+      { href: '/admin/ai', key: 'ai', icon: SparkIcon, adminOnly: true },
+    ],
   },
-  { href: '/admin/inventory', key: 'inventory', icon: BoxIcon },
-  { href: '/admin/promotions', key: 'promotions', icon: TagIcon },
-  { href: '/admin/ai', key: 'ai', icon: SparkIcon, adminOnly: true },
 ]
 
-type NavItem = (typeof NAV)[number]
+type NavGroup = { group: string; items: NavItem[] }
+
+/** Applies the role filter, then drops any group left with no entries. */
+function visibleGroups(role: AdminRole): NavGroup[] {
+  return NAV_GROUPS.map(({ group, items }) => ({
+    group,
+    items: items.filter((item) => !item.adminOnly || role === 'ADMIN'),
+  })).filter(({ items }) => items.length > 0)
+}
 
 export function AdminSidebar({ role }: { role: AdminRole }) {
   const t = useTranslations('admin.nav')
   const pathname = usePathname()
 
-  const items = NAV.filter((item) => !item.adminOnly || role === 'ADMIN')
+  const groups = visibleGroups(role)
 
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -127,13 +173,22 @@ export function AdminSidebar({ role }: { role: AdminRole }) {
     <>
       {/* Desktop: sticky vertical rail (lg and up). */}
       <aside className="hidden lg:sticky lg:top-24 lg:block lg:self-start">
-        <nav className="card overflow-hidden p-0">
-          <div className="border-b border-border px-4 py-3">
+        <nav
+          aria-label={t('title')}
+          className="card overflow-hidden p-0 bg-gradient-to-b from-surface to-surface-2/40"
+        >
+          <div className="flex items-center gap-2 border-b border-border px-4 py-3">
+            <span className="h-1.5 w-1.5 flex-none rounded-full bg-brand-gradient" />
             <p className="font-mono text-[10px] uppercase tracking-widest text-fg-subtle">
               {t('title')}
             </p>
           </div>
-          <NavList items={items} className="flex flex-col gap-1 p-2" />
+          {/* Caps the rail at the viewport so the longer ADMIN list scrolls
+              inside the card instead of running past the sticky offset. */}
+          <NavGroups
+            groups={groups}
+            className="scrollbar-thin max-h-[calc(100vh-11rem)] overflow-y-auto p-2"
+          />
         </nav>
       </aside>
 
@@ -174,9 +229,12 @@ export function AdminSidebar({ role }: { role: AdminRole }) {
                 className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col bg-surface shadow-soft-lg"
               >
                 <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                  <p className="font-mono text-[10px] uppercase tracking-widest text-fg-subtle">
-                    {t('title')}
-                  </p>
+                  <span className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 flex-none rounded-full bg-brand-gradient" />
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-fg-subtle">
+                      {t('title')}
+                    </p>
+                  </span>
                   <button
                     type="button"
                     onClick={() => setOpen(false)}
@@ -186,10 +244,10 @@ export function AdminSidebar({ role }: { role: AdminRole }) {
                     <CloseIcon className="h-5 w-5" />
                   </button>
                 </div>
-                <NavList
-                  items={items}
+                <NavGroups
+                  groups={groups}
                   onNavigate={() => setOpen(false)}
-                  className="scrollbar-thin flex flex-col gap-1 overflow-y-auto p-2"
+                  className="scrollbar-thin flex-1 overflow-y-auto p-2"
                 />
               </div>
             </div>,
@@ -200,12 +258,12 @@ export function AdminSidebar({ role }: { role: AdminRole }) {
   )
 }
 
-function NavList({
-  items,
+function NavGroups({
+  groups,
   className,
   onNavigate,
 }: {
-  items: NavItem[]
+  groups: NavGroup[]
   className?: string
   onNavigate?: () => void
 }) {
@@ -213,31 +271,55 @@ function NavList({
   const pathname = usePathname()
 
   return (
-    <ul className={className}>
-      {items.map(({ href, key, icon: Icon }) => {
-        const active =
-          href === '/admin'
-            ? pathname === '/admin'
-            : pathname === href || pathname.startsWith(`${href}/`)
-        return (
-          <li key={href}>
-            <Link
-              href={href}
-              onClick={onNavigate}
-              aria-current={active ? 'page' : undefined}
-              className={`group flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                active
-                  ? 'bg-brand-gradient text-white shadow-soft'
-                  : 'text-fg-muted hover:bg-surface-2 hover:text-fg'
-              }`}
-            >
-              <Icon className="h-4 w-4 flex-none" />
-              <span>{t(key)}</span>
-            </Link>
-          </li>
-        )
-      })}
-    </ul>
+    <div className={className}>
+      {groups.map(({ group, items }, index) => (
+        <div key={group} className={index > 0 ? 'mt-5' : undefined}>
+          <p className="px-3 pb-1.5 font-mono text-[10px] font-medium uppercase tracking-widest text-fg-subtle/80">
+            {t(`groups.${group}`)}
+          </p>
+          <ul className="flex flex-col gap-0.5">
+            {items.map(({ href, key, icon: Icon }) => {
+              const active =
+                href === '/admin'
+                  ? pathname === '/admin'
+                  : pathname === href || pathname.startsWith(`${href}/`)
+              return (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    onClick={onNavigate}
+                    aria-current={active ? 'page' : undefined}
+                    className={`group relative flex w-full items-center gap-2.5 rounded-xl py-2 pl-3.5 pr-3 text-sm transition-all duration-200 ease-out ${
+                      active
+                        ? 'bg-brand-500/10 font-semibold text-brand-700 dark:bg-brand-500/15 dark:text-brand-200'
+                        : 'font-medium text-fg-muted hover:bg-surface-2 hover:text-fg'
+                    }`}
+                  >
+                    {/* The position marker. Rendered on every row but scaled
+                        to nothing when inactive, so it grows in place instead
+                        of popping, and the label never shifts. */}
+                    <span
+                      aria-hidden
+                      className={`absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-brand-gradient transition-transform duration-200 ease-out ${
+                        active ? 'scale-y-100' : 'scale-y-0'
+                      }`}
+                    />
+                    <Icon
+                      className={`h-4 w-4 flex-none transition-colors ${
+                        active
+                          ? 'text-brand-600 dark:text-brand-300'
+                          : 'text-fg-subtle group-hover:text-fg-muted'
+                      }`}
+                    />
+                    <span className="truncate">{t(key)}</span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -314,6 +396,25 @@ function UsersIcon({ className = '' }: { className?: string }) {
       <circle cx="9" cy="7" r="4" />
       <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  )
+}
+
+/** Single silhouette — keeps Clientes distinguishable from the Usuários pair. */
+function UserRoundIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
     </svg>
   )
 }
@@ -428,6 +529,30 @@ function SparkIcon({ className = '' }: { className?: string }) {
     >
       <path d="M12 3v4M12 17v4M3 12h4M17 12h4" />
       <path d="M12 8a4 4 0 0 0 4 4 4 4 0 0 0-4 4 4 4 0 0 0-4-4 4 4 0 0 0 4-4z" />
+    </svg>
+  )
+}
+
+/** Two nodes joined by a branch — a graph, not a list of steps. */
+function FlowIcon({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden
+    >
+      <rect x="3" y="3" width="6" height="6" rx="1.5" />
+      <circle cx="18" cy="6" r="2.5" />
+      <rect x="15" y="15" width="6" height="6" rx="1.5" />
+      {/* Straight through to the condition, then the branch that falls away. */}
+      <path d="M9 6h6.5" />
+      <path d="M18 8.5V15" />
+      <path d="M6 9v9h9" />
     </svg>
   )
 }

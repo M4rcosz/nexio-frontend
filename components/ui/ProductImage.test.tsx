@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { ProductImage } from './ProductImage'
 
 afterEach(cleanup)
@@ -46,6 +46,61 @@ describe('ProductImage', () => {
     render(<ProductImage src={src} alt="Açaí" />)
     expect(img()).toBeNull()
     expect(screen.getByText('🍲')).toBeInTheDocument()
+  })
+})
+
+describe('ProductImage — load failures', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  /**
+   * jsdom never fetches, so `complete`/`naturalWidth` have to be forced to the
+   * shape a real browser leaves behind for the case under test.
+   */
+  function stubImageState(complete: boolean, naturalWidth: number) {
+    vi.spyOn(
+      window.HTMLImageElement.prototype,
+      'complete',
+      'get',
+    ).mockReturnValue(complete)
+    vi.spyOn(
+      window.HTMLImageElement.prototype,
+      'naturalWidth',
+      'get',
+    ).mockReturnValue(naturalWidth)
+  }
+
+  it('falls back when the image errors after mount', () => {
+    render(<ProductImage src="https://cdn.example.com/gone.jpg" alt="Açaí" />)
+    fireEvent.error(img()!)
+    expect(img()).toBeNull()
+    expect(screen.getByText('🍲')).toBeInTheDocument()
+  })
+
+  // The menu is server-rendered: the browser fetches the image while parsing
+  // the HTML, so a 404/dead-host failure lands before React hydrates and
+  // attaches `onError` — and React does not replay media error events. Without
+  // the mount-time re-check the broken-image icon stayed on screen forever.
+  it('falls back for an image that already failed before hydration', () => {
+    stubImageState(true, 0)
+    render(<ProductImage src="https://cdn.example.com/gone.jpg" alt="Açaí" />)
+    expect(img()).toBeNull()
+    expect(screen.getByText('🍲')).toBeInTheDocument()
+  })
+
+  it('keeps an image that completed successfully', () => {
+    stubImageState(true, 640)
+    render(<ProductImage src="https://cdn.example.com/a.jpg" alt="Açaí" />)
+    expect(img()).toHaveAttribute('src', 'https://cdn.example.com/a.jpg')
+  })
+
+  // Still in flight at hydration: `onError` is attached in time, so the
+  // mount-time check must not pre-emptively blank it.
+  it('keeps an image that is still loading at mount', () => {
+    stubImageState(false, 0)
+    render(<ProductImage src="https://cdn.example.com/slow.jpg" alt="Açaí" />)
+    expect(img()).toHaveAttribute('src', 'https://cdn.example.com/slow.jpg')
   })
 })
 

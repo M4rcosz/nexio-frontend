@@ -38,6 +38,27 @@ export const envSchema = z
       .string()
       .regex(/^\d+$/, 'MOCK_DELAY_MS must be a non-negative integer (ms).')
       .optional(),
+
+    // nexio-workflow (the workflow engine) — server-only, never NEXT_PUBLIC_.
+    // The browser talks to our own route handlers, so this URL must not reach
+    // the client bundle and the service never needs to be internet-reachable.
+    //
+    // DELIBERATELY NOT REQUIRED IN PRODUCTION, unlike BACKEND_INTERNAL_URL
+    // below. The workflow engine is an optional subsystem: with this unset and
+    // mocks off, /admin/workflows renders a "not configured" state instead of
+    // failing the boot. Making it a hard requirement would turn every
+    // deployment — including ones that will never use workflows — into a
+    // dependency on a service that may not exist yet. The omission from the
+    // superRefine block is the whole point, not an oversight.
+    WORKFLOW_INTERNAL_URL: z
+      .string()
+      .url('WORKFLOW_INTERNAL_URL must be a valid URL.')
+      .optional(),
+    // Forward the nexio-core access token to nexio-workflow. Defaults to false
+    // because the service does not verify a JWT yet (§9 of its integration
+    // guide); flip it to true once it does, rather than handing our credential
+    // to something that ignores it.
+    WORKFLOW_FORWARD_JWT: boolStr.optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return

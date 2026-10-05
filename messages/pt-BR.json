@@ -248,8 +248,79 @@
       "menu": "Cardápio",
       "businessUnits": "Unidades",
       "ai": "Assistente IA",
+      "workflows": "Automações",
       "openMenu": "Abrir menu de administração",
-      "closeMenu": "Fechar menu de administração"
+      "closeMenu": "Fechar menu de administração",
+      "groups": {
+        "operation": "Operação",
+        "catalog": "Catálogo",
+        "management": "Gestão"
+      }
+    },
+    "workflows": {
+      "title": "Automações",
+      "subtitle": "Fluxos que reagem a um evento ou rodam em horário programado.",
+      "notConfiguredTitle": "Motor de automações não conectado",
+      "notConfiguredBody": "Este ambiente não tem o serviço de automações configurado, então ainda não há nada para mostrar. Defina WORKFLOW_INTERNAL_URL para habilitá-lo.",
+      "count": "{count, plural, =0 {Nenhuma automação} one {# automação} other {# automações}}",
+      "empty": "Ainda não há automações.",
+      "emptyPage": "Nada nesta página. Volte para a anterior.",
+      "tableName": "Nome",
+      "tableTrigger": "Disparo",
+      "tableNodes": "Nós",
+      "tableUpdated": "Atualizado",
+      "tableStatus": "Status",
+      "tableActions": "Ações",
+      "statusEnabled": "Ativa",
+      "statusDisabled": "Inativa",
+      "actionOpen": "Detalhes",
+      "actionActivate": "Ativar",
+      "actionDeactivate": "Desativar",
+      "toggling": "Salvando...",
+      "toggleFailed": "Não foi possível alterar o status da automação.",
+      "nodeCount": "{count, plural, =0 {Nenhum nó} one {# nó} other {# nós}}",
+      "triggerMockEvent": "Evento",
+      "triggerSchedule": "Agendamento",
+      "triggerEventLabel": "Evento",
+      "triggerCronLabel": "Cron",
+      "triggerCronHint": "Seis campos, começando pelos segundos.",
+      "triggerUnknown": "Não definido",
+      "pagerLabel": "Páginas de automações",
+      "pagerPrevious": "← Anterior",
+      "pagerNext": "Próxima →",
+      "pagerPosition": "Exibindo {from}–{to}",
+      "detail": {
+        "back": "← Voltar para automações",
+        "sectionOverview": "Resumo",
+        "fieldTriggerType": "Tipo",
+        "noDescription": "Sem descrição.",
+        "fieldId": "Identificador",
+        "fieldCreated": "Criada em",
+        "fieldUpdated": "Última alteração",
+        "fieldStartNode": "Nó inicial",
+        "fieldStartNodeMissing": "Não definido — esta automação não consegue rodar.",
+        "sectionTrigger": "Disparo",
+        "sectionNodes": "Nós"
+      },
+      "nodes": {
+        "empty": "Esta automação não tem nós.",
+        "typeHttp": "Requisição HTTP",
+        "typeCondition": "Condição",
+        "startBadge": "Início",
+        "url": "URL",
+        "method": "Método",
+        "headers": "Cabeçalhos",
+        "body": "Corpo",
+        "expression": "Expressão",
+        "config": "Configurações",
+        "nextOnSuccess": "Se der certo",
+        "nextOnTrue": "Se verdadeiro",
+        "nextOnFalse": "Se falso",
+        "nextEnd": "Fim do fluxo",
+        "none": "Não definido",
+        "secretHidden": "Oculto por segurança",
+        "secretHiddenTitle": "O serviço de automações mascara credenciais na leitura, então este valor nunca chega ao navegador."
+      }
     },
     "overview": {
       "title": "Painel administrativo",
@@ -755,6 +826,15 @@
       "emailLabel": "Filtrar clientes por e-mail"
     }
   },
+  "backendStatus": {
+    "wakingTitle": "Acordando o servidor…",
+    "wakingBody": "Nosso servidor entra em repouso quando ninguém está usando, então o primeiro acesso pode levar até um minuto. Esta página se atualiza sozinha assim que ele estiver pronto.",
+    "errorWaking": "O servidor estava em repouso e está iniciando agora — isso pode levar até um minuto. Vamos recarregar esta página automaticamente assim que ele estiver pronto.",
+    "unavailableTitle": "O servidor não está respondendo",
+    "unavailableBody": "Está demorando mais do que o normal para iniciar. Tente novamente em instantes.",
+    "readyTitle": "Tudo pronto — o servidor está no ar.",
+    "retry": "Tentar novamente"
+  },
   "errors": {
     "title": "Algo deu errado",
     "fallback": "Não foi possível concluir a operação. Tente novamente em instantes.",
@@ -791,7 +871,11 @@
       "invalid_query": "Alguns filtros são inválidos. Ajuste-os e tente novamente.",
       "insufficient_stock": "Um dos itens está sem estoque nesta unidade. Remova-o ou reduza a quantidade para continuar.",
       "profile_edit_unsupported": "Nome, e-mail, telefone e papel da equipe ainda não podem ser alterados — por enquanto esses campos são somente leitura.",
-      "unit_change_forbidden": "Apenas um administrador pode alterar as unidades vinculadas a um membro da equipe."
+      "unit_change_forbidden": "Apenas um administrador pode alterar as unidades vinculadas a um membro da equipe.",
+      "workflow_invalid": "O serviço de automações recusou esta alteração. Confira os detalhes abaixo.",
+      "workflow_conflict": "Outra pessoa alterou esta automação antes de você. Recarregue a página e tente de novo.",
+      "workflow_unavailable": "O serviço de automações está indisponível agora. Tente novamente em instantes.",
+      "workflow_not_configured": "O serviço de automações não está configurado neste ambiente."
     }
   },
   "orderStatus": {

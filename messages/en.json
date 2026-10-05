@@ -248,8 +248,79 @@
       "menu": "Menu",
       "businessUnits": "Business Units",
       "ai": "AI Assistant",
+      "workflows": "Workflows",
       "openMenu": "Open admin menu",
-      "closeMenu": "Close admin menu"
+      "closeMenu": "Close admin menu",
+      "groups": {
+        "operation": "Operations",
+        "catalog": "Catalog",
+        "management": "Management"
+      }
+    },
+    "workflows": {
+      "title": "Workflows",
+      "subtitle": "Automations that react to an event or run on a schedule.",
+      "notConfiguredTitle": "Workflow engine not connected",
+      "notConfiguredBody": "This deployment has no workflow service configured, so there is nothing to show yet. Set WORKFLOW_INTERNAL_URL to enable it.",
+      "count": "{count, plural, =0 {No workflows} one {# workflow} other {# workflows}}",
+      "empty": "No workflows yet.",
+      "emptyPage": "Nothing on this page. Go back to the previous one.",
+      "tableName": "Name",
+      "tableTrigger": "Trigger",
+      "tableNodes": "Nodes",
+      "tableUpdated": "Updated",
+      "tableStatus": "Status",
+      "tableActions": "Actions",
+      "statusEnabled": "Enabled",
+      "statusDisabled": "Disabled",
+      "actionOpen": "Details",
+      "actionActivate": "Enable",
+      "actionDeactivate": "Disable",
+      "toggling": "Saving...",
+      "toggleFailed": "Could not change the workflow status.",
+      "nodeCount": "{count, plural, =0 {No nodes} one {# node} other {# nodes}}",
+      "triggerMockEvent": "Event",
+      "triggerSchedule": "Schedule",
+      "triggerEventLabel": "Event",
+      "triggerCronLabel": "Cron",
+      "triggerCronHint": "Six fields, seconds first.",
+      "triggerUnknown": "Not set",
+      "pagerLabel": "Workflow pages",
+      "pagerPrevious": "← Previous",
+      "pagerNext": "Next →",
+      "pagerPosition": "Showing {from}–{to}",
+      "detail": {
+        "back": "← Back to workflows",
+        "sectionOverview": "Overview",
+        "fieldTriggerType": "Type",
+        "noDescription": "No description.",
+        "fieldId": "Identifier",
+        "fieldCreated": "Created",
+        "fieldUpdated": "Last updated",
+        "fieldStartNode": "Start node",
+        "fieldStartNodeMissing": "Not set — this workflow cannot run.",
+        "sectionTrigger": "Trigger",
+        "sectionNodes": "Nodes"
+      },
+      "nodes": {
+        "empty": "This workflow has no nodes.",
+        "typeHttp": "HTTP request",
+        "typeCondition": "Condition",
+        "startBadge": "Start",
+        "url": "URL",
+        "method": "Method",
+        "headers": "Headers",
+        "body": "Body",
+        "expression": "Expression",
+        "config": "Settings",
+        "nextOnSuccess": "On success",
+        "nextOnTrue": "If true",
+        "nextOnFalse": "If false",
+        "nextEnd": "End of the flow",
+        "none": "Not set",
+        "secretHidden": "Hidden for security",
+        "secretHiddenTitle": "The workflow service masks credentials on read, so this value is never sent to the browser."
+      }
     },
     "overview": {
       "title": "Admin overview",
@@ -755,6 +826,15 @@
       "emailLabel": "Filter customers by e-mail"
     }
   },
+  "backendStatus": {
+    "wakingTitle": "Waking up the server…",
+    "wakingBody": "Our server sleeps when nobody is using it, so the first visit can take up to a minute. This page will update on its own once it's ready.",
+    "errorWaking": "The server was asleep and is starting up now — this can take up to a minute. We'll reload this page automatically as soon as it's ready.",
+    "unavailableTitle": "The server isn't responding",
+    "unavailableBody": "It's taking longer than usual to start. Please try again in a moment.",
+    "readyTitle": "All set — the server is ready.",
+    "retry": "Try again"
+  },
   "errors": {
     "title": "Something went wrong",
     "fallback": "We couldn't complete the operation. Please try again shortly.",
@@ -791,7 +871,11 @@
       "invalid_query": "Some of the filters are invalid. Please adjust them and try again.",
       "insufficient_stock": "One of the items is out of stock at this unit. Remove it or lower the quantity to continue.",
       "profile_edit_unsupported": "Staff name, e-mail, phone and role can't be changed yet — these fields are read-only for now.",
-      "unit_change_forbidden": "Only an administrator can change which units a staff member is assigned to."
+      "unit_change_forbidden": "Only an administrator can change which units a staff member is assigned to.",
+      "workflow_invalid": "The workflow service rejected this change. Review the details below.",
+      "workflow_conflict": "Someone else changed this workflow first. Reload the page and try again.",
+      "workflow_unavailable": "The workflow service is unavailable right now. Please try again shortly.",
+      "workflow_not_configured": "The workflow service is not configured in this environment."
     }
   },
   "orderStatus": {

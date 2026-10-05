@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 
 /**
  * Storage hosts product images may come from — the same allowlist that gates
@@ -77,11 +77,28 @@ export function ProductImage({
   /** Placeholder glyph; callers use a smaller/different one in dense lists. */
   fallbackEmoji?: string
 }) {
-  const [failed, setFailed] = useState(false)
+  // Which src failed, rather than a boolean — a boolean needs an effect to
+  // clear it when `src` changes, and that effect runs *after* the ref below,
+  // wiping a failure detected at mount.
+  const [failedSrc, setFailedSrc] = useState<string | null | undefined>(null)
+  const failed = failedSrc === src
 
-  useEffect(() => {
-    setFailed(false)
-  }, [src])
+  /**
+   * Catches the failure `onError` structurally cannot see.
+   *
+   * These cards are server-rendered, so the browser starts fetching the `<img>`
+   * while parsing the HTML — long before the bundle hydrates and React attaches
+   * `onError`. React does not replay media error events, so a 404 / dead host /
+   * blocked request that resolves before hydration leaves the broken-image icon
+   * on screen forever. A mounted image that is already `complete` with a zero
+   * `naturalWidth` *is* that missed error, so re-check it when the node attaches.
+   */
+  const checkAlreadyFailed = useCallback(
+    (node: HTMLImageElement | null) => {
+      if (node && node.complete && node.naturalWidth === 0) setFailedSrc(src)
+    },
+    [src],
+  )
 
   if (!src || failed || !isRenderableImageUrl(src)) {
     return (
@@ -94,10 +111,11 @@ export function ProductImage({
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
+      ref={checkAlreadyFailed}
       src={src}
       alt={alt}
       className={className}
-      onError={() => setFailed(true)}
+      onError={() => setFailedSrc(src)}
     />
   )
 }

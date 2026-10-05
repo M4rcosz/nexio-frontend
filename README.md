@@ -56,6 +56,7 @@ resource marked "real backend + mock fallback" honours `NEXT_PUBLIC_USE_MOCKS`.
 | Staff users (admin)   | Real backend + mock fallback (`GET/POST /api/admin/users`, cursor-paginated; filters `role`, `businessUnitId`, `search`, `email`) |
 | Customers (admin)     | Real backend + mock fallback (`GET /api/admin/customers` — ADMIN only; `GET /api/users?role=CUSTOMER` upstream) |
 | Promotions            | Real backend + mock fallback — admin CRUD (`/api/promotions/...`, ADMIN/MANAGER) and the public listing (`GET /api/promotions/public/by-business-unit/:id`, no auth, only what is running now) |
+| Workflows (admin)     | Separate service — **nexio-workflow**, GraphQL (`POST /graphql`) — + mock fallback. Reached only through this app's own resource-shaped route handlers under `/api/workflow/...`; the browser never talks to it. Unset `WORKFLOW_INTERNAL_URL` is a supported state: the screens render "not configured" instead of failing. |
 | AI assistant          | Real backend + mock fallback — metered chat with server-owned threads (`POST /api/ai/chat`, `GET /api/ai/conversations`, `GET/PATCH/DELETE /api/ai/conversations/:id`), own wallet (`GET /api/ai/memberships/me`) and ADMIN management (`POST/DELETE /api/ai/memberships/:userId`, `PATCH .../balance`, `POST .../reinstate`, plus the usage report `GET /api/ai/memberships`) |
 
 The `NEXT_PUBLIC_USE_MOCKS=true` flag in `.env.local` forces the *menu* and
@@ -78,6 +79,15 @@ See `.env.example`. The relevant ones:
 - `BACKEND_INTERNAL_URL` — used by `serverFetch` (server-only).
 - `SESSION_COOKIE_NAME` — name of the httpOnly cookie that holds the JWT.
 - `SESSION_COOKIE_SECURE` — `'true'` in production.
+- `WORKFLOW_INTERNAL_URL` — base URL of the **nexio-workflow** service
+  (server-only, never `NEXT_PUBLIC_`). Optional: unlike `BACKEND_INTERNAL_URL`
+  it is *not* required in production, because workflows are an optional
+  subsystem — unset means the admin workflow screens render a "not configured"
+  state rather than failing the boot.
+- `WORKFLOW_FORWARD_JWT` — `'true'` forwards the nexio-core access token to
+  nexio-workflow as a Bearer header. Defaults to `'false'`: that service
+  authenticates nothing yet, so forwarding would only widen where our
+  credential is exposed. The code path ships; flip the flag when it lands.
 
 ## Key decisions
 
@@ -98,6 +108,14 @@ See `.env.example`. The relevant ones:
   cookie/localStorage.
 - **Polling** on order tracking (5s) and on payment status (4s) — the
   backend has no WebSocket yet.
+- **Backend cold starts.** nexio-core runs on Render's free tier, which sleeps
+  after ~15 min idle and takes up to a minute to wake. On each hard load (and on
+  refocus of a stale tab) the browser probes `GET /api/backend-status`, which
+  checks the backend's `/health` with a 3s timeout. While it's down, a toast
+  (`components/BackendWakeBanner.tsx`) says the server is waking. The page
+  re-renders on its own once it answers, and `app/[locale]/error.tsx` retries a
+  render that timed out. After 2 min it says the server isn't responding and
+  shows a retry button. Always `up` with mocks on.
 - **No OpenAPI**: types are typed manually in `lib/api/types.ts`. Route
   handler input is validated with Zod.
 - **Product images upload direct to storage.** `POST /api/products/:id/image/upload-url`
@@ -107,6 +125,20 @@ See `.env.example`. The relevant ones:
   product. The bytes never pass through this app and no storage SDK or key
   ships to the client, so **there is no new environment variable**. Driver in
   `lib/products/imageUpload.ts`.
+- **The workflow engine is proxied, and deliberately NOT as a `/graphql`
+  passthrough.** nexio-workflow is a second service that speaks GraphQL and,
+  today, authenticates nothing — so a passthrough route would turn one
+  authenticated same-origin endpoint into an open gateway onto it: any logged-in
+  browser could post an arbitrary document, trigger any workflow, or read
+  definitions holding another unit's credentials. Instead the browser hits
+  resource-shaped handlers under `/api/workflow/...` which **own the document**
+  and validate only the variables, and the transport
+  (`lib/api/workflow/graphql.ts`) is a sibling of `lib/api/client.ts` rather than
+  a reuse of it, because GraphQL reports failure as **HTTP 200 with an
+  `errors[]` array**. One consequence worth knowing before editing a workflow:
+  reads mask credentials as `***REDACTED***` and writes reject that marker, so
+  the save path sends only the fields that were actually edited
+  (`lib/api/workflow/redaction.ts`).
 - **Order channels** (`APP`/`WEB`/`TOTEM`/`COUNTER`/`PICKUP`) and the order
   status state machine are centralized in `lib/orders/channelPolicy.ts` and
   `lib/orders/statusMachine.ts` — derive form/board behaviour from those

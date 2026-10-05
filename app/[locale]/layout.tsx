@@ -8,6 +8,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server'
 import { routing } from '@/i18n/routing'
 import { PATHNAME_HEADER } from '@/lib/i18n/pathname'
 import { shellTier } from '@/lib/layout/shell'
+import { BackendWakeBanner } from '@/components/BackendWakeBanner'
 import { Header } from '@/components/Header'
 import { PrefetchRoutes } from '@/components/PrefetchRoutes'
 import { RouteTransition } from '@/components/RouteTransition'
@@ -125,6 +126,7 @@ export default async function LocaleLayout({
                 </div>
               </Shell>
             </div>
+            <BackendWakeBanner />
             <DevAccountSwitcher currentUsername={devUsername} />
           </TenantProvider>
         </NextIntlClientProvider>
