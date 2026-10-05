@@ -8,17 +8,21 @@ describe('shellTier', () => {
     ['/register', 'prose'],
     ['/profile', 'prose'],
 
-    // Wide — dense/grid surfaces.
+    // Wide — customer-facing card grids.
     ['/', 'wide'],
-    ['/admin', 'wide'],
-    ['/admin/orders', 'wide'],
-    ['/admin/business-units/abc123', 'wide'],
-    ['/ai', 'wide'],
     ['/units/abc123', 'wide'],
 
-    // Full — kiosk.
+    // Full — kiosk and the back-office surfaces.
     ['/totem', 'full'],
     ['/totem/anything', 'full'],
+    ['/admin', 'full'],
+    ['/admin/orders', 'full'],
+    ['/admin/business-units/abc123', 'full'],
+    // A workflow graph is the widest thing in the back office — it inherits
+    // `full` from the `/admin` prefix, and the node summary needs all of it.
+    ['/admin/workflows', 'full'],
+    ['/admin/workflows/wf-notifica-cozinha', 'full'],
+    ['/ai', 'full'],
 
     // Content — the default for everything else.
     ['/pos', 'content'],

@@ -32,7 +32,7 @@ export default async function AdminLayout({
   }
 
   return (
-    // The width comes from the shell (/admin is on the `wide` tier — see
+    // The width comes from the shell (/admin is on the `full` tier — see
     // lib/layout/shell.ts); the rail widens one step at xl so it keeps its
     // proportion once the content area gets room.
     <div className="grid gap-4 sm:gap-6 lg:grid-cols-[220px_1fr] xl:grid-cols-[240px_1fr]">

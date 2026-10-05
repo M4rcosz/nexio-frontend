@@ -364,7 +364,10 @@ export function OrderBoard({
         </div>
       ) : (
         <div
-          className={`card max-w-[1400px] overflow-hidden p-0 ${loading ? 'opacity-50' : ''}`}
+          // No cap of its own: the board is the widest surface in the app and
+          // takes whatever the `full` shell gives it, so the columns stop
+          // needing horizontal scroll on a desk monitor.
+          className={`card overflow-hidden p-0 ${loading ? 'opacity-50' : ''}`}
           aria-busy={loading}
         >
           <div className="scrollbar-thin overflow-x-auto">

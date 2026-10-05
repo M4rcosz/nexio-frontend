@@ -10,19 +10,27 @@ import { stripLocale } from '@/lib/i18n/pathname'
  *
  * - `prose`   — reading/typing surfaces (auth, profile): ~65-75ch, never wider.
  * - `content` — the safe default for mixed pages (today's 1152px).
- * - `wide`    — dense/tabular and grid surfaces (admin, assistant, catalogs).
- * - `full`    — chrome-less, self-centering surfaces (kiosk).
+ * - `wide`    — customer-facing card grids (home, unit storefronts).
+ * - `full`    — uncapped: back-office surfaces (admin, assistant) and the
+ *               chrome-less kiosk. Only the page gutters remain.
  */
 export type ShellTier = 'prose' | 'content' | 'wide' | 'full'
 
 /** Reading/typing surfaces. Matched as prefixes so nested routes inherit. */
 const PROSE_PREFIXES = ['/login', '/register', '/profile'] as const
 
-/** Dense surfaces that benefit from horizontal room. */
-const WIDE_PREFIXES = ['/admin', '/ai'] as const
-
-/** Kiosk — the flow centers itself, so the shell must not cap it. */
-const FULL_PREFIXES = ['/totem'] as const
+/**
+ * Uncapped surfaces.
+ *
+ * - `/totem` — kiosk; the flow centers itself, so the shell must not cap it.
+ * - `/admin`, `/ai` — back-office. These are operator tools driven on desk
+ *   monitors: a board of orders or a data table has no natural line length to
+ *   protect, and every pixel taken by the cap is a column the operator has to
+ *   scroll for. Line-length-bound children inside them keep their own
+ *   `max-w-*` (`AdminFormCard`, assistant message bubbles) — that is what
+ *   stops "uncapped" from turning a form into a 2560px input.
+ */
+const FULL_PREFIXES = ['/totem', '/admin', '/ai'] as const
 
 /**
  * A unit's storefront (`/units/<id>`) is a card grid and goes wide; anything
@@ -58,7 +66,6 @@ export function shellTier(pathname: string): ShellTier {
   const path = normalize(pathname)
   if (path === '/') return 'wide'
   if (FULL_PREFIXES.some((p) => isUnder(path, p))) return 'full'
-  if (WIDE_PREFIXES.some((p) => isUnder(path, p))) return 'wide'
   if (UNIT_STOREFRONT.test(path)) return 'wide'
   if (PROSE_PREFIXES.some((p) => isUnder(path, p))) return 'prose'
   // Unknown routes — including `''` — get the conservative default. `/pos` is

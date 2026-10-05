@@ -14,8 +14,8 @@ rules that are easy to break without noticing.
 | --------- | ----------- | ----------------------------------------------- |
 | `prose`   | 768px       | `/login`, `/register`, `/profile`               |
 | `content` | 1152px      | **default** — `/cart`, `/checkout`, `/orders`, `/pos` |
-| `wide`    | 1600px      | `/`, `/admin/*`, `/ai`, `/units/<id>`           |
-| `full`    | uncapped    | `/totem/*`                                      |
+| `wide`    | 1600px      | `/`, `/units/<id>`                              |
+| `full`    | uncapped    | `/totem/*`, `/admin/*`, `/ai`                   |
 
 **When you add a route, decide its tier.** Unlisted paths fall through to
 `content`, which is safe but may not be what you want. Register it in the
